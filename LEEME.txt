@@ -1,0 +1,21 @@
+DASHBOARD PRODUCTIVIDAD WMS · BATA · ADECCO
+===========================================
+
+QUÉ HAY EN ESTA CARPETA
+  index.html ............ la página (estructura). Es la que se abre.
+  config.js ............. los datos de conexión a Supabase (la nube). NO cambiar el nombre.
+  css/estilos.css ....... los colores y el diseño (ordenado por secciones, con índice arriba).
+  js/ ................... el "cerebro", un archivo por tema, numerados en el orden en que cargan:
+      01-nucleo-datos-y-kpis ........ cálculo de HH, productividad, filtros, KPIs, gráficos, vistas
+      02-asignacion-de-tareas ....... módulo Asignación de tareas
+      03-nube-supabase .............. guardar y leer en la nube
+      04-operaciones-y-archivos ..... ventana PICKING/PACKING, duplicados, archivos cargados
+      05-corrida-de-olas ............ módulo Corrida de Olas
+      06-rutas-y-packing ............ módulo Rutas y la lógica de PACKING
+      07-maestro-sku ................ módulo Maestro SKU
+      08-prescripciones-semanales ... módulo Prescripciones semanales
+      09-totales-generales .......... fila TOTAL GENERAL de las tablas
+  lib/xlsx.full.min.js .. librería para leer/escribir Excel (no se toca).
+
+IMPORTANTE: el orden de los <script> en index.html es el orden de carga.
+No muevas ni borres archivos: todos se necesitan.

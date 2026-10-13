@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Productividad Picking WMS · Online Público V37</title>
+<link rel="stylesheet" href="css/estilos.css">
+<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+
+
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="brand">Bata <span>Adecco</span></div>
+    <div><div class="title" id="reportTitle">Productividad Picking WMS</div><div class="sub" id="reportSubtitle">Reporte ejecutivo web · datos centralizados y actualización controlada</div></div>
+    <div class="status"><div id="fileStatus">Sin datos cargados</div><div>Meta vigente: <b id="headerMeta">125 und/HH · PP 60 cajas/HH</b></div></div>
+  </div>
+
+  <section id="upload" class="upload">
+    <h2>Centro de carga de información</h2>
+    <div class="uploadGate" id="uploadGate"><span>🔒 La carga y guardado de datos están protegidos. Ingresa la contraseña de carga para continuar.</span><button class="cloudbtn update" id="authorizeUploadBtn" type="button">🔐 Autorizar carga</button></div>
+    <p>
+      Para el histórico 2025–2026 no necesitas un Excel gigante. Puedes seleccionar una <b>carpeta completa</b>
+      con tus CSV mensuales. El reporte los procesa uno por uno, localmente. Para el trabajo diario,
+      carga el CSV del día cada vez que tengas uno nuevo: el reporte <b>fusiona</b> la información con lo ya
+      cargado, agrega solo las líneas nuevas e ignora automáticamente las que ya estaban (sin duplicar cantidades).
+    </p>
+
+    <div class="steps">
+      <div class="step"><b>1.</b> Histórico: organiza un CSV por mes dentro de carpetas 2025 / 2026.</div>
+      <div class="step"><b>2.</b> Primera vez: procesa la carpeta y exporta un <b>histórico procesado</b>.</div>
+      <div class="step"><b>3.</b> Día a día: carga el histórico procesado + actualiza únicamente el CSV del día.</div>
+    </div>
+
+    <div class="loadgrid">
+      <div class="loadcard">
+        <div class="lh">📁 Histórico bruto</div>
+        <div class="ld">Selecciona una carpeta completa con CSV mensuales. Chrome/Edge incluye también los archivos de subcarpetas.</div>
+        <div class="loadbuttons">
+          <label class="filebtn">Seleccionar carpeta<input id="folderInput" type="file" accept=".csv,.txt,.xlsx" webkitdirectory directory multiple></label>
+          <label class="btn" style="cursor:pointer">CSV / XLSX<input id="historyFilesInput" type="file" accept=".csv,.txt,.xlsx" multiple style="display:none"></label>
+        </div>
+        <div class="loadstatus" id="histStatus">Aún no se cargó histórico bruto.</div>
+      </div>
+
+      <div class="loadcard">
+        <div class="lh">💾 Histórico procesado</div>
+        <div class="ld">Después de procesar la carpeta una vez, guarda un archivo compacto. En las siguientes aperturas será mucho más rápido.</div>
+        <div class="loadbuttons">
+          <label class="filebtn">Cargar procesado<input id="processedInput" type="file" accept=".json,.csv,.txt,.xlsx"></label>
+          <button type="button" class="btn" id="exportProcessedBtn" disabled>Exportar procesado</button>
+        </div>
+        <div class="loadstatus" id="processedStatus">Sin histórico procesado cargado/exportado.</div>
+      </div>
+
+      <div class="loadcard">
+        <div class="lh">⚡ Operación del día</div>
+        <div class="ld">Carga el CSV del día. Si vuelves a cargarlo a las 10:00, 12:00 o 15:00, se fusiona con lo ya cargado: agrega las líneas nuevas e ignora las que ya estaban (sin duplicar).</div>
+        <div class="loadbuttons">
+          <label class="filebtn">Actualizar día (CSV / XLSX)<input id="dayInput" type="file" accept=".csv,.txt,.xlsx" multiple></label>
+          <label class="btn" style="cursor:pointer">Carpeta del día<input id="dayFolderInput" type="file" accept=".csv,.txt,.xlsx" webkitdirectory directory multiple style="display:none"></label>
+          <button type="button" class="btn" id="clearDayBtn">Quitar actualización</button>
+        </div>
+        <div class="loadstatus" id="dayStatus">Sin actualización del día.</div>
+      </div>
+
+      <div class="loadcard">
+        <div class="lh">🧩 Distribución de Tareas</div>
+        <div class="ld">Carga aparte (no se mezcla con la productividad del día): el archivo de tareas pendientes y la lista de usuarios (jerarquía, prioridad, áreas y meta x día).</div>
+        <div class="loadbuttons">
+          <label class="filebtn">Tareas pendientes<input id="atTasksInput" type="file" accept=".xlsx,.csv"></label>
+          <label class="filebtn">Usuarios y prioridad<input id="atRosterInput" type="file" accept=".xlsx,.csv"></label>
+        </div>
+        <div class="loadstatus" id="atStatus">Sin datos de tareas cargados.</div>
+      </div>
+
+      <div class="loadcard">
+        <div class="lh">🌊 Análisis de Corrida de Olas</div>
+        <div class="ld">Carga el Excel con hojas PEND, STOCK y RUTA Y PRIORIDAD. El stock se asigna primero a lo más antiguo (semana/día), luego Lima y después Provincia.</div>
+        <div class="loadbuttons">
+          <label class="filebtn">Cargar PEND-STOCK-RUTA<input id="olaInput" type="file" accept=".xlsx"></label>
+          <button class="btn" id="olaDownloadBtn" type="button" disabled>⬇ Descargar corrida (Excel)</button>
+        </div>
+        <div class="loadstatus" id="olaStatus">Sin archivo de corrida cargado.</div>
+      </div>
+      <div class="loadcard">
+        <div class="lh">🗺️ Rutas</div>
+        <div class="ld">Matriz de tiendas (ZONA Lima/Provincia y Ruta). Súbela cada vez que cambie; también puedes agregar o editar rutas a mano en el módulo RUTAS.</div>
+        <div class="loadbuttons"><label class="filebtn">Cargar RUTAS<input id="rutasInput" type="file" accept=".xlsx"></label></div>
+        <div class="loadstatus" id="rutasStatus">Sin rutas cargadas.</div>
+      </div>
+      <div class="loadcard">
+        <div class="lh">🏷️ Maestro SKU</div>
+        <div class="ld">Define la categoría de cada SKU (Calzado, Accesorio, Insumo, Materiales). Tiene prioridad sobre la regla automática. Al subir uno nuevo se actualiza y se conservan los SKU que no estén en el archivo.</div>
+        <div class="loadbuttons"><label class="filebtn">Cargar MAESTRO SKU<input id="maestroInput" type="file" accept=".xlsx,.csv,.txt"></label></div>
+        <div class="loadstatus" id="maestroStatus">Sin maestro SKU cargado.</div>
+      </div>
+      <div class="loadcard">
+        <div class="lh">📝 Prescripciones semanales</div>
+        <div class="ld">Excel del área comercial (columnas Dist, CAD, TIEND, NOMBR, PRIORIDAD, ETIQUETA, FECHAPR, GUIA…). Puedes subir varios archivos o una carpeta. Si una guía ya existe, se actualiza.</div>
+        <div class="loadbuttons"><label class="filebtn">Cargar PRESCRIPCIONES<input id="prescInput" type="file" accept=".xlsx,.xls" multiple></label><label class="btn" style="cursor:pointer">Carpeta<input id="prescFolderInput" type="file" accept=".xlsx,.xls" webkitdirectory directory multiple style="display:none"></label></div>
+        <div class="loadstatus" id="prescStatus">Sin prescripciones cargadas.</div>
+      </div>
+      <div class="loadcard" style="grid-column:1 / -1">
+        <div class="lh">📁 Archivos cargados</div>
+        <div class="ld">Marca uno o varios archivos y elimínalos: se quitan sus datos del dashboard y se actualiza la nube.</div>
+        <div class="loadbuttons"><button class="btn" id="filesDelBtn" type="button">🗑 Eliminar seleccionados</button></div>
+        <div class="heatbox" style="max-height:300px;margin-top:8px"><table class="heatmap" id="filesTable"></table></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px">
+      <div class="filter" style="min-width:240px">
+        <label>Corte de inactividad para nueva sesión</label>
+        <div style="display:flex;align-items:center;gap:7px">
+          <input id="sessionGapInput" type="number" value="10" min="1" max="120" step="1" style="width:90px">
+          <span style="font-size:12px;color:#6e7c89">minutos</span>
+        </div>
+      </div>
+      <button type="button" class="btn" id="goDashBtn" disabled>Ver dashboard</button>
+    </div>
+
+<div class="cloudbar" id="cloudBar"><div class="cloudstatus"><span class="cloud-dot off" id="cloudDot"></span><b id="cloudStatusText">Dashboard público · datos online</b><span id="cloudVersionText"></span><span id="cloudRoleText"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="cloudbtn" id="cloudLoginBtn" type="button">🔐 Ingresar</button><button class="cloudbtn update" id="cloudSaveBtn" type="button" disabled>☁ Guardar datos online</button><button class="cloudbtn" id="cloudUpdateBtn" type="button" disabled>↻ Actualizar datos</button></div></div><div class="cloudnotice" id="cloudNotice"></div><div class="authback" id="authBack"><div class="authbox"><h3>🔐 Acceso al Dashboard WMS</h3><div class="mini">Para ingresar al Dashboard se necesita usuario y contraseña.</div><label>Usuario / correo</label><input id="authEmail" type="email" autocomplete="username"><label>Contraseña</label><input id="authPassword" type="password" autocomplete="current-password"><div class="authmsg" id="authMsg"></div><button id="authForgotBtn" type="button" style="margin:10px 0;border:0;background:none;color:#0b67d1;cursor:pointer;text-decoration:underline">¿Olvidaste tu contraseña?</button>
+<div id="authRecoveryBox" style="display:none;margin:4px 0 12px;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fafafa">
+  <div style="font-weight:700;margin-bottom:6px">Recuperar contraseña</div>
+  <div style="font-size:13px;margin-bottom:8px">Escribe tu correo y te enviaremos un enlace.</div>
+  <input id="recoveryEmail" type="email" placeholder="correo electrónico" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+  <div style="display:flex;gap:8px">
+    <button id="sendRecoveryBtn" type="button">Enviar enlace</button>
+    <button id="cancelRecoveryBtn" type="button">Cancelar</button>
+  </div>
+  <div id="recoveryMsg" style="margin-top:8px;font-size:13px"></div>
+</div>
+<div class="authactions"><button class="btn" id="authCancelBtn" type="button">Cancelar</button><button class="cloudbtn update" id="authLoginSubmit" type="button">Ingresar</button></div></div></div>    <div class="progressBox" id="progressBox">
+      <div style="margin:12px 0 6px;font-size:13px;color:#556675" id="progressText">Preparando…</div>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+
+    <div class="data-summary">
+      <div class="ds">Histórico<b id="sumHistory">0 registros procesados</b></div>
+      <div class="ds">Actualización día<b id="sumDay">Sin archivo</b></div>
+      <div class="ds">Base combinada<b id="sumCombined">0 registros</b></div>
+    </div>
+
+    <div class="load-warning" id="loadWarning" style="display:none"></div>
+
+    <div style="margin-top:12px;font-size:12px;color:#768492">
+      Los archivos CSV deben mantener las columnas: Fecha, Categoria, Usuario, Turno, Area, Tipo_Pedido,
+      Orden_ID, Und_Cantidad Conv, Und_PRE PACK., hora y Hora de selección.
+      <b>Importante:</b> para evitar duplicados, usa archivos históricos mensuales sin solapamiento de fechas.
+    </div>
+  </section>
+
+  <main id="dash">
+    <div class="filters">
+      <div class="filter multifilter">
+        <label>Día</label>
+        <button type="button" class="multibtn" id="dayBtn">Todos</button>
+        <div class="multipanel" id="dayPanel">
+          <input class="multisearch" id="daySearch" type="text" placeholder="Buscar día (dd/mm/aaaa)...">
+          <div class="multiactions"><button type="button" data-multi-all="day">Seleccionar todo</button><button type="button" data-multi-clear="day">Limpiar</button></div>
+          <div class="multioptions" id="dayOptions"></div><div class="multicount" id="dayCount"></div>
+        </div>
+      </div>
+      <div class="filter multifilter"><label>Mes</label>
+        <button type="button" class="multibtn" id="monthBtn">Todos</button>
+        <div class="multipanel" id="monthPanel">
+          <div class="multiactions">
+            <button type="button" data-multi-all="month">Seleccionar todo</button>
+            <button type="button" data-multi-clear="month">Limpiar</button>
+          </div>
+          <div class="multioptions" id="monthOptions"></div>
+          <div class="multicount" id="monthCount"></div>
+        </div>
+      </div>
+
+      <div class="filter multifilter">
+        <label>Semana</label>
+        <button type="button" class="multibtn" id="weekBtn">Todas</button>
+        <div class="multipanel" id="weekPanel">
+          <div class="multiactions">
+            <button type="button" data-multi-all="week">Seleccionar todo</button>
+            <button type="button" data-multi-clear="week">Limpiar</button>
+          </div>
+          <div class="multioptions" id="weekOptions"></div>
+          <div class="multicount" id="weekCount"></div>
+        </div>
+      </div>
+
+      <div class="filter multifilter">
+        <label>Categoría</label>
+        <button type="button" class="multibtn" id="catBtn">Todas</button>
+        <div class="multipanel" id="catPanel">
+          <div class="multiactions">
+            <button type="button" data-multi-all="cat">Seleccionar todo</button>
+            <button type="button" data-multi-clear="cat">Limpiar</button>
+          </div>
+          <div class="multioptions" id="catOptions"></div>
+          <div class="multicount" id="catCount"></div>
+        </div>
+      </div>
+
+      <div class="filter multifilter">
+        <label>Usuario</label>
+        <button type="button" class="multibtn" id="userBtn">Todos</button>
+        <div class="multipanel" id="userPanel">
+          <input class="multisearch" id="userSearch" type="text" placeholder="Buscar usuario...">
+          <div class="multiactions">
+            <button type="button" data-multi-all="user">Seleccionar todo</button>
+            <button type="button" data-multi-clear="user">Limpiar</button>
+          </div>
+          <div class="multioptions" id="userOptions"></div>
+          <div class="multicount" id="userCount"></div>
+        </div>
+      </div>
+
+      <div class="filter multifilter">
+        <label>Área</label>
+        <button type="button" class="multibtn" id="areaBtn">Todas</button>
+        <div class="multipanel" id="areaPanel">
+          <div class="multiactions">
+            <button type="button" data-multi-all="area">Seleccionar todo</button>
+            <button type="button" data-multi-clear="area">Limpiar</button>
+          </div>
+          <div class="multioptions" id="areaOptions"></div>
+          <div class="multicount" id="areaCount"></div>
+        </div>
+      </div>
+
+      <div class="filter multifilter">
+        <label>Tipo pedido</label>
+        <button type="button" class="multibtn" id="tipoBtn">Todos</button>
+        <div class="multipanel" id="tipoPanel">
+          <div class="multiactions">
+            <button type="button" data-multi-all="tipo">Seleccionar todo</button>
+            <button type="button" data-multi-clear="tipo">Limpiar</button>
+          </div>
+          <div class="multioptions" id="tipoOptions"></div>
+          <div class="multicount" id="tipoCount"></div>
+        </div>
+      </div>
+
+      <div class="filter">
+        <label>Tipo productividad</label>
+        <select id="prodMode">
+          <option value="operational" selected>Operativa estimada</option>
+          <option value="effective">Efectiva WMS</option>
+        </select>
+      </div>
+
+      <button class="btn" id="clearBtn">Limpiar filtros</button>
+
+      <!-- Campos internos: no se muestran en el panel superior -->
+      <input type="hidden" id="meta" value="125">
+      <input type="hidden" id="d1">
+      <input type="hidden" id="d2">
+    </div>
+
+    <div style="font-size:11px;color:#74838f;margin:-5px 0 8px">
+      Día, Mes, Semana, Categoría, Usuario, Área y Tipo pedido permiten seleccionar una o varias opciones. Si Día está vacío o tiene más de un día, la evolución ejecutiva se muestra separada por día.
+      Si no marcas ninguna, se consideran todas.
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" id="captureBtn">📤 Compartir / Imprimir</button>
+      <button class="btn" id="configBtn">⚙ Configuración</button>
+      <button class="btn" id="exportBtn">⬇ Excel / PDF</button>
+      <button class="btn" id="anotherBtn">📚 Gestionar datos</button>
+    </div>
+
+    <div class="optabs" id="opTabs"><button type="button" data-op="PICKING" class="active">PICKING</button><button type="button" data-op="PACKING">PACKING</button><button type="button" data-op="AMBOS">AMBOS</button></div>
+    <section class="opsum" id="opSummary" style="display:none"><div class="h">Resumen por transacción</div><div class="heatbox"><table class="heatmap" id="opSumTable"></table></div></section>
+    <div class="viewtabs">
+      <button class="viewtab active" data-view="gerencia">GERENCIA</button>
+      <button class="viewtab" data-view="jefatura">JEFATURA</button>
+      <button class="viewtab" data-view="supervision">SUPERVISIÓN</button>
+      <button class="viewtab" data-view="asignacion">ASIGNACIÓN DE TAREAS</button>
+      <button class="viewtab" data-view="olas">CORRIDA DE OLAS</button>
+      <button class="viewtab" data-view="rutas">RUTAS</button>
+      <button class="viewtab" data-view="maestro">MAESTRO SKU</button>
+      <button class="viewtab" data-view="archivos">ARCHIVOS CARGADOS</button>
+      <button class="viewtab" data-view="presc">PRESCRIPCIONES SEMANALES</button>
+    </div>
+
+    <div id="view-gerencia" class="viewsection active">
+    <section class="kpis">
+      <div class="card kpi">
+        <div class="lab">Producción Picking</div>
+        <div id="kUnits" class="val">0</div>
+        <div class="small">Unidades o cajas según categoría seleccionada</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab" id="kHHLabel">HH operativas estimadas</div>
+        <div id="kHH" class="val">0</div>
+        <div class="small" id="kHHSmall">Tiempo según modo seleccionado</div>
+      </div>
+      <div class="card kpi highlight">
+        <div class="lab" id="kProdLabel">Productividad operativa estimada</div>
+        <div id="kProd" class="val">0</div>
+        <div id="kProdMsg" class="small">und / HH</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">Pickers activos</div>
+        <div id="kPickers" class="val">0</div>
+        <div class="small">Usuarios con actividad</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">Sesiones Picking</div>
+        <div id="kRows" class="val">0</div>
+        <div class="small">Sesiones identificadas</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">Prod. operativa estimada</div>
+        <div class="val" id="kProdOp">0</div>
+        <div class="small">Producción ÷ HH operativas</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">Prod. efectiva WMS</div>
+        <div class="val" id="kProdEff">0</div>
+        <div class="small">Producción ÷ HH efectivas</div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">Utilización estimada</div>
+        <div class="val" id="kUtil">0%</div>
+        <div class="small">HH efectivas ÷ HH operativas</div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="h"><span id="evolTitle">Evolutivo semanal: unidades picadas vs productividad</span> <span class="mode-note" id="chartModeNote">Operativa estimada</span></div>
+      <div class="mini" id="evolSubtitle">Barras = unidades picadas por semana · línea = productividad WMS · línea punteada = meta</div>
+      <div class="chart" id="weekUnitsProdChart"></div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Tabla ejecutiva de evolución</div>
+          <div class="mini">El nivel seleccionado controla simultáneamente el gráfico superior y esta tabla ejecutiva.</div>
+        </div>
+      </div>
+      <div class="mgmtcontrols">
+        <div class="left">
+          <div class="filter">
+            <label>Nivel de evolución (gráfico y tabla)</label>
+            <select id="mgmtLevel">
+              <option value="day">Día</option>
+              <option value="week" selected>Semana</option>
+              <option value="month">Mes</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <button class="btn" id="exportMgmtBtn">⬇ Excel / PDF</button>
+        </div>
+      </div>
+      <div class="tblbox"><table class="mgmt" id="mgmtTable"></table></div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Evolución de picking por categoría</div>
+          <div class="mini">Analiza la participación de CALZADO, ACCESORIO y PP según el nivel de evolución seleccionado en Gerencia.</div>
+        </div>
+      </div>
+      <div class="chart" id="catMixChart"></div>
+      <div class="tblbox"><table class="mgmt" id="catMixTable"></table></div>
+    </section>
+
+    <section class="grid3">
+      <div class="card"><div class="h">Evolutivo semanal de productividad</div><div class="mini">und/HH · eje X = número de semana · línea punteada = meta</div><div class="chart" id="weekChart"></div></div>
+      <div class="card"><div class="h">Productividad por categoría</div><div class="mini">CALZADO · ACCESORIO · PP</div><div class="chart" id="catChart"></div></div>
+      <div class="card"><div class="h">Evolutivo mensual</div><div class="mini">Productividad WMS por mes</div><div class="chart" id="monthChart"></div></div>
+    </section>
+
+    <div class="execgrid">
+      <div class="card">
+        <div class="h">Lectura ejecutiva</div>
+        <div class="mini">Resumen automático de tendencias y principales alertas del período filtrado.</div>
+        <div id="alertsGerencia"></div>
+      </div>
+      <div class="card">
+        <div class="h">Criterio de lectura</div>
+        <div class="mini">La gerencia ve resultado y tendencia; el detalle operativo se revisa en Jefatura y Supervisión.</div>
+        <div class="alert">🎯 Meta vigente: <b id="metaGerencia">125 und/HH</b></div>
+        <div class="alert">📈 Revisar tendencia semanal y mensual antes de interpretar un único día.</div>
+        <div class="alert">👥 Si sube HC y no aumenta volumen/productividad, revisar restricciones operativas.</div>
+        <div class="alert">⏱ Tiempo efectivo: sesiones por <b>Fecha + Usuario</b>. Si la pausa entre dos selecciones supera el corte configurado, inicia una nueva sesión.</div>
+        <div class="alert">🏭 Tiempo operativo estimado: <b>MIN(primera selección, 08:11)</b> hasta la última selección, sin tope de HH; descuento según última selección (lunes–viernes) o regla de sábado.</div>
+      </div>
+    </div>
+    </div>
+
+    <div id="view-supervision" class="viewsection">
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Vista Supervisor · Avance por hora</div>
+          <div class="mini">Carga el CSV y controla producción, acumulado, productividad y brecha contra la meta del día.</div>
+        </div>
+        <span class="pill">Uso operativo</span>
+      </div>
+
+      <div class="supcontrols">
+        <div class="filter">
+          <label>Fecha a supervisar</label>
+          <select id="supDate"></select>
+        </div>
+        <div class="filter">
+          <label>Meta diaria de unidades (grupal)</label>
+          <input id="supDailyTarget" type="number" value="29400" min="1" step="100">
+        </div>
+        <div class="filter">
+          <label>Meta individual (und/día por usuario)</label>
+          <input id="supIndividualTarget" type="number" value="1500" min="1" step="50">
+        </div>
+        <div class="filter">
+          <label>Hora inicio</label>
+          <input id="supStartHour" type="number" value="8" min="0" max="23">
+        </div>
+        <div class="filter">
+          <label>Hora fin</label>
+          <input id="supEndHour" type="number" value="19" min="1" max="23">
+        </div>
+        <div class="filter" style="grid-column:1 / -1">
+          <label>Categorías supervisión</label>
+          <div class="checkgroup" id="supCatGroup">
+            <label class="checktag"><input type="checkbox" class="supcat" value="CALZADO" checked>Calzado</label>
+            <label class="checktag"><input type="checkbox" class="supcat" value="ACCESORIO" checked>Accesorio</label>
+            <label class="checktag"><input type="checkbox" class="supcat" value="PP" checked>PP</label>
+            <label class="checktag"><input type="checkbox" class="supcat" value="INSUMO" checked>Insumo</label>
+            <label class="checktag"><input type="checkbox" class="supcat" value="MATERIALES" checked>Materiales</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="cardcontext" id="supTopContext"></div>
+      <div class="ctxfilters" id="supTopFilters"></div>
+      <div class="daysummary" id="supSummary"></div>
+
+      <div class="supgrid">
+        <div>
+          <div class="h" style="font-size:15px" id="supCumulativeTitle">Acumulado real vs. esperado</div>
+          <div class="mini" id="supCumulativeSubtitle">El esperado distribuye la meta diaria de manera uniforme entre las horas configuradas.</div>
+          <div class="chart" id="supCumulativeChart"></div>
+        </div>
+        <div>
+          <div class="h" style="font-size:15px">Detalle por hora</div>
+          <div class="mini">Unidades, acumulado, pickers activos, productividad y estado.</div>
+          <div style="max-height:360px;overflow:auto"><table id="supHourTable"></table></div>
+          <div style="margin-top:9px;text-align:right">
+            <button class="btn" id="exportSupervisorBtn">⬇ Excel / PDF</button>
+          </div>
+        </div>
+        <div class="card gaugecard" style="margin:0">
+          <div class="h" style="font-size:15px">Avance meta</div>
+          <div class="mini">Semáforo visual del cumplimiento del día</div>
+          <div id="supGoalGauge"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card heatwrap">
+      <div class="dayhead">
+        <div>
+          <div class="h" id="heatTitle">Matriz por hora y usuario</div>
+          <div class="mini">Vista tipo semáforo para supervisión operativa. Cada celda muestra unidades picadas por usuario y hora. <b>Click en el nombre</b> del usuario para ver su evolución arriba (click de nuevo para quitarlo, selecciona varios para compararlos). <b>Click en una cantidad</b> para ver el detalle de esa hora.</div>
+        </div>
+        <div style="text-align:right">
+          <button class="btn" id="exportHeatmapBtn">⬇ Excel / PDF</button>
+        </div>
+      </div>
+      <div class="heatlegend" id="heatLegend">Semáforo referencial por hora</div>
+      <div class="heatbox"><table class="heatmap" id="supHeatTable"></table></div>
+    </section>
+
+    <section class="card" id="heatDetailSection" style="display:none;margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h" id="heatDetailTitle">Detalle de la hora seleccionada</div>
+          <div class="mini">Detalle a nivel de línea (orden, LPN, SKU, ubicación, tienda). Solo disponible para datos cargados en formato Allocation del WMS.</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="downloadHeatDetailBtn">⬇ Descargar</button>
+          <button class="btn" id="closeHeatDetailBtn">✕ Cerrar</button>
+        </div>
+      </div>
+      <div class="mini" id="heatDetailEmpty" style="display:none;padding:8px 0"></div>
+      <div style="max-height:420px;overflow:auto"><table id="heatDetailTable"></table></div>
+    </section>
+
+    </div>
+
+    <div id="view-olas" class="viewsection">
+      <section class="opsum"><div class="h">Corrida de Olas</div>
+        <div class="mod-note">El stock se asigna primero a lo más antiguo (semana/día), luego Lima y después Provincia. El archivo debe tener las hojas PEND, STOCK y RUTA Y PRIORIDAD.</div>
+        <div class="mod-actions"><label class="btn">📂 Cargar PEND-STOCK-RUTA<input id="olaInput2" type="file" accept=".xlsx" hidden></label><button class="btn" id="olaDownloadBtn2" type="button">⬇ Descargar corrida (Excel)</button></div>
+        <div class="mod-status" id="olaStatus2">Sin archivo de corrida cargado.</div>
+        <div class="heatbox" style="max-height:520px"><table class="heatmap" id="olaTable"></table></div>
+      </section>
+    </div>
+    <div id="view-rutas" class="viewsection">
+      <section class="opsum"><div class="h">Rutas</div>
+        <div class="mod-note">Matriz de tiendas: define la ZONA (Lima / Provincia) y la RUTA que usan Packing y la Corrida de Olas.</div>
+        <div class="mod-actions"><label class="btn">📂 Cargar RUTAS (Excel)<input id="rutasInput2" type="file" accept=".xlsx" hidden></label><button class="btn" id="rutaAddBtn" type="button">➕ Agregar ruta</button><button class="btn" id="rutaDownBtn" type="button">⬇ Descargar rutas</button><input id="rutaSearch" class="mod-search" placeholder="Buscar tienda, código o ruta…"></div>
+        <div class="rform" id="rutaForm" style="display:none"><input id="rCdg" placeholder="Código (CDG)"><input id="rTienda" placeholder="Tienda"><input id="rDepto" placeholder="Departamento"><select id="rZona"><option>LIMA</option><option>PROVINCIA</option></select><input id="rRuta" placeholder="Ruta"><span><button class="btn" id="rutaSaveBtn" type="button">Guardar</button> <button class="btn" id="rutaCancelBtn" type="button">Cancelar</button></span></div>
+        <div class="mod-status" id="rutasStatus2">Sin rutas cargadas.</div>
+        <div class="heatbox" style="max-height:560px"><table class="heatmap" id="rutasTable"></table></div>
+      </section>
+    </div>
+    <div id="view-archivos" class="viewsection">
+      <section class="opsum"><div class="h">Archivos cargados</div>
+        <div class="mod-note">Lista completa de lo que está cargado y guardado en la nube. Marca uno o varios (o "marcar todos") y elimínalos: se quitan sus datos del dashboard y se actualiza la nube.</div>
+        <div class="mod-actions"><button class="btn" id="filesReloadBtn" type="button">↻ Actualizar desde la nube</button><button class="btn" id="filesDelBtn2" type="button">🗑 Eliminar seleccionados</button></div>
+        <div class="mod-status" id="filesCount">No hay archivos cargados.</div>
+        <div class="heatbox" style="max-height:560px"><table class="heatmap" id="filesTable2"></table></div>
+      </section>
+    </div>
+    <div id="view-presc" class="viewsection">
+      <section class="opsum"><div class="h">Prescripciones semanales</div>
+        <div class="mod-note">Excel de prescripciones del área comercial. La fecha de prescripción (FECHAPR) se toma como fecha del correo: se calcula la semana de correo (viernes a jueves), el día de atención y se ordena por antigüedad, Lima antes que Provincia.</div>
+        <div class="mod-actions"><label class="btn">📂 Cargar prescripciones<input id="prescInput2" type="file" accept=".xlsx,.xls" multiple hidden></label><label class="btn">📁 Carpeta<input id="prescFolder2" type="file" accept=".xlsx,.xls" webkitdirectory directory multiple hidden></label><button class="btn" id="prescDown" type="button">⬇ Descargar Excel</button></div>
+        <div class="mod-filters"><select id="pfSem"></select><select id="pfAtn"></select><select id="pfZona"></select><select id="pfEt"></select><input id="pfQ" class="mod-search" placeholder="Buscar tienda, guía o ruta…"></div>
+        <div class="mod-status" id="prescStatus2">Sin prescripciones cargadas.</div>
+        <div class="pkpis" id="prescKpis"></div>
+        <div class="h" style="font-size:14px;margin:6px 0">Resumen por día de atención</div>
+        <div class="heatbox" style="max-height:300px"><table class="heatmap" id="prescSum"></table></div>
+        <div class="h" style="font-size:14px;margin:12px 0 6px">Detalle ordenado por prioridad de atención</div>
+        <div class="heatbox" style="max-height:520px"><table class="heatmap" id="prescTable"></table></div>
+      </section>
+    </div>
+    <div id="view-maestro" class="viewsection">
+      <section class="opsum"><div class="h">Maestro SKU</div>
+        <div class="mod-note">Categoría por SKU: es lo primero que se consulta al cargar datos (antes de la regla automática). Al subir un archivo se actualizan los SKU existentes, se agregan los nuevos y se conservan los que no vengan en el archivo.</div>
+        <div class="mod-actions"><label class="btn">📂 Cargar MAESTRO SKU<input id="maestroInput2" type="file" accept=".xlsx,.csv,.txt" hidden></label><button class="btn" id="mAddBtn" type="button">➕ Agregar SKU</button><button class="btn" id="mDownBtn" type="button">⬇ Descargar maestro</button><input id="mSearch" class="mod-search" placeholder="Buscar SKU, categoría o descripción…"></div>
+        <div class="rform" id="mForm" style="display:none;grid-template-columns:1.2fr 1fr 2fr auto"><input id="mSku" placeholder="SKU"><select id="mCat"><option value="CALZ">CALZADO</option><option value="ACC">ACCESORIO</option><option value="INSUMO">INSUMO</option><option value="MATERIALES">MATERIALES</option></select><input id="mDesc" placeholder="Descripción (opcional)"><span><button class="btn" id="mSaveBtn" type="button">Guardar</button> <button class="btn" id="mCancelBtn" type="button">Cancelar</button></span></div>
+        <div class="mod-status" id="maestroStatus2">Sin maestro SKU cargado.</div>
+        <div class="heatbox" style="max-height:560px"><table class="heatmap" id="maestroTable"></table></div>
+      </section>
+    </div>
+    <div id="view-asignacion" class="viewsection">
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Distribución de Tareas · Plan de asignación</div>
+          <div class="mini">Reparte las tareas pendientes (archivo de tareas) entre los usuarios (archivo de usuarios y prioridad), según la capacidad por hora de cada uno hasta el corte configurado. Orden: BUFFER-C → MZN04 → 1er PISO/MZN02/MZN03. Si a un usuario le falta cantidad en el corte 1, se compensa en el corte 2.</div>
+        </div>
+        <span class="pill">Uso operativo</span>
+      </div>
+
+      <div class="supcontrols">
+        <div class="filter">
+          <label>Fecha (hoy)</label>
+          <input id="atFechaHoy" type="date">
+        </div>
+        <div class="filter">
+          <label>Corte 1 · inicio</label>
+          <input id="atC1Ini" type="time" value="08:00">
+        </div>
+        <div class="filter">
+          <label>Corte 1 · fin</label>
+          <input id="atC1Fin" type="time" value="12:00">
+        </div>
+        <div class="filter">
+          <label>Corte 2 · inicio</label>
+          <input id="atC2Ini" type="time" value="12:00">
+        </div>
+        <div class="filter">
+          <label>Corte 2 · fin</label>
+          <input id="atC2Fin" type="time" value="17:00">
+        </div>
+        <div class="filter">
+          <label>&nbsp;</label>
+          <button type="button" class="btn" id="atRecalcBtn">🔄 Recalcular reparto</button>
+        </div>
+      </div>
+
+<div class="atfilterbar" id="atFilterBar"><select class="at-filter-select" id="atFilterArea"><option value="">Área: Todas</option></select><select class="at-filter-select" id="atFilterUser"><option value="">Asignado: Todos</option></select><select class="at-filter-select" id="atFilterQty"><option value="">Cantidad de tareas: Todas</option><option value="0-10">0–10</option><option value="11-30">11–30</option><option value="31-60">31–60</option><option value="61+">61+</option></select><select class="at-filter-select" id="atFilterUPT"><option value="">UPT: Todos</option><option value="0-10">0–10</option><option value="10-20">10–20</option><option value="20+">20+</option></select><select class="at-filter-select" id="atFilterZone"><option value="">Zona: Todas</option><option value="Lima">Lima</option><option value="Provincia">Provincia</option></select><select class="at-filter-select" id="atFilterRoute"><option value="">Ruta: Todas</option></select><button class="at-chip" id="atFilterClear" type="button">Limpiar filtros</button></div><div class="atExecChart" id="atExecutiveChart"></div>      <div class="cardcontext" id="atSummary"></div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Cantidad (pares) por Área</div>
+          <div class="mini">Amarillo = <span id="atC1Label">Corte 1</span> · Verde = <span id="atC2Label">Corte 2</span>. Incluye UPT promedio.</div>
+        </div>
+      </div>
+      <div class="chart" id="atAreaChart" style="min-height:260px;width:100%;max-width:none;margin:0 auto"></div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Cumplimiento de capacidad por usuario</div>
+          <div class="mini">Capacidad esperada (meta ÷ jornada × horas del corte) vs. lo realmente asignado. Sirve para verificar si a alguien le faltó pool disponible en su área.</div>
+        </div>
+      </div>
+      <div class="compact-report" style="max-height:300px;overflow:auto"><table id="atCumplTable"></table></div><div style="margin-top:9px;text-align:right"><button class="btn" id="atCumplDownloadBtn">⬇ Excel / PDF</button></div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Lista de tareas asignadas</div>
+          <div class="mini">Columna "Corte" indica el turno; la fila se colorea igual que el gráfico.</div>
+        </div>
+      </div>
+      <div class="compact-report" style="max-height:460px;overflow:auto"><table id="atTasksTable"></table></div>
+      <div style="margin-top:9px;text-align:right">
+        <button class="btn" id="atDownloadBtn">⬇ Excel / PDF</button>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Sin asignar</div>
+          <div class="mini">Tareas que exceden la capacidad de ambos cortes.</div>
+        </div>
+      </div>
+      <div class="compact-report" style="max-height:300px;overflow:auto"><table id="atLeftoverTable"></table></div><div style="margin-top:9px;text-align:right"><button class="btn" id="atLeftoverDownloadBtn">⬇ Excel / PDF</button></div>
+    </section>
+    </div>
+
+
+    <div id="view-jefatura" class="viewsection">
+    <section class="card" style="margin-top:10px;padding:10px 14px">
+      <div class="h" style="font-size:15px">Contexto de Jefatura</div>
+      <div class="mini">Referencia visible del criterio aplicado para todas las vistas de jefatura.</div>
+      <div class="cardcontext" id="jefTopContext"></div>
+      <div class="ctxfilters" id="jefTopFilters"></div>
+    </section>
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Control de arranque</div>
+          <div class="mini">Comparación de la primera selección real contra el estándar 08:11. Lunes a sábado. Verde ≤ 08:11 · ámbar 08:12–08:20 · rojo &gt; 08:20.</div>
+        </div>
+      </div>
+      <div class="startkpis" id="startKpis"></div>
+      <div class="tblbox"><table class="mgmt" id="startTable"></table></div>
+    </section>
+    <section class="grid2">
+      <div class="card">
+        <div class="h">Avance diario de Picking</div>
+        <div class="mini">Unidades procesadas por día · el color refleja el cumplimiento de productividad vs meta</div>
+        <div class="chart" id="dayChart"></div>
+      </div>
+      <div class="card">
+        <div class="dayhead">
+          <div>
+            <div class="h">Detalle usuario por día</div>
+            <div class="mini">Unidades, HH efectivas y productividad real de cada picker en el día seleccionado</div>
+          </div>
+          <div>
+            <div class="mini" style="margin-bottom:3px">Fecha de detalle</div>
+            <select id="dayDetail" class="dayselect"></select>
+          </div>
+        </div>
+        <div class="daysummary" id="daySummary"></div>
+        <div style="max-height:360px;overflow:auto"><table id="userDayTable"></table></div>
+        <div style="margin-top:9px;text-align:right">
+          <button class="btn" id="exportUserDayBtn">⬇ Excel / PDF</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:10px">
+      <div class="dayhead">
+        <div>
+          <div class="h">Evaluación semanal por usuario</div>
+          <div class="mini">Visualiza cuánto picó cada usuario por día de la semana dentro de la semana seleccionada.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+          <div>
+            <div class="mini" style="margin-bottom:3px">Semana a evaluar</div>
+            <select id="jefWeekDetail" class="dayselect"></select>
+          </div>
+          <div>
+            <div class="mini" style="margin-bottom:3px">Categorías Jefatura</div>
+            <div class="checkgroup" id="jefCatGroup">
+              <label class="checktag"><input type="checkbox" class="jefcat" value="CALZADO" checked>Calzado</label>
+              <label class="checktag"><input type="checkbox" class="jefcat" value="ACCESORIO" checked>Accesorio</label>
+              <label class="checktag"><input type="checkbox" class="jefcat" value="PP" checked>PP</label>
+            <label class="checktag"><input type="checkbox" class="jefcat" value="INSUMO" checked>Insumo</label>
+            <label class="checktag"><input type="checkbox" class="jefcat" value="MATERIALES" checked>Materiales</label>
+            </div>
+          </div>
+          <button class="btn" id="exportJefWeekBtn">⬇ Excel / PDF</button>
+        </div>
+      </div>
+      <div class="daysummary" id="jefWeekSummary"></div>
+      <div class="weekbox"><table class="weektbl" id="jefWeekTable"></table></div>
+    </section>
+
+    <section class="grid4">
+      <div class="card">
+        <div class="h">Ranking de usuarios</div>
+        <div class="mini">Compara a los pickers bajo el mismo período y filtros.</div>
+        <div class="cardcontext" id="rankContext"></div>
+        <div class="ctxfilters" id="rankFilters"></div>
+        <div style="max-height:330px;overflow:auto"><table id="rankTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="h">Productividad por hora</div>
+        <div class="mini">Agrupa el desempeño según la hora del día.</div>
+        <div class="cardcontext" id="hourContext"></div>
+        <div class="ctxfilters" id="hourFilters"></div>
+        <div class="chart" id="hourChart"></div>
+      </div>
+      <div class="card">
+        <div class="h">Productividad por área</div>
+        <div class="mini">Compara las áreas con mayor volumen del período.</div>
+        <div class="cardcontext" id="areaContext"></div>
+        <div class="ctxfilters" id="areaFilters"></div>
+        <div class="chart" id="areaChart"></div>
+      </div>
+      <div class="alertbox">
+        <div class="h">Alertas y hallazgos</div>
+        <div class="mini">Lectura automática usando el mismo universo filtrado.</div>
+        <div class="cardcontext" id="alertContext"></div>
+        <div class="ctxfilters" id="alertFilters"></div>
+        <div id="alerts"></div>
+      </div>
+    </section>
+
+    </div>
+
+    <div id="configModal" class="configbackdrop">
+      <div class="configmodal">
+        <div class="confighead">
+          <div>
+            <div class="h">Configuración del reporte</div>
+            <div class="mini">Modifica textos, metas y parámetros sin tocar el código. La configuración se guarda en este navegador.</div>
+          </div>
+          <button class="btn" id="closeConfigBtn">Cerrar</button>
+        </div>
+        <div class="configgrid">
+          <div class="filter"><label>Título del reporte</label><input id="cfgTitle" type="text"></div>
+          <div class="filter"><label>Subtítulo</label><input id="cfgSubtitle" type="text"></div>
+          <div class="filter"><label>Meta normal (und/HH)</label><input id="cfgMeta" type="number" min="1" step="1"></div>
+          <div class="filter"><label>Meta PP (cajas/HH)</label><input id="cfgMetaPP" type="number" min="1" step="1"></div>
+          <div class="filter"><label>Meta diaria de supervisión</label><input id="cfgDailyTarget" type="number" min="1" step="100"></div>
+          <div class="filter"><label>Hora inicio supervisión</label><input id="cfgStartHour" type="number" min="0" max="23"></div>
+          <div class="filter"><label>Hora fin supervisión</label><input id="cfgEndHour" type="number" min="1" max="23"></div>
+          <div class="filter"><label>Semáforo rojo hasta (unid/h)</label><input id="cfgLowThr" type="number" min="0" step="1"></div>
+          <div class="filter"><label>Semáforo verde desde (unid/h)</label><input id="cfgHighThr" type="number" min="1" step="1"></div>
+          <div class="filter"><label>Corte de inactividad (min)</label><input id="cfgGapMinutes" type="number" min="1" max="120" step="1"></div>
+          <div class="filter"><label>Inicio estándar Picking</label><input id="cfgOpStartTime" type="time"></div>
+          <div class="filter"><label>Descuentos jornada</label><input value="Según última selección" disabled></div>
+          <div class="filter"><label>Tope máximo de HH</label><input value="Sin tope" disabled></div>
+          <div class="filter"><label>Texto corto de vista supervisor</label><input id="cfgSupLabel" type="text"></div>
+        </div>
+        <div class="smallnote">Semáforo de productividad: rojo ≤ 100 · ámbar entre 101 y 142 · verde ≥ 143 (referencia normal). Inicio estándar operativo: 08:11. Descuento: lunes–viernes según última selección; sábado según regla 14:30. No existe tope máximo de HH. El corte de inactividad es 10 min. Todos los resultados visuales se muestran redondeados, sin decimales.</div>
+        <div class="configactions">
+          <button class="btn" id="resetConfigBtn">Restaurar valores base</button>
+          <button class="btn" id="exportConfigBtn">Exportar configuración</button>
+          <label class="btn" style="cursor:pointer">Importar configuración<input id="importConfigInput" type="file" accept=".json" style="display:none"></label>
+          <button class="filebtn" id="saveConfigBtn">💾 Guardar configuración</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Fuente: WMS Picking · Operativa = producción ÷ HH desde MIN(primera selección, 08:11) hasta última selección, con descuento por última selección y sin tope · Efectiva = producción ÷ sesiones activas WMS</div>
+      <div id="footRange"></div>
+    </div>
+  </main>
+</div>
+
+<!-- PROCESADOR DE ARCHIVOS (se queda dentro de index.html porque el navegador lo necesita así) -->
+<script type="javascript/worker" id="worker-script">
+function parseLine(line, delim){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(q && line[i+1]==='"'){cur+='"'; i++;}
+      else q=!q;
+    } else if(ch===delim && !q){out.push(cur);cur='';}
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+function countSep(line, sep){
+  let q=false,n=0;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){ if(q && line[i+1]==='"'){i++;} else q=!q; }
+    else if(ch===sep && !q)n++;
+  }
+  return n;
+}
+function norm(s){return (s||'').replace(/^\uFEFF/,'').trim();}
+function stripAcc(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function nkey(s){return stripAcc(norm(s)).toLowerCase().replace(/\s+/g,' ').replace(/_/g,' ');}
+function num(v){
+  v=norm(v).replace(/\s/g,'');
+  if(v==='') return 0;
+  if(v.includes(',') && !v.includes('.')) v=v.replace(',','.');
+  else if(v.includes(',') && v.includes('.')){
+    if(v.lastIndexOf(',')>v.lastIndexOf('.')) v=v.replace(/\./g,'').replace(',','.');
+    else v=v.replace(/,/g,'');
+  }
+  const x=Number(v); return Number.isFinite(x)?x:0;
+}
+function dateISO(v){
+  v=norm(v);
+  let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  return v.slice(0,10);
+}
+function dateTimeMs(v){
+  v=norm(v);
+  let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(m) return Date.UTC(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0));
+  m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(m) return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));
+  return NaN;
+}
+function fallbackTs(dateIso,hour){
+  const m=dateIso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return NaN;
+  return Date.UTC(+m[1],+m[2]-1,+m[3],Math.max(0,Math.min(23,Math.floor(num(hour)))),0,0);
+}
+function hourFromMs(ms,fallback){
+  if(Number.isFinite(ms)) return new Date(ms).getUTCHours();
+  return Math.floor(num(fallback));
+}
+
+// ===== Adaptador formato "Allocation" (export crudo del WMS) =====
+// Tabla de tiendas: código -> [Zona(Tipo_Pedido), Turno(DIA/NOCHE), Ruta]
+const STORE_TABLE={"50284":["LIMA","DIA","VIERNES DIA","B HUAYCAN"],"50272":["LIMA","DIA","VIERNES DIA","B CHOSICA"],"50277":["LIMA","DIA","MARTES - JUEVES DIA","B2 CERES"],"50218":["LIMA","DIA","MARTES - JUEVES DIA","B AGUSTINO"],"50120":["LIMA","DIA","LUNES DIA","B1 CALLAO"],"50334":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B2 MALL DEL SUR"],"50336":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B MALL DEL SUR"],"50337":["LIMA","DIA","LUNES - MIÉRCOLES DIA","BG MALL DEL SUR"],"50339":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B ATOCONGO"],"50409":["LIMA","DIA","LUNES DIA","B PUNTA HERMOSA"],"50348":["LIMA","DIA","LUNES DIA","B2 LURIN."],"50268":["LIMA","DIA","LUNES DIA","B LURIN"],"50269":["LIMA","DIA","LUNES DIA","BG LURIN"],"50223":["LIMA","DIA","JUEVES DIA","B CANTO GRANDE"],"50214":["LIMA","DIA","JUEVES DIA","B NUEVO SAN JUAN"],"50116":["LIMA","DIA","JUEVES DIA","B2 ZARATE"],"50159":["LIMA","DIA","JUEVES DIA","B3 ZARATE"],"50226":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B3 SAN JUAN DE LURIGANCHO"],"50228":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B4 SAN JUAN DE LURIGANCHO"],"50241":["LIMA","DIA","LUNES - MIÉRCOLES DIA","B SAN JUAN DE LURIGANCHO"],"50243":["LIMA","DIA","LUNES - MIÉRCOLES DIA","NS SAN JUAN DE LURIGANCHO"],"50394":["LIMA","DIA","MARTES DIA","B BREÑA"],"50395":["LIMA","DIA","MARTES DIA","BG BREÑA"],"50398":["LIMA","DIA","MARTES DIA","B2 BREÑA"],"50345":["LIMA","DIA","MARTES DIA","B PRIMAVERA"],"50257":["LIMA","DIA","VIERNES DIA","B CANADA"],"50199":["LIMA","DIA","VIERNES DIA","B3 HIGUERETA"],"50332":["LIMA","DIA","VIERNES DIA","B1 SURQUILLO"],"50344":["LIMA","DIA","VIERNES DIA","B SURCO"],"50340":["LIMA","NOCHE","MIÉRCOLES - VIERNES NOCHE","B JOCKEY PLAZA"],"50251":["LIMA","NOCHE","MIÉRCOLES - VIERNES NOCHE","B2 ANGAMOS"],"50141":["LIMA","DIA","LUNES - JUEVES DIA","B1 SAN BORJA"],"50351":["LIMA","DIA","LUNES - JUEVES DIA","B3 SAN BORJA"],"50266":["LIMA","DIA","MARTES DIA","B3 VILLA EL SALVADOR"],"50258":["LIMA","DIA","MARTES DIA","B5 VILLA EL SALVADOR"],"50263":["LIMA","DIA","MARTES DIA","B2 VILLA EL SALVADOR"],"50259":["LIMA","DIA","MARTES DIA","B4 VILLA EL SALVADOR"],"50265":["LIMA","DIA","MARTES DIA","B VILLA MARIA."],"50273":["LIMA","DIA","MARTES DIA","NS VILLA MARIA"],"50392":["LIMA","DIA","VIERNES DIA","B3 MAGDALENA"],"50140":["LIMA","DIA","VIERNES DIA","B1 MIRAFLORES"],"50143":["LIMA","DIA","VIERNES DIA","B5 MIRAFLORES"],"50147":["LIMA","DIA","VIERNES DIA","B4 MIRAFLORES"],"50330":["LIMA","DIA","VIERNES DIA","B LINCE"],"50279":["LIMA","DIA","MARTES - JUEVES DIA","B2 SANTA ANITA"],"50275":["LIMA","DIA","MARTES - JUEVES DIA","B1 SANTA ANITA"],"50293":["LIMA","DIA","MARTES - JUEVES DIA","NS SANTA ANITA"],"50153":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B3 CHORRILLOS."],"50154":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B4 CHORRILLOS"],"50149":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B CHORRILLOS"],"50152":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B2 CHORRILLOS"],"50157":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B5 CHORRILLOS"],"50117":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B3 SAN MIGUEL"],"50122":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B2 SAN MIGUEL"],"50156":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","NS SAN MIGUEL"],"50119":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B BELLAVISTA"],"50130":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","NS BELLAVISTA"],"50235":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B FAUCETT"],"50230":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B MINKA"],"50232":["LIMA","DIA","MIÉRCOLES - VIERNES DIA","B2 MINKA"],"50290":["LIMA","DIA","MARTES DIA","B1 JESUS MARIA"],"50390":["LIMA","DIA","MARTES DIA","B2 JESUS MARIA"],"50393":["LIMA","DIA","MARTES DIA","B SALAVERRY"],"50207":["LIMA","DIA","JUEVES DIA","B3 INDEPENDENCIA"],"50189":["LIMA","DIA","JUEVES DIA","B2 INDEPENDENCIA"],"50245":["LIMA","DIA","JUEVES DIA","B5 COMAS"],"50158":["LIMA","DIA","JUEVES DIA","B SAN MARTIN DE PORRES"],"50124":["LIMA","DIA","VIERNES DIA","B VENTANILLA"],"50131":["LIMA","DIA","VIERNES DIA","B MI PERU"],"50129":["LIMA","DIA","VIERNES DIA","B2 VENTANILLA"],"50270":["LIMA","DIA","JUEVES DIA","BG SANTA CLARA"],"50271":["LIMA","DIA","JUEVES DIA","B SANTA CLARA"],"50267":["LIMA","DIA","MARTES DIA","B LA MOLINA"],"50292":["LIMA","DIA","MARTES DIA","B3 LA MOLINA"],"50288":["LIMA","DIA","MARTES DIA","B2 PURUCHUCO"],"50289":["LIMA","DIA","MARTES DIA","B PURUCHUCO"],"50294":["LIMA","DIA","MARTES DIA","NS PURUCHUCO"],"50221":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B PRO"],"50224":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B PUENTE PIEDRA"],"50225":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B2 PUENTE PIEDRA"],"50240":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B3 COMAS"],"50244":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B4 COMAS"],"50196":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B2 COMAS"],"50237":["LIMA","NOCHE","MARTES - JUEVES NOCHE","NS COMAS"],"50242":["LIMA","NOCHE","MARTES - JUEVES NOCHE","BG2 COMAS"],"50333":["LIMA","NOCHE","LUNES NOCHE","B2 SAN JUAN DE MIRAFLORES"],"50350":["LIMA","NOCHE","LUNES NOCHE","B SAN JUAN DE MIRAFLORES"],"50249":["LIMA","NOCHE","MIÉRCOLES NOCHE","B4 OLIVOS"],"50227":["LIMA","NOCHE","MIÉRCOLES NOCHE","B3 LOS OLIVOS"],"50217":["LIMA","NOCHE","MIÉRCOLES NOCHE","B LOS OLIVOS"],"50222":["LIMA","NOCHE","MIÉRCOLES NOCHE","B2 LOS OLIVOS"],"50253":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B GAMARRA"],"50254":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B2 GAMARRA"],"50255":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B3 GAMARRA"],"50256":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B4 GAMARRA"],"50201":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","NS PLAZA NORTE"],"50208":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","B PLAZA NORTE"],"50209":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","BG PLAZA NORTE"],"50102":["LIMA","NOCHE","MIÉRCOLES NOCHE","B CENTRO CIVICO"],"50106":["LIMA","NOCHE","MIÉRCOLES NOCHE","NS CENTRO CIVICO"],"50204":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","B2 MEGA PLAZA"],"50210":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","B MEGAPLAZA"],"50213":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","BG MEGA PLAZA"],"50239":["LIMA","NOCHE","LUNES - MIÉRCOLES - VIERNES NOCHE","NS MEGAPLAZA"],"50109":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B AV ABANCAY"],"50205":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B ZAVALA"],"50238":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B JR ANDAHUAYLAS"],"50203":["LIMA","NOCHE","MARTES - JUEVES NOCHE","B MERCADO CENTRAL"],"50125":["LIMA","NOCHE","JUEVES NOCHE","B4 JR. DE LA UNION"],"50128":["LIMA","NOCHE","JUEVES NOCHE","B6 JR. DE LA UNION"],"50107":["LIMA","NOCHE","JUEVES NOCHE","B1 JR DE LA UNION"],"50397":["LIMA","NOCHE","JUEVES NOCHE","B RIMAC"],"50246":["LIMA","DIA","VIERNES DIA","B CARABAYLLO"],"50247":["LIMA","DIA","VIERNES DIA","B2 CARABAYLLO"],"50248":["LIMA","DIA","VIERNES DIA","B3 CARABAYLLO"],"50407":["PROVINCIA","PROVINCIA","DIVAL","B CASMA"],"50430":["PROVINCIA","PROVINCIA","DIVAL","B CHEPEN"],"50399":["PROVINCIA","PROVINCIA","DIVAL","B4 HUACHO"],"50401":["PROVINCIA","PROVINCIA","DIVAL","B HUACHO"],"50641":["PROVINCIA","PROVINCIA","DIVAL","B HUARAZ"],"50642":["PROVINCIA","PROVINCIA","DIVAL","B2 HUARAZ"],"50404":["PROVINCIA","PROVINCIA","DIVAL","B2 BARRANCA"],"50405":["PROVINCIA","PROVINCIA","DIVAL","B3 BARRANCA"],"50423":["PROVINCIA","PROVINCIA","DIVAL","B HUAMACHUCO"],"50406":["PROVINCIA","PROVINCIA","DIVAL","B HUARAL"],"50410":["PROVINCIA","PROVINCIA","DIVAL","B2 HUARAL"],"50408":["PROVINCIA","PROVINCIA","DIVAL","B CHANCAY"],"50643":["PROVINCIA","PROVINCIA","DIVAL","B3 HUARAZ"],"50801":["PROVINCIA","PROVINCIA","DIVAL","B1 IQUITOS"],"50802":["PROVINCIA","PROVINCIA","DIVAL","B2 IQUITOS"],"50804":["PROVINCIA","PROVINCIA","DIVAL","B4 IQUITOS"],"50809":["PROVINCIA","PROVINCIA","DIVAL","B8 IQUITOS"],"50813":["PROVINCIA","PROVINCIA","DIVAL","NS IQUITOS"],"50807":["PROVINCIA","PROVINCIA","DIVAL","B YURIMAGUAS"],"50418":["PROVINCIA","PROVINCIA","ITTSA","B PACASMAYO"],"50561":["PROVINCIA","PROVINCIA","ITTSA","B AGUAS VERDES"],"50443":["PROVINCIA","PROVINCIA","ITTSA","BG2 TRUJILLO"],"50420":["PROVINCIA","PROVINCIA","ITTSA","NS TRUJILLO"],"50421":["PROVINCIA","PROVINCIA","ITTSA","B1 TRUJILLO"],"50428":["PROVINCIA","PROVINCIA","ITTSA","B7 TRUJILLO"],"50416":["PROVINCIA","PROVINCIA","ITTSA","B9 TRUJILLO"],"50427":["PROVINCIA","PROVINCIA","ITTSA","B6 TRUJILLO"],"50422":["PROVINCIA","PROVINCIA","ITTSA","B3 TRUJILLO"],"50424":["PROVINCIA","PROVINCIA","ITTSA","B5 TRUJILLO"],"50425":["PROVINCIA","PROVINCIA","ITTSA","B4 TRUJILLO"],"50429":["PROVINCIA","PROVINCIA","ITTSA","B8 TRUJILLO"],"50506":["PROVINCIA","PROVINCIA","ITTSA","B3 CHICLAYO"],"50508":["PROVINCIA","PROVINCIA","ITTSA","NS2 CHICLAYO"],"50459":["PROVINCIA","PROVINCIA","ITTSA","NS CHICLAYO"],"50501":["PROVINCIA","PROVINCIA","ITTSA","B1 CHICLAYO"],"50502":["PROVINCIA","PROVINCIA","ITTSA","B2 CHICLAYO"],"50505":["PROVINCIA","PROVINCIA","ITTSA","B5 CHICLAYO"],"50511":["PROVINCIA","PROVINCIA","ITTSA","B6 CHICLAYO"],"50516":["PROVINCIA","PROVINCIA","ITTSA","B8 CHICLAYO"],"50411":["PROVINCIA","PROVINCIA","ITTSA","B1 CHIMBOTE"],"50412":["PROVINCIA","PROVINCIA","ITTSA","B4 CHIMBOTE"],"50413":["PROVINCIA","PROVINCIA","ITTSA","B3 CHIMBOTE"],"50414":["PROVINCIA","PROVINCIA","ITTSA","B5 CHIMBOTE"],"50515":["PROVINCIA","PROVINCIA","ITTSA","B2 CHIMBOTE"],"50514":["PROVINCIA","PROVINCIA","ITTSA","B LAMBAYEQUE"],"50530":["PROVINCIA","PROVINCIA","ITTSA","B1 PIURA"],"50531":["PROVINCIA","PROVINCIA","ITTSA","B2 PIURA"],"50533":["PROVINCIA","PROVINCIA","ITTSA","B5 PIURA"],"50538":["PROVINCIA","PROVINCIA","ITTSA","B3 PIURA"],"50539":["PROVINCIA","PROVINCIA","ITTSA","B7 PIURA"],"50542":["PROVINCIA","PROVINCIA","ITTSA","BG PIURA"],"50543":["PROVINCIA","PROVINCIA","ITTSA","BG 2 PIURA"],"50532":["PROVINCIA","PROVINCIA","ITTSA","B6 PIURA"],"50540":["PROVINCIA","PROVINCIA","ITTSA","B SULLANA"],"50544":["PROVINCIA","PROVINCIA","ITTSA","B2 SULLANA"],"50546":["PROVINCIA","PROVINCIA","ITTSA","B TALARA"],"50560":["PROVINCIA","PROVINCIA","ITTSA","B1 TUMBES"],"50563":["PROVINCIA","PROVINCIA","ITTSA","B2 TUMBES"],"50564":["PROVINCIA","PROVINCIA","ITTSA","B3 TUMBES"],"50790":["PROVINCIA","PROVINCIA","LOG","B ABANCAY"],"50792":["PROVINCIA","PROVINCIA","LOG","B ANDAHUAYLAS"],"50760":["PROVINCIA","PROVINCIA","LOG","B AYACUCHO"],"50763":["PROVINCIA","PROVINCIA","LOG","B 2 AYACUCHO"],"50834":["PROVINCIA","PROVINCIA","LOG","B BAGUA GRANDE"],"50528":["PROVINCIA","PROVINCIA","LOG","B BAMBAMARCA"],"50518":["PROVINCIA","PROVINCIA","LOG","B CAJABAMBA"],"50521":["PROVINCIA","PROVINCIA","LOG","B2 CAJAMARCA"],"50522":["PROVINCIA","PROVINCIA","LOG","B3 CAJAMARCA"],"50523":["PROVINCIA","PROVINCIA","LOG","B4 CAJAMARCA"],"50524":["PROVINCIA","PROVINCIA","LOG","BG CAJAMARCA"],"50526":["PROVINCIA","PROVINCIA","LOG","WB CAJAMARCA"],"50547":["PROVINCIA","PROVINCIA","LOG","B CATACAOS"],"50829":["PROVINCIA","PROVINCIA","LOG","B CHACHAPOYAS"],"50519":["PROVINCIA","PROVINCIA","LOG","B CHOTA"],"50545":["PROVINCIA","PROVINCIA","LOG","B CHULUCANAS"],"50749":["PROVINCIA","PROVINCIA","LOG","B6 CUSCO"],"50758":["PROVINCIA","PROVINCIA","LOG","WB CUSCO"],"50740":["PROVINCIA","PROVINCIA","LOG","B1 CUSCO"],"50741":["PROVINCIA","PROVINCIA","LOG","B2 CUSCO"],"50742":["PROVINCIA","PROVINCIA","LOG","B3 CUSCO"],"50744":["PROVINCIA","PROVINCIA","LOG","B4 CUSCO"],"50746":["PROVINCIA","PROVINCIA","LOG","B5 CUSCO"],"50747":["PROVINCIA","PROVINCIA","LOG","BG CUSCO"],"50750":["PROVINCIA","PROVINCIA","LOG","NS CUSCO"],"50525":["PROVINCIA","PROVINCIA","LOG","B JAEN"],"50529":["PROVINCIA","PROVINCIA","LOG","B2 JAEN"],"50627":["PROVINCIA","PROVINCIA","LOG","B JUANJUI"],"50831":["PROVINCIA","PROVINCIA","LOG","B MOYOBAMBA"],"50541":["PROVINCIA","PROVINCIA","LOG","B PAITA"],"50535":["PROVINCIA","PROVINCIA","LOG","B LA UNION PIURA"],"50748":["PROVINCIA","PROVINCIA","LOG","B PUERTO MALDONADO"],"50745":["PROVINCIA","PROVINCIA","LOG","B. QUILLABAMBA"],"50830":["PROVINCIA","PROVINCIA","LOG","B TARAPOTO"],"50832":["PROVINCIA","PROVINCIA","LOG","B2 TARAPOTO"],"50417":["PROVINCIA","PROVINCIA","LOG","B VIRU"],"50720":["PROVINCIA","PROVINCIA","LOG","B CAMANA"],"50721":["PROVINCIA","PROVINCIA","LOG","B EL PEDREGAL"],"50701":["PROVINCIA","PROVINCIA","LOG","B1 AREQUIPA"],"50702":["PROVINCIA","PROVINCIA","LOG","B4 AREQUIPA"],"50704":["PROVINCIA","PROVINCIA","LOG","B5 AREQUIPA"],"50705":["PROVINCIA","PROVINCIA","LOG","B6 AREQUIPA"],"50706":["PROVINCIA","PROVINCIA","LOG","B2 AREQUIPA"],"50707":["PROVINCIA","PROVINCIA","LOG","B7 AREQUIPA"],"50708":["PROVINCIA","PROVINCIA","LOG","NS2 AREQUIPA"],"50709":["PROVINCIA","PROVINCIA","LOG","B8 AREQUIPA"],"50710":["PROVINCIA","PROVINCIA","LOG","B9 AREQUIPA"],"50711":["PROVINCIA","PROVINCIA","LOG","B10 AREQUIPA"],"50719":["PROVINCIA","PROVINCIA","LOG","B12 AREQUIPA"],"50722":["PROVINCIA","PROVINCIA","LOG","NS AREQUIPA"],"50728":["PROVINCIA","PROVINCIA","LOG","WB3 AREQUIPA"],"50729":["PROVINCIA","PROVINCIA","LOG","BG3 AREQUIPA"],"50730":["PROVINCIA","PROVINCIA","LOG","WB4 AREQUIPA"],"50723":["PROVINCIA","PROVINCIA","TOSCANO","B ILO"],"50751":["PROVINCIA","PROVINCIA","TOSCANO","B1 JULIACA"],"50754":["PROVINCIA","PROVINCIA","TOSCANO","BG JULIACA"],"50755":["PROVINCIA","PROVINCIA","TOSCANO","WB JULIACA"],"50727":["PROVINCIA","PROVINCIA","TOSCANO","B MOQUEGUA"],"50753":["PROVINCIA","PROVINCIA","TOSCANO","B1 PUNO"],"50756":["PROVINCIA","PROVINCIA","TOSCANO","B2 PUNO"],"50757":["PROVINCIA","PROVINCIA","TOSCANO","WB PUNO"],"50725":["PROVINCIA","PROVINCIA","TOSCANO","B1 TACNA"],"50726":["PROVINCIA","PROVINCIA","TOSCANO","B2 TACNA"],"50431":["PROVINCIA","PROVINCIA","TOSCANO","B1 CHINCHA"],"50434":["PROVINCIA","PROVINCIA","TOSCANO","B3 CHINCHA"],"50433":["PROVINCIA","PROVINCIA","TOSCANO","B2 CHINCHA"],"50450":["PROVINCIA","PROVINCIA","TOSCANO","B1 ICA"],"50452":["PROVINCIA","PROVINCIA","TOSCANO","B3 ICA"],"50453":["PROVINCIA","PROVINCIA","TOSCANO","B4 ICA"],"50455":["PROVINCIA","PROVINCIA","TOSCANO","BG ICA"],"50451":["PROVINCIA","PROVINCIA","TOSCANO","B2 ICA"],"50457":["PROVINCIA","PROVINCIA","TOSCANO","B NAZCA"],"50454":["PROVINCIA","PROVINCIA","TOSCANO","B CAÑETE"],"50456":["PROVINCIA","PROVINCIA","TOSCANO","BG CAÑETE"],"50440":["PROVINCIA","PROVINCIA","TOSCANO","B1 PISCO"],"50441":["PROVINCIA","PROVINCIA","TOSCANO","B2 PISCO"],"50614":["PROVINCIA","PROVINCIA","TOSCANO","B CERRO DE PASCO"],"50816":["PROVINCIA","PROVINCIA","TOSCANO","B4 HUANUCO"],"50820":["PROVINCIA","PROVINCIA","TOSCANO","B HUANUCO"],"50818":["PROVINCIA","PROVINCIA","TOSCANO","B3 HUANUCO"],"50621":["PROVINCIA","PROVINCIA","TOSCANO","B LA MERCED"],"50626":["PROVINCIA","PROVINCIA","TOSCANO","B PICHANAQUI"],"50822":["PROVINCIA","PROVINCIA","TOSCANO","B1 PUCALLPA"],"50826":["PROVINCIA","PROVINCIA","TOSCANO","B3 PUCALLPA"],"50827":["PROVINCIA","PROVINCIA","TOSCANO","B4 PUCALLPA"],"50625":["PROVINCIA","PROVINCIA","TOSCANO","B SATIPO"],"50620":["PROVINCIA","PROVINCIA","TOSCANO","B TARMA"],"50828":["PROVINCIA","PROVINCIA","TOSCANO","B2 TINGO MARIA"],"50837":["PROVINCIA","PROVINCIA","TOSCANO","NS HUANUCO"],"50836":["PROVINCIA","PROVINCIA","TOSCANO","NS PUCALLPA"],"50601":["PROVINCIA","PROVINCIA","TRANSA","B1 HUANCAYO"],"50602":["PROVINCIA","PROVINCIA","TRANSA","B2 HUANCAYO"],"50603":["PROVINCIA","PROVINCIA","TRANSA","B3 HUANCAYO"],"50605":["PROVINCIA","PROVINCIA","TRANSA","B5 HUANCAYO"],"50606":["PROVINCIA","PROVINCIA","TRANSA 4 y 7 HUANCAYO","B4 HUANCAYO"],"50607":["PROVINCIA","PROVINCIA","TRANSA","B6 HUANCAYO"],"50609":["PROVINCIA","PROVINCIA","TRANSA","WB HUANCAYO"],"50610":["PROVINCIA","PROVINCIA","TRANSA","WB2 HUANCAYO"],"50615":["PROVINCIA","PROVINCIA","TRANSA 4 y 7 HUANCAYO","B7 HUANCAYO"],"50622":["PROVINCIA","PROVINCIA","TRANSA","B HUANCAVELICA"]};
+// Prefijos de Código de artículo (7 primeros dígitos) que la empresa clasifica como INSUMO
+const INSUMO_CODE_PREFIXES=new Set(['9992849','9992847','9992846','9005800','9992848','9945990','9946996','9946995','9949997','9949998','9949999','9900300','9900301','9903902','9903903','9900602']);
+function stripFormulaWrap(v){
+  v=norm(v);
+  // El parser de CSV ya interpreta las comillas de celdas tipo ="50120",
+  // dejando el valor como =50120 (o, según el origen, ="50120" completo).
+  if(v.charAt(0)==='=') v=v.slice(1);
+  if(v.length>=2 && v.charAt(0)==='"' && v.charAt(v.length-1)==='"') v=v.slice(1,-1);
+  return v;
+}
+function masterLookup(m,c){c=stripFormulaWrap(c);return (m&&(m[c]||m[c.slice(0,7)]))||'';}
+function categoriaFromCodigo(rawCodigo){
+  const z=norm(rawCodigo);
+  if(z.length===5) return 'MATERIALES';
+  if(INSUMO_CODE_PREFIXES.has(z.slice(0,7))) return 'INSUMO';
+  if(z.charAt(0)==='9') return 'ACC';
+  return 'CALZ';
+}
+// LARGO(Código de artículo)=12 -> "SOLI" (va a Und_cantidad); si no, "PRE PACK" (va a Und_PRE PACK.)
+function esPrePack(rawCodigo){
+  return norm(rawCodigo).length!==12;
+}
+// Multiplicador de PRE PACK: =EXTRAE(C2;11;2) -> 2 dígitos a partir de la posición 11 (1-indexado)
+// del Código de artículo. Si no se puede leer, se asume 1 (no se pierde la cantidad empaquetada).
+function ppMultiplier(rawCodigo){
+  const z=norm(rawCodigo);
+  const s=z.slice(10,12);
+  const n=parseInt(s,10);
+  return Number.isFinite(n)&&n>0 ? n : 1;
+}
+// Clave única por línea, usada para fusionar archivos sin duplicar información.
+// Formato Allocation: orden + LPN/contenedor + SKU + ubicación + fecha/hora de selección
+// identifican de forma natural una línea de picking real del WMS.
+// Formato Data (ya procesado): no trae esos campos, así que se arma una clave con las
+// dimensiones + cantidad de esa fila (mejor esfuerzo, sin garantía tan fuerte como Allocation).
+function rowDedupeKey(isAllocation,AI,d,ts,a,rf){
+  if(isAllocation){
+    return ['A',d,ts,stripFormulaWrap(a[AI.orden]),stripFormulaWrap(a[AI.contenedor]),norm(a[AI.codigo]),norm(a[AI.ubicActiva])].join('\u001f');
+  }
+  return ['D',d,ts,norm(rf.user),norm(rf.cat),norm(rf.turn),norm(rf.area),norm(rf.tipo),norm(rf.units),norm(rf.pp)].join('\u001f');
+}
+function areaFromUbicacion(rawLoc){
+  const v=norm(rawLoc);
+  if(!v) return '';
+  const i=v.indexOf('-');
+  return i>0 ? v.slice(0,i) : v;
+}
+// Regla de etiqueta: las áreas AND, SEL y MZN01 se agrupan y muestran como "1er PISO".
+const AREA_LABEL_MAP={'AND':'1er PISO','SEL':'1er PISO','MZN01':'1er PISO'};
+function mapAreaLabel(rawArea){
+  const v=norm(rawArea).toUpperCase();
+  return AREA_LABEL_MAP[v]||norm(rawArea);
+}
+function storeInfoFromInstalacion(rawInstalacion){
+  const code=stripFormulaWrap(rawInstalacion).trim();
+  const s=STORE_TABLE[code];
+  return s ? {zona:s[0],turno:s[1],ruta:s[2],tienda:s[3]||''} : null;
+}
+// ===== Fin adaptador Allocation =====
+
+
+self.onmessage=async(e)=>{
+  try{
+    const file=e.data.file;
+    // Claves de filas ya cargadas en el dashboard (histórico + actualización del día).
+    // Sirven para que un archivo nuevo se FUSIONE en vez de reemplazar: las líneas que
+    // ya existen se ignoran y solo se agregan las que son realmente nuevas.
+    const existingKeys=new Set(Array.isArray(e.data.existingKeys)?e.data.existingKeys:[]);
+    let duplicates=0;
+    const GAP_MINUTES=Math.max(1,Number(e.data.gapMinutes)||10);
+    const OP_START_TIME=String(e.data.opStartTime||'08:11').match(/^(\d{2}):(\d{2})$/)||['','08','11'];
+    const OP_START_MINUTES=Number(OP_START_TIME[1])*60+Number(OP_START_TIME[2]);
+    const MIN_SESSION_MINUTES=1;
+
+    if(/\.xlsx$/i.test(file.name)){
+      self.postMessage({type:'error',message:'Este reporte offline lee CSV. En Excel usa Archivo > Guardar como > CSV UTF-8 y vuelve a cargarlo.'}); return;
+    }
+
+    const buf=await file.arrayBuffer();
+    const bytes=new Uint8Array(buf);
+    const hasUtf8Bom=bytes.length>=3 && bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF;
+    let text=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+    // Excel 2016 en español suele exportar CSV en Windows-1252/ANSI, no UTF-8.
+    // Si detectamos caracteres corruptos típicos (mojibake) y no hay BOM UTF-8, reintentamos con esa codificación.
+    const looksMojibake=!hasUtf8Bom && (text.includes('\uFFFD') || /Ã[\u0080-\u00BF]|Â[ºª°]|â€™|â€œ|â€/.test(text));
+    if(looksMojibake){
+      try{ text=new TextDecoder('windows-1252',{fatal:false}).decode(bytes); }catch(e){}
+    }
+
+    const firstEnd=text.indexOf('\n');
+    if(firstEnd<0) throw new Error('El archivo no contiene filas.');
+
+    // Toma varias líneas de muestra (no solo el encabezado) para elegir el separador
+    // de forma robusta: soporta CSV separado por comas (Excel EN/US), por punto y coma
+    // (Excel ES/Excel 2016 con configuración regional en español) y por tabulador.
+    const sampleLines=[];
+    {
+      let sp=0,cnt=0;
+      while(sp<text.length && cnt<8){
+        let se=text.indexOf('\n',sp); if(se<0) se=text.length;
+        const ln=text.slice(sp,se).replace(/\r$/,'');
+        if(ln.trim()!=='' ){ sampleLines.push(ln); cnt++; }
+        sp=se+1;
+        if(se===text.length) break;
+      }
+    }
+    if(!sampleLines.length) sampleLines.push(text.slice(0,firstEnd).replace(/\r$/,''));
+
+    const first=sampleLines[0];
+    const seps=[',',';','\t']; let delim=seps[0],best=-1;
+    for(const s of seps){
+      const counts=sampleLines.map(l=>countSep(l,s));
+      const headCount=counts[0];
+      if(headCount<=0) continue;
+      const consistent=counts.every(c=>c===headCount);
+      // Preferimos el separador cuyo número de columnas es igual en todas las filas
+      // de muestra; ante empate, el que tenga más columnas.
+      const score=(consistent?1000:0)+headCount;
+      if(score>best){best=score;delim=s;}
+    }
+
+    const heads=parseLine(first,delim).map(norm);
+    const map={}; heads.forEach((h,i)=>map[nkey(h)]=i);
+    function idx(...names){for(const name of names){const k=nkey(name);if(k in map)return map[k];}return -1;}
+
+    // Detecta si el archivo viene en formato "Allocation" (export crudo del WMS)
+    // en vez del formato ya trabajado (Data.csv) que trae la columna "Fecha".
+    const isAllocation = (nkey('Fecha') in map)===false && (nkey('Número de orden') in map || nkey('Numero de orden') in map);
+
+    const I={
+      fecha:idx('Fecha'),
+      cat:idx('Categoria','Categoría'),
+      user:idx('Usuario'),
+      turn:idx('Turno'),
+      area:idx('Area','Área'),
+      tipo:idx('Tipo_Pedido','Tipo Pedido'),
+      order:idx('Orden_ID','Orden ID'),
+      units:idx('Und_Cantidad Conv','Und Cantidad Conv'),
+      rawunits:idx('Und_cantidad','Und cantidad','Und_Cantidad'),
+      pp:idx('Und_PRE PACK.','Und PRE PACK.'),
+      hour:idx('hora','Hora'),
+      selection:idx('Hora de selección','Hora de seleccion','Hora selección','Hora seleccion')
+    };
+
+    let AI=null;
+    if(isAllocation){
+      AI={
+        codigo:idx('Código de artículo','Codigo de articulo'),
+        instalacion:idx('Instalación de destino','Instalacion de destino'),
+        usSel:idx('Usuario de selección','Usuario de seleccion'),
+        horaSel:idx('Hora de selección','Hora de seleccion'),
+        ubicActiva:idx('Ubicación activa','Ubicacion activa'),
+        cantActual:idx('Cantidad actual'),
+        cantEmpaquetada:idx('Cantidad empaquetada'),
+        orden:idx('Número de orden','Numero de orden'),
+        contenedor:idx('Número de contenedor','Numero de contenedor'),
+        descripcion:idx('Descripción de artículo','Descripcion de articulo')
+      };
+      const requiredA=['codigo','instalacion','usSel','horaSel','ubicActiva'];
+      const missingA=requiredA.filter(k=>AI[k]<0);
+      if(missingA.length) throw new Error('Formato Allocation: faltan columnas: '+missingA.join(', ')+'. Encabezados encontrados: '+heads.join(' | '));
+      if(AI.cantActual<0 && AI.cantEmpaquetada<0) throw new Error('Formato Allocation: falta la columna Cantidad actual o Cantidad empaquetada.');
+    } else {
+      const required=['fecha','cat','user','turn','area','tipo','units','pp','hour','selection'];
+      const missing=required.filter(k=>I[k]<0);
+      if(missing.length) throw new Error('Faltan columnas obligatorias: '+missing.join(', ')+'. Encabezados encontrados: '+heads.join(' | '));
+    }
+
+    // Unifica ambos formatos a los mismos campos lógicos que usa el resto del procesamiento.
+    function getRowFields(raw){
+      if(isAllocation){
+        const horaSelRaw=raw[AI.horaSel];
+        const store=storeInfoFromInstalacion(raw[AI.instalacion]);
+        const cantActualRaw=AI.cantActual>=0?raw[AI.cantActual]:undefined;
+        const cantEmpRaw=AI.cantEmpaquetada>=0?raw[AI.cantEmpaquetada]:undefined;
+        // La cantidad base siempre es G2 = Cantidad empaquetada, tal cual las fórmulas:
+        // SI(LARGO(C2)=12;G2;EXTRAE(C2;11;2)*G2). "Cantidad actual" NO participa en ninguna
+        // de las dos ramas; solo se usa como respaldo si la columna Cantidad empaquetada
+        // no existiera en el archivo.
+        const unitsRaw=(cantEmpRaw!==undefined && norm(cantEmpRaw)!=='') ? cantEmpRaw : cantActualRaw;
+        const prePack=esPrePack(raw[AI.codigo]);
+        // Cantidad a devolver si es PRE PACK: =EXTRAE(Código;11;2)*G2, donde G2 es
+        // siempre la Cantidad empaquetada (no la Cantidad actual).
+        const ppQty=prePack ? String(ppMultiplier(raw[AI.codigo])*num(unitsRaw)) : 0;
+        return {
+          cat: masterLookup(e.data.master,raw[AI.codigo])||categoriaFromCodigo(raw[AI.codigo]),
+          fecha: norm(horaSelRaw).split(/\s+/)[0]||horaSelRaw,
+          user: raw[AI.usSel],
+          turn: store ? (store.turno==='NOCHE'?'Noche':'Día') : 'Día',
+          area: areaFromUbicacion(raw[AI.ubicActiva]),
+          tipo: store ? store.zona : 'OTROS',
+          units: prePack ? 0 : unitsRaw,
+          rawunits: unitsRaw,
+          pp: ppQty,
+          hour: '',
+          selection: horaSelRaw,
+          _store: store,
+          _cantidadRaw: prePack ? ppQty : unitsRaw
+        };
+      }
+      return {
+        cat: raw[I.cat], fecha: raw[I.fecha], user: raw[I.user], turn: raw[I.turn],
+        area: raw[I.area], tipo: raw[I.tipo], units: raw[I.units],
+        rawunits: I.rawunits>=0?raw[I.rawunits]:raw[I.units],
+        pp: raw[I.pp], hour: raw[I.hour], selection: raw[I.selection]
+      };
+    }
+
+    // Agrupación principal: Fecha + Usuario.
+    // Dentro de cada día/usuario se guardan eventos compactados por timestamp y dimensión.
+    const userDays=new Map();
+    let pos=firstEnd+1,total=0,kept=0,invalidTs=0;
+    let minDate='9999-99-99',maxDate='0000-00-00';
+    const details=isAllocation?[]:null; // Detalle a nivel de línea (orden/LPN/SKU/ubicación), solo disponible en formato Allocation.
+
+    while(pos<=text.length){
+      let end=text.indexOf('\n',pos); if(end<0)end=text.length;
+      let line=text.slice(pos,end); if(line.endsWith('\r'))line=line.slice(0,-1);
+      pos=end+1;
+      if(!line){if(end===text.length)break;continue;}
+
+      const a=parseLine(line,delim); total++;
+      const rf=getRowFields(a);
+      const cat=norm(rf.cat).toUpperCase();
+      if(cat!=='CALZ' && cat!=='ACC' && cat!=='INSUMO' && cat!=='MATERIALES'){
+        if(total%50000===0)self.postMessage({type:'progress',rows:total});
+        if(end===text.length)break;
+        continue;
+      }
+
+      const d=dateISO(rf.fecha);
+      const u=norm(rf.user);
+      if(!d||!u) continue;
+
+      let ts=dateTimeMs(rf.selection);
+      if(!Number.isFinite(ts)){
+        invalidTs++;
+        ts=fallbackTs(d,rf.hour);
+      }
+      if(!Number.isFinite(ts)) continue;
+
+      // Si esta línea ya está cargada en el dashboard (mismo pedido/LPN/SKU/ubicación y
+      // hora de selección, o misma combinación de dimensiones en formato Data), se ignora
+      // para no duplicar cantidades al fusionar con la información existente.
+      const rowKey=rowDedupeKey(isAllocation,AI,d,ts,a,rf);
+      if(existingKeys.has(rowKey)){
+        duplicates++;
+        if(total%50000===0)self.postMessage({type:'progress',rows:total});
+        if(end===text.length)break;
+        continue;
+      }
+
+      const h=hourFromMs(ts,rf.hour);
+      const units=num(rf.units);
+      const rawUnits=num(rf.rawunits);
+      const pp=num(rf.pp);
+      const c=(pp>0&&(cat==='CALZ'||cat==='ACC'))?'PP':(cat==='CALZ'?'CALZADO':cat==='ACC'?'ACCESORIO':cat);
+      const t=norm(rf.turn)||'(Sin turno)';
+      const ar=mapAreaLabel(rf.area)||'(Sin área)';
+      const tp=norm(rf.tipo)||'(Sin tipo)';
+
+      if(details){
+        details.push({
+          d,h,ts,u,
+          orden:stripFormulaWrap(a[AI.orden]),
+          lpn:stripFormulaWrap(a[AI.contenedor]),
+          sku:norm(a[AI.codigo]),
+          desc:AI.descripcion>=0?norm(a[AI.descripcion]):'',
+          ubicacion:norm(a[AI.ubicActiva]),
+          cantidad:num(rf._cantidadRaw),
+          instalacion:stripFormulaWrap(a[AI.instalacion]),
+          tienda:(rf._store&&rf._store.tienda)||''
+        });
+      }
+
+      const udKey=d+'\u001f'+u;
+      let ud=userDays.get(udKey);
+      if(!ud){
+        ud={d,u,events:new Map()};
+        userDays.set(udKey,ud);
+      }
+
+      // Compacta líneas del mismo minuto/segundo y mismas dimensiones.
+      const eKey=[ts,h,c,t,ar,tp].join('\u001f');
+      let ev=ud.events.get(eKey);
+      if(!ev){
+        ev={ts,h,c,t,a:ar,p:tp,n:0,raw:0,r:0,pp:0};
+        ud.events.set(eKey,ev);
+      }
+      // n = Und_Cantidad Conv. Para PP exclusivo, el dashboard utilizará raw=Und_cantidad.
+      // No se mezclan cajas con unidades en combinaciones de categorías.
+      ev.n+=units;
+      ev.raw+=rawUnits;
+      ev.r++;
+      ev.pp+=pp;
+
+      kept++;
+      if(d<minDate)minDate=d;
+      if(d>maxDate)maxDate=d;
+
+      if(total%50000===0)self.postMessage({type:'progress',rows:total});
+      if(end===text.length)break;
+    }
+
+    const records=[];
+    let sessionsCount=0;
+    let singleEventSessions=0;
+    let totalEffectiveMinutes=0;
+    let totalOperationalMinutes=0;
+
+    // Crea sesiones según continuidad temporal.
+    for(const ud of userDays.values()){
+      const events=[...ud.events.values()].sort((a,b)=>a.ts-b.ts);
+      if(!events.length) continue;
+
+      // HH operativas definitivas: Fecha + Usuario, inicio considerado = MIN(primera selección, 08:11),
+      // fin = última selección, sin tope. El descuento depende de la última selección.
+      const parts=ud.d.split('-').map(Number);
+      const firstSelectionTs=events[0].ts;
+      const lastSelectionTs=events[events.length-1].ts;
+      const standardStartTs=Date.UTC(parts[0],parts[1]-1,parts[2],Math.floor(OP_START_MINUTES/60),OP_START_MINUTES%60,0);
+      const opStartTs=Math.min(firstSelectionTs,standardStartTs);
+      const dow=new Date(Date.UTC(parts[0],parts[1]-1,parts[2])).getUTCDay();
+      const lastMin=new Date(lastSelectionTs).getUTCHours()*60+new Date(lastSelectionTs).getUTCMinutes();
+      let discountMinutes=0;
+      if(dow>=1 && dow<=5){
+        if(lastMin<13*60) discountMinutes=0;
+        else if(lastMin<=14*60) discountMinutes=lastMin-13*60;
+        else if(lastMin<=15*60) discountMinutes=60;
+        else discountMinutes=90;
+      }else if(dow===6){
+        discountMinutes=lastMin>14*60+30?60:0;
+      }
+      const elapsedMinutes=Math.max(0,(lastSelectionTs-opStartTs)/60000);
+      const opMinutesDay=Math.max(0,elapsedMinutes-discountMinutes);
+      const userDayUnits=events.reduce((s,x)=>s+x.n,0);
+      totalOperationalMinutes+=opMinutesDay;
+      const startDeviationMinutes=(firstSelectionTs-standardStartTs)/60000;
+
+      let start=0;
+      for(let i=1;i<=events.length;i++){
+        const closeSession = i===events.length || ((events[i].ts-events[i-1].ts)/60000)>GAP_MINUTES;
+        if(!closeSession) continue;
+
+        const sess=events.slice(start,i);
+        const firstTs=sess[0].ts, lastTs=sess[sess.length-1].ts;
+        let duration=(lastTs-firstTs)/60000;
+        if(sess.length===1 || duration<=0){
+          duration=MIN_SESSION_MINUTES;
+          singleEventSessions++;
+        }
+        duration=Math.max(MIN_SESSION_MINUTES,duration);
+        totalEffectiveMinutes+=duration;
+        sessionsCount++;
+
+        const sessionId=[ud.d,ud.u,sessionsCount].join('\u001f');
+        const totalUnits=sess.reduce((s,x)=>s+x.n,0);
+        const denom=totalUnits>0?totalUnits:sess.length;
+
+        // Para conservar filtros por hora/categoría/área, distribuye el tiempo
+        // de la sesión proporcionalmente al volumen dentro de esa sesión.
+        const bucketMap=new Map();
+        sess.forEach(ev=>{
+          const bKey=[ud.d,ud.u,ev.h,ev.c,ev.t,ev.a,ev.p].join('\u001f');
+          let b=bucketMap.get(bKey);
+          if(!b){
+            b={d:ud.d,u:ud.u,h:ev.h,c:ev.c,t:ev.t,a:ev.a,p:ev.p,n:0,raw:0,r:0,m:0,om:0,task:sessionId,firstTs:firstSelectionTs,lastTs:lastSelectionTs,opStartTs,standardStartTs,startDeviationMinutes,discountMinutes,opMinutesDay};
+            bucketMap.set(bKey,b);
+          }
+          b.n+=ev.n;
+          b.raw+=ev.raw;
+          b.r+=ev.r;
+          const share=totalUnits>0 ? ev.n/denom : 1/Math.max(1,sess.length);
+          b.m+=duration*share;
+          const opShare=userDayUnits>0 ? ev.n/userDayUnits : 1/Math.max(1,events.length);
+          b.om+=opMinutesDay*opShare;
+        });
+
+        bucketMap.forEach(b=>records.push(b));
+        start=i;
+      }
+    }
+
+    self.postMessage({
+      type:'done',
+      records,
+      details: details||[],
+      stats:{
+        total,kept,duplicates,minDate,maxDate,file:file.name,delimiter:delim,sourceFormat:(isAllocation?'Allocation (WMS)':'Data (procesado)'),
+        userDays:userDays.size,
+        sessions:sessionsCount,
+        singleEventSessions,
+        invalidTs,
+        totalEffectiveMinutes,
+        totalOperationalMinutes,
+        gapMinutes:GAP_MINUTES,
+        opStartTime:`${String(Math.floor(OP_START_MINUTES/60)).padStart(2,'0')}:${String(OP_START_MINUTES%60).padStart(2,'0')}`,
+        methodologyVersion:'PICKING_WMS_METHODOLOGY_V2_0811'
+      }
+    });
+  }catch(err){
+    self.postMessage({type:'error',message:err.message||String(err)});
+  }
+};
+</script>
+
+<script src="js/01-nucleo-datos-y-kpis.js"></script>
+<script src="lib/xlsx.full.min.js"></script>
+<script src="js/02-asignacion-de-tareas.js"></script>
+<div id="captureToast" class="capturetoast"></div>
+<script src="js/03-nube-supabase.js"></script>
+<script src="js/04-operaciones-y-archivos.js"></script>
+<script src="js/05-corrida-de-olas.js"></script>
+<script src="js/06-rutas-y-packing.js"></script><script src="js/07-maestro-sku.js"></script><script src="js/08-prescripciones-semanales.js"></script><script src="js/09-totales-generales.js"></script></body>
+</html>
