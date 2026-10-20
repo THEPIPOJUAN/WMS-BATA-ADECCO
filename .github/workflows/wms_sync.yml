@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       modo:
-        description: 'probar = solo muestra los campos del WMS · sincronizar = trae los datos'
+        description: 'diagnostico = comprueba la conexión · probar = muestra los campos del WMS · sincronizar = trae los datos'
         default: 'sincronizar'
 permissions:
   contents: write
@@ -33,9 +33,10 @@ jobs:
           WMS_DIAS: ${{ vars.WMS_DIAS }}
           WMS_TZ_API: ${{ vars.WMS_TZ_API }}
         run: |
-          if [ "${{ github.event.inputs.modo }}" = "probar" ]; then python wms_sync.py probar; else python wms_sync.py; fi
+          MODO="${{ github.event.inputs.modo }}"
+          if [ "$MODO" = "probar" ] || [ "$MODO" = "diagnostico" ]; then python wms_sync.py "$MODO"; else python wms_sync.py; fi
       - name: Guardar los datos nuevos en el repositorio
-        if: ${{ github.event.inputs.modo != 'probar' }}
+        if: ${{ github.event.inputs.modo != 'probar' && github.event.inputs.modo != 'diagnostico' }}
         run: |
           git config user.name "wms-sync"
           git config user.email "wms-sync@users.noreply.github.com"
