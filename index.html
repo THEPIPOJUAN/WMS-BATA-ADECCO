@@ -926,7 +926,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
   const colorOf = (n, i) => COLOR_BY_NAME[n] || PALETTE[i % PALETTE.length];
 
   function chartPNG(title, ch, w, h) {
-    w = w || 1000; h = h || 380; const S = 2;
+    w = w || 1000; h = h || 400; const S = 2;
     const c = document.createElement('canvas'); c.width = w * S; c.height = h * S;
     const g = c.getContext('2d'); g.scale(S, S);
     g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
@@ -935,16 +935,16 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const mx = Math.max(1, ...totals);
     const mag = Math.pow(10, Math.floor(Math.log10(mx))), step0 = mag / 2;
     let top = Math.ceil(mx * 1.12 / step0) * step0; const ticks = 5; const step = top / ticks;
-    const L = 62, R = 16, T = 62, B = 40, pw = w - L - R, ph = h - T - B;
-    g.font = '700 16px Helvetica, Arial, sans-serif'; g.fillStyle = NAVY_HEX; g.textAlign = 'left'; g.fillText(title, L, 24);
+    const L = 84, R = 18, T = 80, B = 52, pw = w - L - R, ph = h - T - B;
+    g.font = '700 24px Helvetica, Arial, sans-serif'; g.fillStyle = NAVY_HEX; g.textAlign = 'left'; g.fillText(title, L - 40, 30);
     // leyenda
-    let lx = L; g.font = '12px Helvetica, Arial, sans-serif';
-    ch.series.forEach((s, i) => { g.fillStyle = colorOf(s.name, i); g.fillRect(lx, 37, 11, 11); g.fillStyle = '#41536a'; g.fillText(s.name, lx + 16, 47); lx += 30 + g.measureText(s.name).width; });
-    g.textAlign = 'right'; g.font = '11px Helvetica, Arial, sans-serif';
+    let lx = L - 40; g.font = '18px Helvetica, Arial, sans-serif';
+    ch.series.forEach((s, i) => { g.fillStyle = colorOf(s.name, i); g.fillRect(lx, 45, 16, 16); g.fillStyle = '#41536a'; g.fillText(s.name, lx + 22, 59); lx += 42 + g.measureText(s.name).width; });
+    g.textAlign = 'right'; g.font = '16px Helvetica, Arial, sans-serif';
     for (let i = 0; i <= ticks; i++) {
       const y = T + ph - (ph * i / ticks);
       g.strokeStyle = i ? '#e3e9f0' : '#9db0c4'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, y); g.lineTo(w - R, y); g.stroke();
-      g.fillStyle = '#6b7c8e'; g.fillText(fmt(step * i), L - 8, y + 4);
+      g.fillStyle = '#6b7c8e'; g.fillText(fmt(step * i), L - 8, y + 6);
     }
     const slot = pw / Math.max(n, 1), bw = Math.min(slot * 0.58, 90);
     ch.labels.forEach((lab, i) => {
@@ -953,12 +953,12 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
         const v = s.values[i]; if (!v) return;
         const hh = ph * v / top; y -= hh;
         g.fillStyle = colorOf(s.name, si); g.fillRect(x, y, bw, hh);
-        if (hh > 17) { g.fillStyle = '#fff'; g.font = '700 11px Helvetica, Arial, sans-serif'; g.textAlign = 'center'; g.fillText(fmt(v), x + bw / 2, y + hh / 2 + 4); }
+        if (hh > 22) { g.fillStyle = '#fff'; g.font = '700 16px Helvetica, Arial, sans-serif'; g.textAlign = 'center'; g.fillText(fmt(v), x + bw / 2, y + hh / 2 + 6); }
       });
-      g.textAlign = 'center'; g.fillStyle = NAVY_HEX; g.font = '700 12px Helvetica, Arial, sans-serif';
-      if (totals[i]) g.fillText(fmt(totals[i]), x + bw / 2, y - 7);
-      g.fillStyle = '#41536a'; g.font = '12px Helvetica, Arial, sans-serif';
-      g.fillText(lab, x + bw / 2, T + ph + 20);
+      g.textAlign = 'center'; g.fillStyle = NAVY_HEX; g.font = '700 18px Helvetica, Arial, sans-serif';
+      if (totals[i]) g.fillText(fmt(totals[i]), x + bw / 2, y - 8);
+      g.fillStyle = '#41536a'; g.font = '17px Helvetica, Arial, sans-serif';
+      g.fillText(lab, x + bw / 2, T + ph + 28);
     });
     return { url: c.toDataURL('image/png'), w, h };
   }
@@ -1005,20 +1005,20 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const sumHead = [['Categoría'].concat(r.bloques.map(b => b.id), ['Cant. cajas', 'Total'])];
     const sumBody = r.summary.map(s => [s.cat].concat(r.bloques.map(b => fmt(s.by[b.id])), [fmt(s.cajas), fmt(s.total)]));
     const sumFoot = [['Total general'].concat(r.bloques.map(b => fmt(r.sumTot.by[b.id])), [fmt(r.sumTot.cajas), fmt(r.sumTot.total)])];
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...NAVY); doc.text('Resumen de producción', 12, y + 3);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY); doc.text('Resumen de producción', 12, y + 3);
     doc.autoTable({
       head: sumHead, body: sumBody, foot: sumFoot, startY: y + 6, margin: { left: 12 }, tableWidth: 128, theme: 'striped',
-      styles: { fontSize: 8.5, cellPadding: 2, halign: 'right' }, headStyles: { fillColor: NAVY, textColor: 255, halign: 'right' },
+      styles: { fontSize: 10.5, cellPadding: 2.4, halign: 'center' }, headStyles: { fillColor: NAVY, textColor: 255, halign: 'center' },
       footStyles: { fillColor: [238, 239, 241], textColor: NAVY, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 248, 249] },
       columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
     });
-    let ty = doc.lastAutoTable.finalY + 4;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...NAVY);
+    let ty = doc.lastAutoTable.finalY + 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY);
     doc.text('Total ' + r.tx.charAt(0) + r.tx.slice(1).toLowerCase() + ': ' + fmt(r.sumTot.total), 12, ty + 3);
     // Lectura ejecutiva
-    ty += 10; doc.setFontSize(10); doc.text('Lectura ejecutiva', 12, ty);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8); doc.setTextColor(50, 65, 85);
-    lectura(r).forEach((t, i) => { const lines = doc.splitTextToSize('• ' + t, 126); doc.text(lines, 12, ty + 6 + i * 5.3 * 1); ty += (lines.length - 1) * 4; });
+    ty += 11; doc.setFontSize(12); doc.text('Lectura ejecutiva', 12, ty);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(50, 65, 85);
+    lectura(r).forEach((t, i) => { const lines = doc.splitTextToSize('• ' + t, 128); doc.text(lines, 12, ty + 7 + i * 6.4); ty += (lines.length - 1) * 5; });
 
     // Gráficos (derecha)
     const c1 = chartPNG('Producción diaria por categoría', r.chartCat), c2 = chartPNG('Producción diaria por tipo (' + r.bloques.map(b => b.id).join(' / ') + ')', r.chartBlq);
@@ -1035,13 +1035,18 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
         t.general ? [u.meta ? fmt(u.meta) : '', u.pct == null ? '—' : Math.round(u.pct * 100) + '%'] : []));
       const foot = [['Total general'].concat(r.days.map(d => fmt(t.pv.byDay[d])), [fmt(t.pv.total)],
         t.general ? [fmt(t.pv.meta), t.pv.pct == null ? '—' : Math.round(t.pv.pct * 100) + '%'] : [])];
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY); doc.text(t.title, 12, 30);
+      const FS = 10, PADH = 3.2, cols = head.length, cw = new Array(cols).fill(0);
+      doc.setFontSize(FS); doc.setFont('helvetica', 'bold');
+      [head].concat(body, foot).forEach(row => row.forEach((c, i) => { cw[i] = Math.max(cw[i], doc.getTextWidth(String(c)) + 2 * PADH); }));
+      const tw = cw.reduce((a, b) => a + b, 0), ml = Math.max(12, (W - tw) / 2);
+      const cs = {}; cw.forEach((w, i) => { cs[i] = { cellWidth: w, halign: i ? 'center' : 'left' }; }); cs[0].fontStyle = 'bold'; cs[nd + 1].fontStyle = 'bold';
+      doc.setFontSize(13); doc.setTextColor(...NAVY); doc.text(t.title, ml, 30);
       doc.autoTable({
-        head: [head], body, foot, startY: 33, margin: { left: 12, right: 12, top: 26, bottom: 14 }, theme: 'striped',
-        styles: { fontSize: 7.8, cellPadding: 1.6, halign: 'right', textColor: [30, 40, 55] },
+        head: [head], body, foot, startY: 34, margin: { left: ml, right: ml, top: 26, bottom: 14 }, tableWidth: tw, theme: 'striped',
+        styles: { fontSize: FS, cellPadding: { top: 1.8, bottom: 1.8, left: PADH, right: PADH }, halign: 'center', textColor: [30, 40, 55] },
         headStyles: { fillColor: NAVY, textColor: 255, halign: 'center' },
         footStyles: { fillColor: [238, 239, 241], textColor: NAVY, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 248, 249] },
-        columnStyles: { 0: { halign: 'left', fontStyle: 'bold', cellWidth: 34 }, [nd + 1]: { fontStyle: 'bold' } }, showFoot: 'lastPage',
+        columnStyles: cs, showFoot: 'lastPage',
         didParseCell(h) {
           if (!t.general || h.column.index !== nd + 3) return;
           if (h.section === 'body') {
@@ -1069,7 +1074,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
       ws.mergeCells(2, 1, 2, nc); const b = ws.getCell(2, 1); b.value = sub; b.font = { size: 10, color: { argb: 'FF41536A' } };
     };
     const head = (row, vals) => vals.forEach((t, i) => { const c = row.getCell(i + 1); c.value = t; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = fillOf(NAV); c.alignment = { horizontal: i ? 'center' : 'left' }; });
-    const numc = (c, v, bold) => { c.value = v; c.numFmt = '#,##0'; c.alignment = { horizontal: 'right' }; if (bold) c.font = { bold: true }; };
+    const numc = (c, v, bold) => { c.value = v; c.numFmt = '#,##0'; c.alignment = { horizontal: 'center' }; if (bold) c.font = { bold: true }; };
 
     // Hoja Resumen
     const ws = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
@@ -1083,7 +1088,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     for (let i = 1; i <= nc; i++) { const c = fr.getCell(i); c.font = { bold: true, color: { argb: NAV } }; c.fill = fillOf('FFEEEFF1'); c.border = { top: { style: 'medium', color: { argb: NAV } } }; }
     const kr = 8 + r.summary.length;
     ws.getRow(kr).getCell(1).value = 'Indicadores'; ws.getRow(kr).getCell(1).font = { bold: true, size: 12, color: { argb: NAV } };
-    kpisOf(r).forEach(([l, v, tone], i) => { const row = ws.getRow(kr + 1 + i); row.getCell(1).value = l; row.getCell(2).value = v; row.getCell(2).font = { bold: true, color: { argb: tone ? SEM[tone].hexText : NAV } }; if (tone) row.getCell(2).fill = fillOf(SEM[tone].hexFill); row.getCell(2).alignment = { horizontal: 'right' }; });
+    kpisOf(r).forEach(([l, v, tone], i) => { const row = ws.getRow(kr + 1 + i); row.getCell(1).value = l; row.getCell(2).value = v; row.getCell(2).font = { bold: true, color: { argb: tone ? SEM[tone].hexText : NAV } }; if (tone) row.getCell(2).fill = fillOf(SEM[tone].hexFill); row.getCell(2).alignment = { horizontal: 'center' }; });
     const lr = kr + 8;
     ws.getRow(lr).getCell(1).value = 'Lectura ejecutiva'; ws.getRow(lr).getCell(1).font = { bold: true, size: 12, color: { argb: NAV } };
     lectura(r).forEach((t, i) => { ws.getRow(lr + 1 + i).getCell(1).value = '• ' + t; });
