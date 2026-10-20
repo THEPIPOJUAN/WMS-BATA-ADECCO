@@ -11,6 +11,7 @@ Qué hace (cada vez que corre):
   El dashboard lee esa carpeta solo y se actualiza (no hay que subir nada a mano).
 
 Uso:
+  python wms_sync.py diagnostico → comprueba hasta dónde llega la conexión con el WMS
   python wms_sync.py probar     → muestra los campos reales que devuelve el WMS (para confirmar el MAPEO)
   python wms_sync.py            → sincroniza
 
@@ -34,6 +35,7 @@ DIAS_GUARDAR= int(env('WMS_DIAS_GUARDAR', '14'))      # cuántos días se conser
 TZ_LOCAL    = ZoneInfo(env('WMS_TZ', 'America/Lima'))
 TZ_API      = ZoneInfo(env('WMS_TZ_API', 'UTC'))      # zona en que el API entrega las horas
 PAGINA      = int(env('WMS_PAGINA', '500'))
+TIMEOUT     = int(env('WMS_TIMEOUT', '25'))                      # segundos que se espera la respuesta del WMS
 CARPETA     = env('WMS_CARPETA', 'data')
 # Campo del WMS  →  columna del Excel de packing que usa el dashboard.   ⚠ POR CONFIRMAR con «probar»
 MAPEO_DEFECTO = {
@@ -60,17 +62,22 @@ def _auth():
     if not u or not p: sys.exit('Faltan los secretos WMS_USER y WMS_PASS.')
     return 'Basic ' + base64.b64encode(f'{u}:{p}'.encode()).decode()
 
-def api_get(url, reintentos=3):
+def api_get(url, reintentos=2):
+    ultimo = None
     for i in range(reintentos):
         try:
             rq = urllib.request.Request(url, headers={'Authorization': _auth(), 'Accept': 'application/json'})
-            with urllib.request.urlopen(rq, timeout=60) as r: return json.loads(r.read().decode('utf-8'))
+            with urllib.request.urlopen(rq, timeout=TIMEOUT) as r: return json.loads(r.read().decode('utf-8'))
         except urllib.error.HTTPError as e:
             if e.code in (401, 403): sys.exit(f'El WMS rechazó el usuario/clave o no tiene permiso (HTTP {e.code}).')
-            if i == reintentos - 1: raise
-        except Exception:
-            if i == reintentos - 1: raise
-        time.sleep(3 * (i + 1))
+            if e.code == 404: sys.exit(f'El WMS dice que esa dirección no existe (HTTP 404). Revisa WMS_BASE y WMS_ENTIDAD.\nURL: {url}')
+            ultimo = f'HTTP {e.code}'
+        except Exception as e:
+            ultimo = f'{type(e).__name__}: {e}'
+        time.sleep(3)
+    sys.exit(f'El WMS no respondió después de {reintentos} intentos de {TIMEOUT} s ({ultimo}).\n'
+             'Lo más probable: el WMS o su firewall BLOQUEA las conexiones que vienen de los servidores de GitHub,\n'
+             'o la dirección del API no es la correcta. Ejecuta el modo «diagnostico» para ver cuál de las dos.')
 
 def url_entidad(extra=''):
     return f'{BASE}/wms/lgfapi/v10/entity/{ENTIDAD}/?{extra}'
@@ -100,6 +107,43 @@ def probar():
     for k, v in sorted(aplanar(res[0]).items()): print(f'  {k} = {str(v)[:60]}')
     falt = [c for c in MAPEO if c not in aplanar(res[0])]
     print('\nCampos del MAPEO que NO existen en la respuesta (hay que corregirlos):', falt or 'ninguno ✔')
+
+def diagnostico():
+    """Prueba paso a paso hasta dónde llega la conexión con el WMS (sin cambiar nada)."""
+    import socket
+    from urllib.parse import urlparse
+    def paso(t): print('\n== ' + t + ' ==')
+    def pedir(url, auth=False, t=None):
+        t = t or TIMEOUT
+        t0 = time.time()
+        try:
+            h = {'Accept': 'application/json,text/html'}
+            if auth: h['Authorization'] = _auth()
+            with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=t) as r:
+                cuerpo = r.read(300).decode('utf-8', 'replace').replace('\n', ' ')
+                print(f'  Respondió HTTP {r.status} en {time.time()-t0:.1f} s · Server: {r.headers.get("Server")} · Tipo: {r.headers.get("Content-Type")}')
+                print('  Inicio de la respuesta:', cuerpo[:160]); return r.status
+        except urllib.error.HTTPError as e:
+            print(f'  Respondió HTTP {e.code} en {time.time()-t0:.1f} s (el servidor SÍ contestó) · Server: {e.headers.get("Server")}')
+            print('  Inicio de la respuesta:', e.read(200).decode('utf-8', 'replace').replace('\n', ' ')[:160]); return e.code
+        except Exception as e:
+            print(f'  SIN RESPUESTA tras {time.time()-t0:.1f} s → {type(e).__name__}: {e}'); return None
+    paso('1) Desde dónde sale el robot')
+    try: print('  IP pública del robot de GitHub:', urllib.request.urlopen('https://api.ipify.org', timeout=5).read().decode())
+    except Exception as e: print('  (no pude leer la IP)', e)
+    host = urlparse(BASE).hostname
+    paso(f'2) Dirección del WMS ({host})')
+    try: print('  IP del WMS:', sorted({x[4][0] for x in socket.getaddrinfo(host, 443)}))
+    except Exception as e: print('  No se pudo resolver el nombre:', e)
+    paso('3) Página principal del WMS (sin usuario)'); pedir(BASE + '/index/')
+    paso('4) API LGF SIN usuario (lo normal es HTTP 401)'); r4 = pedir(url_entidad('page_size=1'))
+    paso('5) API LGF CON usuario y clave'); r5 = pedir(url_entidad('page_size=1'), auth=True)
+    print('\n== CONCLUSIÓN ==')
+    if r4 is None and r5 is None: print('  El WMS no contesta a este robot: casi seguro BLOQUEA los servidores de GitHub (o la dirección del API es otra).\n  Alternativa: ejecutar el mismo robot en tu PC (Plan B del LEEME).')
+    elif r5 in (401, 403): print('  El WMS contesta pero rechaza el usuario/clave: revisa los Secrets WMS_USER y WMS_PASS (o los permisos del usuario).')
+    elif r5 == 404 or r4 == 404: print('  La dirección del API no existe: revisa WMS_BASE y WMS_ENTIDAD.')
+    elif r5 == 200: print('  ¡Todo bien! Ahora ejecuta el modo «probar» para ver los campos.')
+    else: print('  Resultado mixto: copia todo este registro y envíamelo.')
 
 # ------------------------------------ Datos del dashboard ------------------------------------
 def nrm(s): return unicodedata.normalize('NFD', str(s or '')).encode('ascii', 'ignore').decode().strip().upper()
@@ -210,4 +254,5 @@ def sincronizar():
     for a in arch: print('  ', a['nombre'], a['lineas'], 'líneas', a['unidades'], 'und conv')
 
 if __name__ == '__main__':
-    probar() if (len(sys.argv) > 1 and sys.argv[1] == 'probar') else sincronizar()
+    modo = sys.argv[1] if len(sys.argv) > 1 else 'sincronizar'
+    {'probar': probar, 'diagnostico': diagnostico}.get(modo, sincronizar)()
