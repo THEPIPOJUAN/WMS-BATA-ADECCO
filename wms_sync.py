@@ -35,7 +35,7 @@ DIAS_GUARDAR= int(env('WMS_DIAS_GUARDAR', '14'))      # cuántos días se conser
 TZ_LOCAL    = ZoneInfo(env('WMS_TZ', 'America/Lima'))
 TZ_API      = ZoneInfo(env('WMS_TZ_API', 'UTC'))      # zona en que el API entrega las horas
 PAGINA      = int(env('WMS_PAGINA', '500'))
-TIMEOUT     = int(env('WMS_TIMEOUT', '25'))                      # segundos que se espera la respuesta del WMS
+TIMEOUT     = int(env('WMS_TIMEOUT', '120'))                      # segundos que se espera la respuesta del WMS
 CARPETA     = env('WMS_CARPETA', 'data')
 # Campo del WMS  →  columna del Excel de packing que usa el dashboard.   ⚠ POR CONFIRMAR con «probar»
 MAPEO_DEFECTO = {
@@ -137,7 +137,7 @@ def diagnostico():
     except Exception as e: print('  No se pudo resolver el nombre:', e)
     paso('3) Página principal del WMS (sin usuario)'); pedir(BASE + '/index/')
     paso('4) API LGF SIN usuario (lo normal es HTTP 401)'); r4 = pedir(url_entidad('page_size=1'))
-    paso('5) API LGF CON usuario y clave'); r5 = pedir(url_entidad('page_size=1'), auth=True)
+    paso('5) API LGF CON usuario y clave'); r5 = pedir(url_entidad('page_size=1'), auth=True, t=120)
     print('\n== CONCLUSIÓN ==')
     if r4 is None and r5 is None: print('  El WMS no contesta a este robot: casi seguro BLOQUEA los servidores de GitHub (o la dirección del API es otra).\n  Alternativa: ejecutar el mismo robot en tu PC (Plan B del LEEME).')
     elif r5 in (401, 403): print('  El WMS contesta pero rechaza el usuario/clave: revisa los Secrets WMS_USER y WMS_PASS (o los permisos del usuario).')
