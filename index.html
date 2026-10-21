@@ -855,7 +855,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
 
     // --- Resumen categoría x bloque
     const cajasIds = bloques.filter(b => b.conCajas).map(b => b.id);
-    const summary = cats.map(cat => {
+    const summary = cats.filter(c => !excl.includes(c)).map(cat => {
       const by = {}; let total = 0, cajas = 0;
       bloques.forEach(b => {
         by[b.id] = rows.filter(r => r.categoria === cat && r.bloque === b.id).reduce((s, r) => s + r.unidades, 0);
@@ -984,7 +984,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     if (r.best) out.push('Mejor día: ' + r.best.label + ' con ' + fmt(r.best.v) + ' unidades.');
     if (r.low && r.days.length > 1) out.push('Día más bajo: ' + r.low.label + ' con ' + fmt(r.low.v) + ' unidades.');
     const gtot = r.sumTot.total || 1;
-    r.bloques.forEach(b => out.push(b.id + ' representa el ' + Math.round(100 * r.sumTot.by[b.id] / gtot) + '% de la producción (' + fmt(r.sumTot.by[b.id]) + ').'));
+    r.bloques.forEach(b => out.push(b.id + ' representa el ' + Math.round(100 * r.sumTot.by[b.id] / gtot) + '% de la producción SIN INSUMOS (' + fmt(r.sumTot.by[b.id]) + ').'));
     if (r.gen.pct != null) out.push('Cumplimiento semanal vs meta: ' + Math.round(r.gen.pct * 100) + '% (brecha ' + fmt(r.gen.total - r.gen.meta) + ').');
     return out;
   }
@@ -1005,7 +1005,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const sumHead = [['Categoría'].concat(r.bloques.map(b => b.id), ['Cant. cajas', 'Total'])];
     const sumBody = r.summary.map(s => [s.cat].concat(r.bloques.map(b => fmt(s.by[b.id])), [fmt(s.cajas), fmt(s.total)]));
     const sumFoot = [['Total general'].concat(r.bloques.map(b => fmt(r.sumTot.by[b.id])), [fmt(r.sumTot.cajas), fmt(r.sumTot.total)])];
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY); doc.text('Resumen de producción', 12, y + 3);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY); doc.text('Resumen de producción — SIN INSUMOS', 12, y + 3);
     doc.autoTable({
       head: sumHead, body: sumBody, foot: sumFoot, startY: y + 6, margin: { left: 12 }, tableWidth: 128, theme: 'striped',
       styles: { fontSize: 10.5, cellPadding: 2.4, halign: 'center' }, headStyles: { fillColor: NAVY, textColor: 255, halign: 'center' },
@@ -1014,7 +1014,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     });
     let ty = doc.lastAutoTable.finalY + 5;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY);
-    doc.text('Total ' + r.tx.charAt(0) + r.tx.slice(1).toLowerCase() + ': ' + fmt(r.sumTot.total), 12, ty + 3);
+    doc.text('Total ' + r.tx.charAt(0) + r.tx.slice(1).toLowerCase() + ' (sin insumos): ' + fmt(r.sumTot.total), 12, ty + 3);
     // Lectura ejecutiva
     ty += 11; doc.setFontSize(12); doc.text('Lectura ejecutiva', 12, ty);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(50, 65, 85);
@@ -1080,7 +1080,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const ws = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
     const nc = 3 + r.bloques.length;
     banner(ws, 9, repTitle(r), repSub(r));
-    ws.getRow(4).getCell(1).value = 'Resumen de producción'; ws.getRow(4).getCell(1).font = { bold: true, size: 12, color: { argb: NAV } };
+    ws.getRow(4).getCell(1).value = 'Resumen de producción — SIN INSUMOS'; ws.getRow(4).getCell(1).font = { bold: true, size: 12, color: { argb: NAV } };
     head(ws.getRow(5), ['Categoría'].concat(r.bloques.map(b => b.id), ['Cant. cajas', 'Total']));
     r.summary.forEach((s, i) => { const row = ws.getRow(6 + i); row.getCell(1).value = s.cat; row.getCell(1).font = { bold: true }; r.bloques.forEach((b, j) => numc(row.getCell(2 + j), s.by[b.id])); numc(row.getCell(2 + r.bloques.length), s.cajas); numc(row.getCell(3 + r.bloques.length), s.total, true); });
     const fr = ws.getRow(6 + r.summary.length);
