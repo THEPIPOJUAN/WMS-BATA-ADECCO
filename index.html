@@ -1315,6 +1315,9 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
 .mod-actions label.btn{cursor:pointer}
 .mod-search{flex:1;min-width:220px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
 .mod-status{font-size:12px;color:#2d3139;background:#f1f5f9;border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.pchart{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;margin:8px 0 14px;overflow-x:auto}
+.pw-btn{padding:4px 8px;font-size:12px;margin-top:4px}
+.pdetsel{border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px}
 .rform{display:grid;grid-template-columns:1fr 1.4fr 1fr 1fr 1.2fr auto;gap:8px;margin-bottom:10px}
 .rform input,.rform select{border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;min-width:0}
 .mini-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 9px;font-size:12px;cursor:pointer;margin-right:4px}
@@ -1479,6 +1482,31 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
   </section>
 
   <main id="dash">
+    <div class="viewtabs">
+      <button class="viewtab active" data-view="gerencia">GERENCIA</button>
+      <button class="viewtab" data-view="jefatura">JEFATURA</button>
+      <button class="viewtab" data-view="supervision">SUPERVISIÓN</button>
+      <button class="viewtab" data-view="asignacion">ASIGNACIÓN DE TAREAS</button>
+      <button class="viewtab" data-view="olas">CORRIDA DE OLAS</button>
+      <button class="viewtab" data-view="rutas">RUTAS</button>
+      <button class="viewtab" data-view="maestro">MAESTRO SKU</button>
+      <button class="viewtab" data-view="archivos">ARCHIVOS CARGADOS</button>
+      <button class="viewtab" data-view="presc">PRESCRIPCIONES SEMANALES</button>
+      <button class="viewtab" data-view="usuarios">USUARIOS</button>
+    </div>
+
+    <div class="optabs" id="opTabs"><button type="button" data-op="PICKING" class="active">PICKING</button><button type="button" data-op="PACKING">PACKING</button><button type="button" data-op="AMBOS">AMBOS</button></div>
+    <section class="opsum" id="opSummary" style="display:none"><div class="h">Resumen por transacción</div><div class="heatbox"><table class="heatmap" id="opSumTable"></table></div></section>
+
+    <div class="toolbar">
+      <button class="btn" id="filtersBtn" type="button">🔎 Filtros</button>
+      <button class="btn" id="captureBtn">📤 Compartir / Imprimir</button>
+      <button class="btn" id="configBtn">⚙ Configuración</button>
+      <button class="btn" id="exportBtn">⬇ Excel / PDF</button>
+      <button class="btn" id="anotherBtn">📚 Gestionar datos</button>
+    </div>
+
+    <div id="filtersWrap" style="display:none">
     <div class="filters">
       <div class="filter multifilter">
         <label>Día</label>
@@ -1600,26 +1628,6 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
       Día, Mes, Semana, Categoría, Usuario, Área y Tipo pedido permiten seleccionar una o varias opciones. Si Día está vacío o tiene más de un día, la evolución ejecutiva se muestra separada por día.
       Si no marcas ninguna, se consideran todas.
     </div>
-
-    <div class="toolbar">
-      <button class="btn" id="captureBtn">📤 Compartir / Imprimir</button>
-      <button class="btn" id="configBtn">⚙ Configuración</button>
-      <button class="btn" id="exportBtn">⬇ Excel / PDF</button>
-      <button class="btn" id="anotherBtn">📚 Gestionar datos</button>
-    </div>
-
-    <div class="optabs" id="opTabs"><button type="button" data-op="PICKING" class="active">PICKING</button><button type="button" data-op="PACKING">PACKING</button><button type="button" data-op="AMBOS">AMBOS</button></div>
-    <section class="opsum" id="opSummary" style="display:none"><div class="h">Resumen por transacción</div><div class="heatbox"><table class="heatmap" id="opSumTable"></table></div></section>
-    <div class="viewtabs">
-      <button class="viewtab active" data-view="gerencia">GERENCIA</button>
-      <button class="viewtab" data-view="jefatura">JEFATURA</button>
-      <button class="viewtab" data-view="supervision">SUPERVISIÓN</button>
-      <button class="viewtab" data-view="asignacion">ASIGNACIÓN DE TAREAS</button>
-      <button class="viewtab" data-view="olas">CORRIDA DE OLAS</button>
-      <button class="viewtab" data-view="rutas">RUTAS</button>
-      <button class="viewtab" data-view="maestro">MAESTRO SKU</button>
-      <button class="viewtab" data-view="archivos">ARCHIVOS CARGADOS</button>
-      <button class="viewtab" data-view="presc">PRESCRIPCIONES SEMANALES</button>
     </div>
 
     <div id="view-gerencia" class="viewsection active">
@@ -1865,10 +1873,26 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-filters"><select id="pfSem"></select><select id="pfAtn"></select><select id="pfZona"></select><select id="pfEt"></select><select id="pfDup"><option value="">Todas las guías</option><option value="dup">Solo guías repetidas</option><option value="uni">Sin repetir</option></select><input id="pfQ" class="mod-search" placeholder="Buscar tienda, guía o ruta…"></div>
         <div class="mod-status" id="prescStatus2">Sin prescripciones cargadas.</div>
         <div class="pkpis" id="prescKpis"></div>
+        <div class="h" style="font-size:14px;margin:6px 0">Resumen por semana de atención</div>
+        <div class="heatbox" style="max-height:420px"><table class="heatmap" id="prescWeek"></table></div>
+        <div class="pchart" id="prescWeekChart"></div>
         <div class="h" style="font-size:14px;margin:6px 0">Resumen por día de atención</div>
         <div class="heatbox" style="max-height:300px"><table class="heatmap" id="prescSum"></table></div>
-        <div class="h" style="font-size:14px;margin:12px 0 6px">Detalle ordenado por prioridad de atención</div>
-        <div class="heatbox" style="max-height:520px"><table class="heatmap" id="prescTable"></table></div>
+        <div class="pchart" id="prescDayChart"></div>
+        <div class="mod-actions" style="margin-top:12px"><b style="font-size:13px">DETALLE</b><button class="btn" id="prescDetAll" type="button">📋 TODOS</button><select id="prescDetSem" class="pdetsel"></select><button class="btn" id="prescDetHide" type="button">Ocultar detalle</button></div>
+        <div id="prescDetail" style="display:none">
+          <div class="h" id="prescDetTitle" style="font-size:14px;margin:6px 0">Detalle ordenado por prioridad de atención</div>
+          <div class="heatbox" style="max-height:520px"><table class="heatmap" id="prescTable"></table></div>
+        </div>
+      </section>
+    </div>
+    <div id="view-usuarios" class="viewsection">
+      <section class="opsum"><div class="h">Usuarios</div>
+        <div class="mod-note">Nombres, apellidos, usuario, área y promedio por hora de cada persona. Sube un Excel o CSV con las columnas NOMBRES, APELLIDOS, USUARIO, AREA y PROMEDIO_HORA, o agrega, edita y borra manualmente. El promedio por hora quedará como meta individual y esta lista se usa para la asistencia.</div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel / CSV<input id="usrInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="usrAddBtn" type="button">➕ Agregar usuario</button><button class="btn" id="usrAsisBtn" type="button">🗓 Asistencia</button><button class="btn" id="usrDownBtn" type="button">⬇ Descargar Excel</button><input id="usrSearch" class="pdetsel" placeholder="Buscar usuario, nombre o área…" style="min-width:230px"></div>
+        <div class="rform" id="usrForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto"><input id="uNom" placeholder="Nombres"><input id="uApe" placeholder="Apellidos"><input id="uUsr" placeholder="Usuario"><input id="uArea" placeholder="Área"><input id="uProm" type="number" min="0" step="1" placeholder="Promedio por hora"><span style="display:flex;gap:6px"><button class="btn" id="usrSaveBtn" type="button">Guardar</button><button class="btn" id="usrCancelBtn" type="button">Cancelar</button></span></div>
+        <div class="mod-status" id="usrStatus">Sin usuarios cargados.</div>
+        <div class="heatbox" style="max-height:560px"><table class="heatmap" id="usrTable"></table></div>
       </section>
     </div>
     <div id="view-maestro" class="viewsection">
@@ -2073,7 +2097,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
       <div class="configmodal">
         <div class="confighead">
           <div>
-            <div class="h">Configuración del reporte</div>
+            <div class="h">Configuración del reporte · <span id="cfgTxLabel">PICKING</span></div>
             <div class="mini">Modifica textos, metas y parámetros sin tocar el código. La configuración se guarda en este navegador.</div>
           </div>
           <button class="btn" id="closeConfigBtn">Cerrar</button>
@@ -2081,7 +2105,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="configgrid">
           <div class="filter"><label>Título del reporte</label><input id="cfgTitle" type="text"></div>
           <div class="filter"><label>Subtítulo</label><input id="cfgSubtitle" type="text"></div>
-          <div class="filter"><label>Meta normal (und/HH)</label><input id="cfgMeta" type="number" min="1" step="1"></div>
+          <div class="filter"><label id="cfgMetaLabel">Meta normal (und/HH)</label><input id="cfgMeta" type="number" min="1" step="1"></div>
           <div class="filter"><label>Meta PP (cajas/HH)</label><input id="cfgMetaPP" type="number" min="1" step="1"></div>
           <div class="filter"><label>Meta diaria de supervisión</label><input id="cfgDailyTarget" type="number" min="1" step="100"></div>
           <div class="filter"><label>Hora inicio supervisión</label><input id="cfgStartHour" type="number" min="0" max="23"></div>
@@ -2742,7 +2766,10 @@ function saveSettingsToStorage(){
 function applySettingsToInputs(){
   if($('cfgTitle')) $('cfgTitle').value=SETTINGS.title;
   if($('cfgSubtitle')) $('cfgSubtitle').value=SETTINGS.subtitle;
-  if($('cfgMeta')) $('cfgMeta').value=SETTINGS.meta;
+  {const pk=window.OPSEL==='PACKING';
+   if($('cfgMeta')) $('cfgMeta').value=pk?(Number(SETTINGS.metaPack)||500):SETTINGS.meta;
+   if($('cfgMetaLabel')) $('cfgMetaLabel').textContent=pk?'Meta Packing (und/HH por persona)':'Meta Picking (und/HH)';
+   if($('cfgTxLabel')) $('cfgTxLabel').textContent=pk?'PACKING':(window.OPSEL==='AMBOS'?'PICKING (elige Packing para su meta)':'PICKING');}
   if($('cfgMetaPP')) $('cfgMetaPP').value=SETTINGS.metaPP;
   if($('cfgDailyTarget')) $('cfgDailyTarget').value=SETTINGS.dailyTarget;
   if($('cfgStartHour')) $('cfgStartHour').value=SETTINGS.startHour;
@@ -2770,7 +2797,9 @@ function resetConfig(){ SETTINGS={...DEFAULT_SETTINGS}; applySettingsToInputs();
 function saveConfig(){
   SETTINGS.title=$('cfgTitle').value.trim()||DEFAULT_SETTINGS.title;
   SETTINGS.subtitle=$('cfgSubtitle').value.trim()||DEFAULT_SETTINGS.subtitle;
-  SETTINGS.meta=Math.max(1, Number($('cfgMeta').value)||DEFAULT_SETTINGS.meta);
+  if(window.OPSEL==='PACKING') SETTINGS.metaPack=Math.max(1, Number($('cfgMeta').value)||500);
+  else SETTINGS.meta=Math.max(1, Number($('cfgMeta').value)||DEFAULT_SETTINGS.meta);
+  if(typeof syncPackMeta==='function') syncPackMeta();
   SETTINGS.metaPP=Math.max(1, Number($('cfgMetaPP').value)||DEFAULT_SETTINGS.metaPP);
   SETTINGS.dailyTarget=Math.max(1, Number($('cfgDailyTarget').value)||DEFAULT_SETTINGS.dailyTarget);
   SETTINGS.startHour=Math.max(0, Math.min(23, Number($('cfgStartHour').value)||DEFAULT_SETTINGS.startHour));
@@ -3507,6 +3536,8 @@ function renderGoalGauge(el,pct,actual,target){
 
 // Meta de PACKING por tipo de día: lunes–viernes 36,000 (4,500 x persona) · sábado 16,800 (2,100 x persona) · domingo descanso. Por hora: 4,800 grupal (600 x persona).
 const PACK_META={lv:{day:30000,hour:4000,dayP:3750,hourP:500},sab:{day:15000,hour:4000,dayP:1875,hourP:500}};
+function syncPackMeta(){const h=Number(SETTINGS.metaPack)||500,n=8;PACK_META.lv={day:Math.round(h*7.5*n),hour:h*n,dayP:Math.round(h*7.5),hourP:h};PACK_META.sab={day:Math.round(h*3.75*n),hour:h*n,dayP:Math.round(h*3.75),hourP:h};}
+syncPackMeta();
 function packMetaFor(d,nU){const wd=new Date(d+'T00:00:00Z').getUTCDay(),m=wd===6?PACK_META.sab:(wd===0?{day:0,hour:0,dayP:0,hourP:0}:PACK_META.lv);return nU?{day:m.dayP*nU,hour:m.hourP*nU}:{day:m.day,hour:m.hour};}
 function renderSupervisor(baseArr,meta){
   const workArr=getSupArray(baseArr);
@@ -3825,8 +3856,8 @@ function globalSelectedCats(){
 }
 function activeUnitFn(){ return unitFnFromCats(globalSelectedCats()); }
 function activeUnitLabel(){ return unitLabelFromCats(globalSelectedCats()); }
-function metaBase(){return window.OPSEL==='PACKING'?500:(Number(SETTINGS.meta)||160);}
-function metaPPBase(){return window.OPSEL==='PACKING'?500:(Number(SETTINGS.metaPP)||60);}
+function metaBase(){return window.OPSEL==='PACKING'?(Number(SETTINGS.metaPack)||500):(Number(SETTINGS.meta)||160);}
+function metaPPBase(){return window.OPSEL==='PACKING'?(Number(SETTINGS.metaPack)||500):(Number(SETTINGS.metaPP)||60);}
 function activeMeta(){ return isOnlyPP(globalSelectedCats()) ? metaPPBase() : metaBase(); }
 function productivityUnitText(){ return isOnlyPP(globalSelectedCats()) ? 'cajas/HH' : 'und/HH'; }
 function getArrayByCats(arr,vals){
@@ -5191,7 +5222,7 @@ window.saveCloud=saveCloud;
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
-  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
+  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],asistencia:window.ASISTENCIA||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
 };}
 async function saveCloud(){
   if(!sb){const why=!(CLOUD_CFG.url&&CLOUD_CFG.anonKey)?'No se encontró config.js: en GitHub debe llamarse exactamente config.js y estar en la misma carpeta que el HTML.':'No cargó la librería de Supabase (revisa internet o si algo bloquea cdn.jsdelivr.net).';notice('❌ No se pudo guardar: '+why,true);return false;}
@@ -5267,6 +5298,8 @@ async function applyCloudIfAvailable(){
   if(Array.isArray(p.rutas)){window.RUTAS=p.rutas;window.renderRutas&&window.renderRutas();}
   if(Array.isArray(p.files))window.FILES=p.files;
   if(Array.isArray(p.maestro)){window.MAESTRO=p.maestro;window.renderMaestro&&window.renderMaestro();}
+  if(Array.isArray(p.usuarios)){window.USUARIOS=p.usuarios;window.renderUsuarios&&window.renderUsuarios();}
+  if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5306,6 +5339,8 @@ async function applyCloud(){
   if(Array.isArray(p.rutas)){window.RUTAS=p.rutas;window.renderRutas&&window.renderRutas();}
   if(Array.isArray(p.files))window.FILES=p.files;
   if(Array.isArray(p.maestro)){window.MAESTRO=p.maestro;window.renderMaestro&&window.renderMaestro();}
+  if(Array.isArray(p.usuarios)){window.USUARIOS=p.usuarios;window.renderUsuarios&&window.renderUsuarios();}
+  if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5554,7 +5589,7 @@ document.getElementById('wmsBanner').addEventListener('click',()=>window.wmsSync
 setTimeout(()=>window.wmsSync(),1200);setInterval(()=>window.wmsSync(),5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.wmsSync();});
 document.getElementById('opTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-op]');if(!b)return;
- window.OPSEL=b.dataset.op;{const m=document.getElementById('meta');if(m)m.value=metaBase();const hm=document.getElementById('headerMeta');if(hm)hm.parentElement.innerHTML=(window.OPSEL==='PACKING')?'Meta packing: <b id="headerMeta">600 und/HH · 4,800 por hora (grupal)</b>':'Meta vigente: <b id="headerMeta">'+fmt1(SETTINGS.meta)+' und/HH · PP '+fmt1(SETTINGS.metaPP)+' cajas/HH</b>';}
+ window.OPSEL=b.dataset.op;{const m=document.getElementById('meta');if(m)m.value=metaBase();const hm=document.getElementById('headerMeta');if(hm)hm.parentElement.innerHTML=(window.OPSEL==='PACKING')?'Meta packing: <b id="headerMeta">'+fmt1(Number(SETTINGS.metaPack)||500)+' und/HH por persona · '+fmt1(Math.round((Number(SETTINGS.metaPack)||500)*7.5))+' por día</b>':'Meta vigente: <b id="headerMeta">'+fmt1(SETTINGS.meta)+' und/HH · PP '+fmt1(SETTINGS.metaPP)+' cajas/HH</b>';}
 document.querySelectorAll('#opTabs button').forEach(x=>x.classList.toggle('active',x===b));render();});
 })();
 </script>
@@ -5955,6 +5990,7 @@ async function cargar(files){files=[...files].filter(f=>/\.xlsx?$/i.test(f.name)
 function fill(id,title,vals){const s=$$(id),cur=s.value;s.innerHTML='<option value="">'+title+'</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join('');if(vals.includes(cur))s.value=cur;}
 const COLS=['FECHA DE CORREO','SEMANA CORREO','FECHA DE ATENCION','SEMANA ATENCION','Cadena','TIEND','NOMBR','Prioridad','Etiqueta','FECHA','GUIA','ALMAC','Despachar','Suma de CANTI','CD','Guia Duplicada','PRIORIDAD ATENCIÓN','ZONA','RUTA','DIS'];
 const rowVals=r=>[lab(r.d),r.semdia,lab(r.fatn),r.atn,r.cad,r.tienda,r.nombre,r.prioridad,r.etiqueta,lab(r.fp),r.guia,r.almac,r.desp,r.cant,r.cd,r.dup,r.pri,r.zona,r.ruta,r.dist];
+let detMode=null;
 function render(){const A=all(),t=$$('prescTable');if(!t)return;
  fill('pfSem','Todas las semanas',[...new Set(A.map(r=>r.sem))]);fill('pfAtn','Todos los días de atención',[...new Set(A.map(r=>r.atn))]);fill('pfZona','Lima y Provincia',[...new Set(A.map(r=>r.zona))]);fill('pfEt','Todas las etiquetas',[...new Set(A.map(r=>r.etiqueta))].filter(Boolean));
  const fs=$$('pfSem').value,fa=$$('pfAtn').value,fz=$$('pfZona').value,fe=$$('pfEt').value,fd=$$('pfDup').value,q=nrm($$('pfQ').value);
@@ -5969,8 +6005,42 @@ function render(){const A=all(),t=$$('prescTable');if(!t)return;
  $$('prescSum').innerHTML='<tr><th class="name">SEMANA ATENCION</th><th>Fecha</th>'+zs.map(z=>'<th>'+z+' · guías</th><th>'+z+' · cant.</th>').join('')+'<th>Total guías</th><th>Total cant.</th></tr>'+rowsS.map(o=>{const tg=new Set();let tc=0;
   const cells=zs.map(z=>{const x=o.z[z];if(x){x.g.forEach(v=>tg.add(v));tc+=x.c;}return '<td class="num">'+(x?f0(x.g.size):'-')+'</td><td class="num">'+(x?f0(x.c):'-')+'</td>';}).join('');
   return '<tr><td class="name"><b>'+esc(o.atn)+'</b></td><td>'+lab(o.fatn)+'</td>'+cells+'<td class="num"><b>'+f0(tg.size)+'</b></td><td class="num"><b>'+f0(tc)+'</b></td></tr>';}).join('');
+ weekDay(A,L,fs,f0);
  t.innerHTML='<tr>'+COLS.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>'+L.slice(0,500).map(r=>'<tr>'+rowVals(r).map((v,i)=>{const k=COLS[i];return '<td'+(k==='Guia Duplicada'&&v?' style="background:#f4a3a3;font-weight:700"':(k==='Suma de CANTI'||k==='PRIORIDAD ATENCIÓN'?' class="num"':''))+'>'+esc(k==='Suma de CANTI'?f0(v):v)+'</td>';}).join('')+'</tr>').join('')+
   (L.length>500?'<tr><td colspan="'+COLS.length+'">Se muestran 500 de '+f0(L.length)+'. Usa los filtros o descarga el Excel.</td></tr>':'');}
+const CATN=e=>{const n=nrm(e);return n.startsWith('CALZ')?'CALZADO':n.startsWith('ACC')?'ACCESORIOS':n.startsWith('INSUM')?'INSUMOS':(String(e||'').trim()||'OTROS');};
+const DAYS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'],DLAB={MIERCOLES:'MIÉRCOLES',SABADO:'SÁBADO'};
+const PAL=['#d9232d','#2d3139','#e0a43a','#8a94a3','#2f8f5b','#b04a9c'];
+function chart(el,labels,series,title){
+ if(!el)return;if(!labels.length){el.innerHTML='';return;}
+ const W=Math.max(560,labels.length*96+90),H=300,Lm=70,Rm=12,Tm=44,Bm=48,pw=W-Lm-Rm,ph=H-Tm-Bm,tot=labels.map((_,i)=>series.reduce((a,x)=>a+(x.v[i]||0),0)),mx=Math.max(1,...tot);
+ const step=Math.pow(10,Math.floor(Math.log10(mx))),nice=Math.ceil(mx/step*2)/2*step||mx,f=n=>Number(n).toLocaleString('es-PE');
+ let g='<text x="'+Lm+'" y="22" font-size="17" font-weight="700" fill="#2d3139">'+esc(title)+'</text>';
+ let lx=Lm;series.forEach((x,k)=>{g+='<rect x="'+lx+'" y="30" width="12" height="12" fill="'+PAL[k%PAL.length]+'"/><text x="'+(lx+17)+'" y="41" font-size="13" fill="#41536a">'+esc(x.name)+'</text>';lx+=36+x.name.length*8;});
+ for(let i=0;i<=4;i++){const y=Tm+ph-ph*i/4;g+='<line x1="'+Lm+'" x2="'+(W-Rm)+'" y1="'+y+'" y2="'+y+'" stroke="#e5ebf0"/><text x="'+(Lm-8)+'" y="'+(y+5)+'" font-size="13" text-anchor="end" fill="#41536a">'+f(nice*i/4)+'</text>';}
+ const bw=Math.min(64,pw/labels.length*0.62);
+ labels.forEach((lb,i)=>{const cx=Lm+pw*(i+.5)/labels.length;let y=Tm+ph;
+  series.forEach((x,k)=>{const v=x.v[i]||0,h=ph*v/nice;if(v>0){y-=h;g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+h+'" fill="'+PAL[k%PAL.length]+'"><title>'+esc(lb+' · '+x.name+': '+f(v))+'</title></rect>';if(h>20)g+='<text x="'+cx+'" y="'+(y+h/2+5)+'" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">'+f(v)+'</text>';}});
+  g+='<text x="'+cx+'" y="'+(y-6)+'" font-size="14" font-weight="700" fill="#2d3139" text-anchor="middle">'+f(tot[i])+'</text><text x="'+cx+'" y="'+(Tm+ph+22)+'" font-size="14" fill="#41536a" text-anchor="middle">'+esc(lb)+'</text>';});
+ el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" style="width:100%;max-width:'+Math.max(W,760)+'px;height:auto" role="img">'+g+'</svg>';}
+function weekDay(A,L,fs,f0){
+ const fz=$$('pfZona').value,fe=$$('pfEt').value,LW=A.filter(r=>(!fz||r.zona===fz)&&(!fe||r.etiqueta===fe));
+ const dOf=r=>String(r.atn).split(' ').slice(2).join(' '),sems=[...new Set(LW.map(r=>r.sem))].sort((a,b)=>parseInt(a.slice(4))-parseInt(b.slice(4)));
+ const days=DAYS.filter(d=>LW.some(r=>dOf(r)===d)),cats=['CALZADO','ACCESORIOS','INSUMOS'].concat([...new Set(LW.map(r=>CATN(r.etiqueta)))].filter(c=>!['CALZADO','ACCESORIOS','INSUMOS'].includes(c)));
+ let h='<tr><th class="name">SEMANA</th><th>CATEGORÍA</th>'+days.map(d=>'<th>'+(DLAB[d]||d)+'</th>').join('')+'<th>TOTAL</th><th>TOTAL SEMANA</th></tr>';
+ sems.forEach(sm=>{const R0=LW.filter(r=>r.sem===sm),cs=cats.filter(c=>R0.some(r=>CATN(r.etiqueta)===c)),tw=R0.reduce((a,r)=>a+r.cant,0);
+  cs.forEach((c,k)=>{const RC=R0.filter(r=>CATN(r.etiqueta)===c);h+='<tr>'+(k?'':'<td class="name" rowspan="'+cs.length+'"><b>'+esc(sm)+'</b><br><button class="btn pw-btn" data-sem="'+esc(sm)+'" type="button">Ver detalle</button></td>')+'<td class="name"><b>'+c+'</b></td>'+days.map(d=>'<td class="num">'+f0(RC.filter(r=>dOf(r)===d).reduce((a,r)=>a+r.cant,0))+'</td>').join('')+'<td class="num"><b>'+f0(RC.reduce((a,r)=>a+r.cant,0))+'</b></td>'+(k?'':'<td class="num" rowspan="'+cs.length+'"><b>'+f0(tw)+'</b></td>')+'</tr>';});});
+ $$('prescWeek').innerHTML=sems.length?h:'<tr><td>Sin datos.</td></tr>';
+ chart($$('prescWeekChart'),sems,cats.map(c=>({name:c,v:sems.map(sm=>LW.filter(r=>r.sem===sm&&CATN(r.etiqueta)===c).reduce((a,r)=>a+r.cant,0))})).filter(x=>x.v.some(v=>v>0)),'Cantidad por semana de atención y categoría');
+ const ats=[...new Set(L.slice().sort((a,b)=>a.pri-b.pri).map(r=>r.atn))],zs=[...new Set(L.map(r=>r.zona))];
+ chart($$('prescDayChart'),ats,zs.map(z=>({name:z,v:ats.map(a=>L.filter(r=>r.atn===a&&r.zona===z).reduce((q,r)=>q+r.cant,0))})),'Cantidad por día de atención y zona');
+ const sel=$$('prescDetSem');sel.innerHTML='<option value="">SEMANA…</option>'+sems.map(x=>'<option'+(fs===x&&detMode?' selected':'')+'>'+esc(x)+'</option>').join('');
+ $$('prescDetail').style.display=detMode===null?'none':'block';
+ $$('prescDetTitle').textContent='Detalle ordenado por prioridad de atención — '+(fs||'todas las semanas');}
+$$('prescDetAll').onclick=()=>{$$('pfSem').value='';detMode='ALL';render();$$('prescDetail').scrollIntoView({behavior:'smooth'});};
+$$('prescDetSem').addEventListener('change',e=>{const v=e.target.value;$$('pfSem').value=v;detMode=v||'ALL';render();$$('prescDetail').scrollIntoView({behavior:'smooth'});});
+$$('prescDetHide').onclick=()=>{detMode=null;render();};
+$$('prescWeek').addEventListener('click',e=>{const b=e.target.closest('[data-sem]');if(!b)return;$$('pfSem').value=b.dataset.sem;detMode=b.dataset.sem;render();$$('prescDetail').scrollIntoView({behavior:'smooth'});});
 window.renderPresc=render;
 ['pfSem','pfAtn','pfZona','pfEt','pfDup'].forEach(id=>$$(id).addEventListener('change',render));$$('pfQ').addEventListener('input',render);
 $$('prescDown').onclick=()=>{const A=all();if(!A.length)return;
@@ -6028,5 +6098,113 @@ Object.keys(SPEC).forEach(id=>{const t=document.getElementById(id);if(!t)return;
  const obs=new MutationObserver(()=>{obs.disconnect();try{apply(t,SPEC[id]);}catch(e){}obs.observe(t,{childList:true,subtree:false});});
  obs.observe(t,{childList:true});apply(t,SPEC[id]);});
 })();
-</script></body>
+</script><script>
+document.getElementById('filtersBtn').addEventListener('click',function(){const w=document.getElementById('filtersWrap'),on=w.style.display==='none';w.style.display=on?'block':'none';this.classList.toggle('active',on);this.innerHTML=on?'🔎 Ocultar filtros':'🔎 Filtros';});
+</script>
+<style>
+.asis-back{position:fixed;inset:0;background:rgba(20,24,30,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
+.asis-back.show{display:flex}
+.asis-box{background:#fff;border-radius:16px;width:min(1100px,100%);max-height:92vh;overflow:auto;padding:18px}
+.asis-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.asis-top input{width:84px;border:1px solid #d9e2e8;border-radius:10px;padding:9px;font-size:14px}
+.asis-top .tag{font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:#eef0f2;color:#2d3139}
+.asis-t td,.asis-t th{padding:7px 8px;font-size:14px;text-align:center}
+.asis-t td.l,.asis-t th.l{text-align:left}
+.asis-t select{font-size:14px;padding:5px;border:1px solid #d9e2e8;border-radius:8px}
+.as-A{background:#d9f2e3}.as-T{background:#fbe9c3}.as-F{background:#f6c9cc}.as-P{background:#e3e6ea}
+</style>
+<div class="asis-back" id="asisBack"><div class="asis-box">
+ <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="h">Asistencia semanal</div><div class="mini">A = Asistió · T = Tardanza · F = Faltó · P = Permiso. Sábado es medio día.</div></div><button class="btn" id="asisClose" type="button">Cerrar</button></div>
+ <div class="asis-top"><button class="btn" id="asisPrev" type="button">◀</button><label>Año <input id="asisYear" type="number" min="2024" max="2100"></label><label>Semana <input id="asisWeek" type="number" min="1" max="53"></label><button class="btn" id="asisNext" type="button">▶</button><button class="btn" id="asisNow" type="button">Semana actual</button><span class="tag" id="asisTag"></span><span id="asisRange" style="font-size:13px;color:#41536a"></span></div>
+ <div class="mod-actions"><button class="btn" id="asisAllA" type="button">Marcar todos «A»</button><button class="btn" id="asisUnlock" type="button" style="display:none">✏️ Habilitar edición</button><button class="btn" id="asisSave" type="button">💾 Guardar asistencia</button><span id="asisSum" style="font-size:13px;color:#41536a"></span></div>
+ <div class="heatbox" style="max-height:60vh"><table class="heatmap asis-t" id="asisTable"></table></div>
+</div></div>
+<script>
+(function(){
+const $$=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nrm=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_\-]+/g,' ').trim().toUpperCase();
+const ukey=u=>String(u||'').trim().toLowerCase();
+window.USUARIOS=window.USUARIOS||[];window.ASISTENCIA=window.ASISTENCIA||{};
+// ---- Enlaces listos para medir producción contra la meta individual ----
+window.metaIndividual=u=>{const r=window.USUARIOS.find(x=>ukey(x.usuario)===ukey(u));return r&&Number(r.prom)>0?Number(r.prom):null;};
+window.usuarioInfo=u=>window.USUARIOS.find(x=>ukey(x.usuario)===ukey(u))||null;
+window.asistenciaDe=(sem,u)=>((window.ASISTENCIA[sem]||{})[ukey(u)])||null;   // sem = 'AAAA-Wss'
+const fullName=r=>((r.nombres||'')+' '+(r.apellidos||'')).trim();
+window.renderUsuarios=function(){
+ const t=$$('usrTable');if(!t)return;const q=nrm($$('usrSearch').value),all=window.USUARIOS.slice().sort((a,b)=>String(a.area).localeCompare(String(b.area))||String(a.apellidos).localeCompare(String(b.apellidos)));
+ const L=all.filter(r=>!q||nrm([r.usuario,r.nombres,r.apellidos,r.area].join(' ')).includes(q));
+ $$('usrStatus').textContent=all.length?'Usuarios: '+all.length.toLocaleString('es-PE')+(L.length!==all.length?' · mostrando '+L.length:''):'Sin usuarios cargados.';
+ t.innerHTML='<tr><th class="name">USUARIO</th><th>NOMBRES</th><th>APELLIDOS</th><th>ÁREA</th><th>PROMEDIO / HORA</th><th></th></tr>'+L.map(r=>'<tr><td class="name"><b>'+esc(r.usuario)+'</b></td><td>'+esc(r.nombres)+'</td><td>'+esc(r.apellidos)+'</td><td>'+esc(r.area)+'</td><td class="num">'+(Number(r.prom)>0?Number(r.prom).toLocaleString('es-PE'):'-')+'</td><td><button class="btn pw-btn" data-e="'+esc(r.usuario)+'" type="button">Editar</button> <button class="btn pw-btn" data-d="'+esc(r.usuario)+'" type="button">Borrar</button></td></tr>').join('');};
+const persist=async()=>{window.renderUsuarios();if(window.saveCloud)await window.saveCloud();};
+// ---- Cargar Excel / CSV ----
+async function leer(file){
+ if(/\.(csv|txt)$/i.test(file.name)){const b=new Uint8Array(await file.arrayBuffer());let tx=new TextDecoder('utf-8').decode(b);
+  if(tx.includes('\uFFFD')){const o=[];let i=0;while(i<b.length){const c=b[i];if(c<128){o.push(c);i++;}else if(c>=194&&c<=223&&(b[i+1]&192)===128){o.push(((c&31)<<6)|(b[i+1]&63));i+=2;}else if(c>=224&&c<=239&&(b[i+1]&192)===128&&(b[i+2]&192)===128){o.push(((c&15)<<12)|((b[i+1]&63)<<6)|(b[i+2]&63));i+=3;}else{o.push(c);i++;}}tx=String.fromCharCode.apply(null,o);}
+  return XLSX.read(tx.replace(/^\uFEFF/,''),{type:'string'});}
+ return XLSX.read(await file.arrayBuffer(),{type:'array'});}
+const MAP={nombres:['NOMBRES','NOMBRE'],apellidos:['APELLIDOS','APELLIDO'],usuario:['USUARIO','USER','USUARIO WMS'],area:['AREA'],prom:['PROMEDIO HORA','PROMEDIO POR HORA','PROMEDIO','PROM HORA','PROM H','UND H','UND HH','META']};
+async function cargar(e){const f=e.target.files[0];e.target.value='';if(!f)return;
+ try{const wb=await leer(f);let hit=null;
+  for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+   for(let i=0;i<Math.min(rows.length,10);i++){const H=(rows[i]||[]).map(nrm);if(MAP.usuario.some(k=>H.includes(k))){hit={rows,hi:i,H};break;}}if(hit)break;}
+  if(!hit)throw new Error('No encontré la columna USUARIO. Las columnas deben ser: NOMBRES, APELLIDOS, USUARIO, AREA, PROMEDIO_HORA.');
+  const ix={};Object.keys(MAP).forEach(k=>{ix[k]=hit.H.findIndex(h=>MAP[k].includes(h));});
+  if(!window.requestUploadAccess())return;
+  const m=new Map(window.USUARIOS.map(r=>[ukey(r.usuario),r]));let nu=0,ac=0,om=0;
+  hit.rows.slice(hit.hi+1).forEach(r=>{const g=k=>ix[k]>=0&&r[ix[k]]!=null?String(r[ix[k]]).trim():'',u=g('usuario');if(!u){om++;return;}
+   const p=Number(String(g('prom')).replace(',','.'))||0,o={usuario:u,nombres:g('nombres'),apellidos:g('apellidos'),area:g('area'),prom:p},k=ukey(u);if(m.has(k))ac++;else nu++;m.set(k,o);});
+  window.USUARIOS=[...m.values()];window.__toast&&window.__toast('Usuarios: '+nu+' nuevos · '+ac+' actualizados'+(om?' · '+om+' filas sin usuario omitidas':'')+'.');await persist();
+ }catch(err){window.__toast&&window.__toast('❌ '+err.message);}}
+$$('usrInput').addEventListener('change',cargar);$$('usrSearch').addEventListener('input',window.renderUsuarios);
+// ---- Agregar / editar / borrar ----
+const form=$$('usrForm');let editKey=null;
+$$('usrAddBtn').onclick=()=>{editKey=null;['uNom','uApe','uUsr','uArea','uProm'].forEach(i=>$$(i).value='');form.style.display='grid';$$('uNom').focus();};
+$$('usrCancelBtn').onclick=()=>{form.style.display='none';};
+$$('usrSaveBtn').onclick=async()=>{const u=$$('uUsr').value.trim();if(!u){window.__toast&&window.__toast('Escribe el usuario.');return;}if(!window.requestUploadAccess())return;
+ const o={usuario:u,nombres:$$('uNom').value.trim(),apellidos:$$('uApe').value.trim(),area:$$('uArea').value.trim(),prom:Number($$('uProm').value)||0};
+ const k=editKey||ukey(u),i=window.USUARIOS.findIndex(x=>ukey(x.usuario)===k);if(i>=0)window.USUARIOS[i]=o;else window.USUARIOS.push(o);
+ if(editKey&&editKey!==ukey(u)&&window.USUARIOS.filter(x=>ukey(x.usuario)===ukey(u)).length>1)window.USUARIOS=window.USUARIOS.filter((x,j)=>!(ukey(x.usuario)===ukey(u)&&j!==i));
+ form.style.display='none';await persist();};
+$$('usrTable').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.e){const r=window.USUARIOS.find(x=>ukey(x.usuario)===ukey(b.dataset.e));if(!r)return;editKey=ukey(r.usuario);$$('uNom').value=r.nombres||'';$$('uApe').value=r.apellidos||'';$$('uUsr').value=r.usuario;$$('uArea').value=r.area||'';$$('uProm').value=r.prom||'';form.style.display='grid';}
+ if(b.dataset.d){if(!confirm('¿Borrar al usuario '+b.dataset.d+'?')||!window.requestUploadAccess())return;window.USUARIOS=window.USUARIOS.filter(x=>ukey(x.usuario)!==ukey(b.dataset.d));await persist();}});
+$$('usrDownBtn').onclick=()=>{const rows=[['NOMBRES','APELLIDOS','USUARIO','AREA','PROMEDIO_HORA']].concat(window.USUARIOS.map(r=>[r.nombres,r.apellidos,r.usuario,r.area,r.prom||'']));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
+// ---- Asistencia semanal ----
+function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
+function monday(y,w){const j=new Date(Date.UTC(y,0,4)),d=j.getUTCDay()||7;return new Date(j.getTime()+((w-1)*7-(d-1))*864e5);}
+const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fm=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
+let unlocked=false;
+const wkey=()=>$$('asisYear').value+'-W'+String($$('asisWeek').value).padStart(2,'0');
+function estado(){const n=isoNow(),y=+$$('asisYear').value,w=+$$('asisWeek').value,a=y*100+w,b=n.y*100+n.w;return a<b?'past':a>b?'future':'now';}
+function pintar(){
+ const y=+$$('asisYear').value,w=+$$('asisWeek').value;if(!y||!w)return;const mo=monday(y,w),st=estado(),ro=st==='past'&&!unlocked,saved=window.ASISTENCIA[wkey()]||{};
+ $$('asisRange').textContent='del '+fm(mo)+' al '+fm(new Date(mo.getTime()+5*864e5));
+ $$('asisTag').textContent=st==='now'?'Semana actual · se puede llenar':st==='future'?'Semana futura · se puede llenar':(ro?'Semana anterior · solo lectura':'Semana anterior · edición habilitada');
+ $$('asisUnlock').style.display=st==='past'&&ro?'':'none';$$('asisSave').style.display=ro?'none':'';$$('asisAllA').style.display=ro?'none':'';
+ const us=window.USUARIOS.slice().sort((a,b)=>String(a.area).localeCompare(String(b.area))||String(a.apellidos).localeCompare(String(b.apellidos)));
+ if(!us.length){$$('asisTable').innerHTML='<tr><td>Primero agrega usuarios en este módulo.</td></tr>';$$('asisSum').textContent='';return;}
+ let cnt={A:0,T:0,F:0,P:0};
+ const head='<tr><th class="l">USUARIO</th><th class="l">NOMBRE</th><th>ÁREA</th>'+DN.map((d,i)=>'<th>'+d+'<br>'+fm(new Date(mo.getTime()+i*864e5))+'</th>').join('')+'</tr>';
+ const body=us.map(r=>{const rec=saved[ukey(r.usuario)]||{};return '<tr><td class="l"><b>'+esc(r.usuario)+'</b></td><td class="l">'+esc(fullName(r))+'</td><td>'+esc(r.area)+'</td>'+DN.map((d,i)=>{const v=rec['d'+i]||'';if(cnt[v]!=null)cnt[v]++;
+  return ro?'<td class="'+(v?'as-'+v:'')+'"><b>'+(v||'—')+'</b></td>':'<td class="'+(v?'as-'+v:'')+'"><select data-u="'+esc(ukey(r.usuario))+'" data-d="d'+i+'"><option value=""></option>'+['A','T','F','P'].map(o=>'<option'+(o===v?' selected':'')+'>'+o+'</option>').join('')+'</select></td>';}).join('')+'</tr>';}).join('');
+ $$('asisTable').innerHTML=head+body;
+ $$('asisSum').textContent=Object.keys(saved).length?'Registrado: Asistió '+cnt.A+' · Tardanza '+cnt.T+' · Faltó '+cnt.F+' · Permiso '+cnt.P:(st==='past'?'Sin asistencia registrada para esta semana.':'Aún sin registrar.');}
+function abrir(){const n=isoNow();$$('asisYear').value=n.y;$$('asisWeek').value=n.w;unlocked=false;$$('asisBack').classList.add('show');pintar();}
+$$('usrAsisBtn').onclick=abrir;$$('asisClose').onclick=()=>$$('asisBack').classList.remove('show');
+['asisYear','asisWeek'].forEach(i=>$$(i).addEventListener('change',()=>{unlocked=false;pintar();}));
+const mover=k=>{let y=+$$('asisYear').value,w=+$$('asisWeek').value+k;if(w<1){y--;w=52;}if(w>52){const mx=isoWeeks(y);if(w>mx){w=1;y++;}}$$('asisYear').value=y;$$('asisWeek').value=w;unlocked=false;pintar();};
+function isoWeeks(y){const d=new Date(Date.UTC(y,11,28)),t=new Date(d);t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));return Math.ceil(((t-Date.UTC(t.getUTCFullYear(),0,1))/864e5+1)/7);}
+$$('asisPrev').onclick=()=>mover(-1);$$('asisNext').onclick=()=>mover(1);$$('asisNow').onclick=abrir;
+$$('asisUnlock').onclick=()=>{unlocked=true;pintar();};
+$$('asisAllA').onclick=()=>{$$('asisTable').querySelectorAll('select').forEach(s=>{if(!s.value){s.value='A';s.parentElement.className='as-A';}});};
+$$('asisTable').addEventListener('change',e=>{const s=e.target.closest('select');if(s)s.parentElement.className=s.value?'as-'+s.value:'';});
+$$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const rec={};
+ $$('asisTable').querySelectorAll('select').forEach(s=>{if(s.value){const u=s.dataset.u;(rec[u]=rec[u]||{})[s.dataset.d]=s.value;}});
+ window.ASISTENCIA[wkey()]=rec;window.__toast&&window.__toast('Asistencia de la semana '+$$('asisWeek').value+' guardada.');pintar();if(window.saveCloud)await window.saveCloud();};
+window.renderUsuarios();
+})();
+</script>
+</body>
 </html>
