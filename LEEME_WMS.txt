@@ -1,0 +1,77 @@
+WMS EN LÍNEA · PASO A PASO (explicado fácil)
+============================================
+
+QUÉ VA A PASAR
+  Un "robot" de GitHub entra al WMS cada 15 minutos, trae el packing, le aplica las mismas reglas del dashboard
+  y deja unos archivos en la carpeta "data". El dashboard lee esa carpeta solo (cada 5 minutos) y se actualiza.
+  Ya no hay que subir archivos a mano para PACKING. En la parte de arriba del dashboard aparecerá:
+      "🟢 WMS en línea · actualizado 17/10, 15:05"
+
+IMPORTANTE (seguridad)
+  * Tu usuario y clave del WMS NUNCA van en la página ni en estos archivos. Van en "Secrets" de GitHub (paso 1).
+  * Pide, si puedes, un usuario del WMS que solo pueda LEER (consulta). Así no hay riesgo de cambiar nada.
+  * El repositorio es público: los datos de la carpeta "data" (usuarios, órdenes, tiendas) se podrán ver si alguien
+    conoce la dirección. Es lo mismo que ya pasa con los datos guardados en Supabase.
+
+PASO 1 · Guardar el usuario y la clave del WMS
+  1. Abre tu repositorio en GitHub.   2. Settings (arriba).
+  3. A la izquierda: Secrets and variables  →  Actions.
+  4. Botón verde "New repository secret".
+       Nombre:  WMS_USER      Valor: tu usuario del WMS      →  Add secret
+       Otra vez "New repository secret":
+       Nombre:  WMS_PASS      Valor: tu clave del WMS        →  Add secret
+
+PASO 2 · Crear los 2 archivos del robot
+  1. Pestaña "Code"  →  Add file  →  Create new file.
+  2. En el nombre escribe:  wms_sync.py     Pega TODO el contenido del archivo wms_sync.py del kit.  →  Commit changes.
+  3. Otra vez Add file → Create new file. En el nombre escribe EXACTAMENTE:  .github/workflows/wms_sync.yml
+     (al escribir las "/" GitHub crea las carpetas solo).  Pega el contenido de wms_sync.yml.  →  Commit changes.
+  (Los archivos están dentro del zip: ábrelos con el Bloc de notas, Ctrl+A, Ctrl+C.)
+
+PASO 3 · DIAGNÓSTICO (comprueba si el WMS deja entrar al robot)
+  1. Pestaña "Actions"  →  a la izquierda "Sincronizar WMS"  →  botón "Run workflow".
+  2. En "modo" escribe:  diagnostico   →  Run workflow.
+  3. Espera 1 minuto, entra a la ejecución (clic en su nombre) → clic en "sync" → abre "Conectar con el WMS".
+  4. Lee el final, "CONCLUSIÓN":
+       * "¡Todo bien!"                         → sigue al PASO 3B.
+       * "rechaza el usuario/clave"            → revisa los Secrets del paso 1.
+       * "dirección del API no existe"         → revisa WMS_BASE / WMS_ENTIDAD (paso 4).
+       * "BLOQUEA los servidores de GitHub"    → usa el PLAN B (al final): el robot corre en tu PC.
+  5. Copia TODO el registro y mándamelo.
+
+PASO 3B · PRUEBA DE CAMPOS (el robot muestra qué campos tiene tu WMS)
+  Igual que arriba, pero en "modo" escribe:  probar.  Verás "CAMPOS DISPONIBLES (campo = ejemplo)".
+  Copia esa lista y mándamela: con ella dejo el mapeo exacto.
+
+PASO 4 · Ajustar los nombres (solo si la prueba lo pide)
+  Settings → Secrets and variables → Actions → pestaña "Variables" → "New repository variable":
+     WMS_ENTIDAD       nombre de la entidad del API con las líneas de packing   (por defecto: allocation)
+     WMS_CAMPO_FECHA   campo con la fecha/hora de modificación                  (por defecto: mod_ts)
+     WMS_MAPEO         {"campo_wms":"NUMERO DE ORDEN", ...}   (te lo preparo yo con la lista del paso 3)
+     WMS_TZ_API        zona horaria de las horas que entrega el API (por defecto: UTC)
+
+PASO 5 · Encender
+  1. Actions → Sincronizar WMS → Run workflow → modo:  sincronizar  →  Run workflow.
+  2. Cuando termine, en la pestaña Code debe aparecer la carpeta "data" con archivos packing_AAAA-MM-DD.csv.
+  3. Abre el dashboard con Ctrl + F5: arriba debe decir "🟢 WMS en línea · actualizado …".
+  4. Desde ahora corre solo cada 15 minutos (7:00 a 18:59 hora Perú, lunes a sábado).
+
+REQUISITOS
+  * El módulo RUTAS del dashboard debe tener las rutas cargadas (el robot las lee de la nube para saber Lima/Provincia).
+  * Si usas Maestro SKU, también se lee de la nube.
+
+SI ALGO FALLA
+  * Actions → clic en la ejecución con ❌ → lee el mensaje rojo y mándamelo.
+  * Si pasan 60 días sin ninguna actividad en el repositorio, GitHub pausa los robots programados: entra a Actions y pulsa "Enable".
+  * Para probar sin esperar: Actions → Sincronizar WMS → Run workflow.
+
+PLAN B · EL ROBOT EN TU PC (si el WMS bloquea a GitHub)
+  Tu PC ya entra al WMS desde la red de tu empresa, por eso puede funcionar donde GitHub no.
+  La PC debe estar prendida en el horario de trabajo.
+  1. Instala Python (python.org) y marca la casilla "Add Python to PATH".
+  2. GitHub → tu repositorio → Settings → Actions → Runners → "New self-hosted runner" → Windows.
+     Copia los comandos que muestra GitHub en PowerShell (descargar, configurar con el token y ejecutar).
+     Para que arranque solo con la PC, al configurar responde "Y" a "run as service".
+  3. En el repositorio BORRA el archivo .github/workflows/wms_sync.yml (el de la nube)
+     y crea .github/workflows/wms_sync_pc.yml con el contenido del kit.
+  4. Actions → "Sincronizar WMS (PC)" → Run workflow → modo: diagnostico (y luego probar / sincronizar).
