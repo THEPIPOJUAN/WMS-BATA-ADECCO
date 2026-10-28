@@ -1228,7 +1228,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     version: '1.1.0', configure, PP, exportMenu, exportMatriz, exportTable,
     mountReportButton, openReportModal,
     // expuestos para pruebas / uso avanzado
-    _buildReport: (rows, o) => buildReport(rows, o), _normRows: normRows, _isoWeekOf: isoWeekOf, _isoWeekStart: isoWeekStart,
+    _buildReport: (rows, o) => buildReport(rows, o), _normRows: normRows, _raw: () => (typeof CFG.getRows === 'function' ? CFG.getRows() : []), _map: r => (CFG.mapRow ? CFG.mapRow(r) : r), _isoWeekOf: isoWeekOf, _isoWeekStart: isoWeekStart,
     _reportPDF: reportPDF, _reportXLSX: reportXLSX, _chartPNG: chartPNG, _cfg: CFG
   };
 })(window);
@@ -1493,6 +1493,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
       <button class="viewtab" data-view="archivos">ARCHIVOS CARGADOS</button>
       <button class="viewtab" data-view="presc">PRESCRIPCIONES SEMANALES</button>
       <button class="viewtab" data-view="usuarios">USUARIOS</button>
+      <button class="viewtab" data-view="repsem">REPORTE SEMANAL</button>
     </div>
 
     <div class="optabs" id="opTabs"><button type="button" data-op="PICKING" class="active">PICKING</button><button type="button" data-op="PACKING">PACKING</button><button type="button" data-op="AMBOS">AMBOS</button></div>
@@ -1895,11 +1896,21 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="heatbox" style="max-height:560px"><table class="heatmap" id="usrTable"></table></div>
       </section>
     </div>
+    <div id="view-repsem" class="viewsection">
+      <section class="opsum"><div class="h">Reporte semanal</div>
+        <div class="mod-note">Genera el reporte ejecutivo semanal en HTML (con gráficos dinámicos) y en PDF con el mismo diseño. Producción Picking y Packing, marcas, colecciones y áreas salen del detalle ya cargado y del MAESTRO SKU. Sube aquí el PDF de asistencia y el Excel de % de atención de la semana.</div>
+        <div class="mod-actions"><label style="display:flex;gap:6px;align-items:center">Año <input id="rsYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="rsWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label>
+          <label class="btn">📄 Cargar asistencia (PDF)<input id="rsPdf" type="file" accept=".pdf" hidden></label><label class="btn">📊 Cargar % de atención (Excel)<input id="rsXls" type="file" accept=".xlsx,.xls" hidden></label></div>
+        <div class="mod-status" id="rsMsg">La lectura del PDF usa reconocimiento de texto y puede tardar un minuto.</div>
+        <div class="mod-status" id="rsStatus" style="line-height:1.7"></div>
+        <div class="mod-actions"><button class="btn" id="rsView" type="button">👁 Ver reporte</button><button class="btn" id="rsHtml" type="button">⬇ Descargar HTML</button><button class="btn" id="rsPdfBtn" type="button">⬇ Descargar PDF</button></div>
+      </section>
+    </div>
     <div id="view-maestro" class="viewsection">
       <section class="opsum"><div class="h">Maestro SKU</div>
         <div class="mod-note">Categoría por SKU: es lo primero que se consulta al cargar datos (antes de la regla automática). Al subir un archivo se actualizan los SKU existentes, se agregan los nuevos y se conservan los que no vengan en el archivo.</div>
         <div class="mod-actions"><label class="btn">📂 Cargar MAESTRO SKU<input id="maestroInput2" type="file" accept=".xlsx,.csv,.txt" hidden></label><button class="btn" id="mAddBtn" type="button">➕ Agregar SKU</button><button class="btn" id="mDownBtn" type="button">⬇ Descargar maestro</button><input id="mSearch" class="mod-search" placeholder="Buscar SKU, categoría o descripción…"></div>
-        <div class="rform" id="mForm" style="display:none;grid-template-columns:1.2fr 1fr 2fr auto"><input id="mSku" placeholder="SKU"><select id="mCat"><option value="CALZ">CALZADO</option><option value="ACC">ACCESORIO</option><option value="INSUMO">INSUMO</option><option value="MATERIALES">MATERIALES</option></select><input id="mDesc" placeholder="Descripción (opcional)"><span><button class="btn" id="mSaveBtn" type="button">Guardar</button> <button class="btn" id="mCancelBtn" type="button">Cancelar</button></span></div>
+        <div class="rform" id="mForm" style="display:none;grid-template-columns:1.1fr 1fr 1.6fr 1fr 1fr 1fr auto"><input id="mSku" placeholder="SKU"><select id="mCat"><option value="CALZ">CALZADO</option><option value="ACC">ACCESORIO</option><option value="INSUMO">INSUMO</option><option value="MATERIALES">MATERIALES</option></select><input id="mDesc" placeholder="Descripción (opcional)"><input id="mGen" placeholder="Gender RIMS"><input id="mMarca" placeholder="MarcaStd"><input id="mCol" placeholder="Colección PO"><span><button class="btn" id="mSaveBtn" type="button">Guardar</button> <button class="btn" id="mCancelBtn" type="button">Cancelar</button></span></div>
         <div class="mod-status" id="maestroStatus2">Sin maestro SKU cargado.</div>
         <div class="heatbox" style="max-height:560px"><table class="heatmap" id="maestroTable"></table></div>
       </section>
@@ -2354,6 +2365,7 @@ self.onmessage=async(e)=>{
       order:idx('Orden_ID','Orden ID'),
       units:idx('Und_Cantidad Conv','Und Cantidad Conv','Cantidad Conv'),
       rawunits:idx('Und_cantidad','Und cantidad','Und_Cantidad','cantidad'),
+      sku:idx('Codigo de articulo','Código de artículo','Codigo articulo','SKU'),
       pp:idx('Und_PRE PACK.','Und PRE PACK.','PRE PACK.','PRE PACK'),
       hour:idx('hora','Hora'),
       selection:idx('Hora de selección','Hora de seleccion','Hora selección','Hora seleccion')
@@ -2425,7 +2437,7 @@ self.onmessage=async(e)=>{
 
     // Agrupación principal: Fecha + Usuario.
     // Dentro de cada día/usuario se guardan eventos compactados por timestamp y dimensión.
-    const userDays=new Map();
+    const userDays=new Map(),skuAgg=new Map();
     let pos=firstEnd+1,total=0,kept=0,invalidTs=0;
     let minDate='9999-99-99',maxDate='0000-00-00';
     const details=isAllocation?[]:null; // Detalle a nivel de línea (orden/LPN/SKU/ubicación), solo disponible en formato Allocation.
@@ -2438,6 +2450,7 @@ self.onmessage=async(e)=>{
 
       const a=parseLine(line,delim); total++;
       const rf=getRowFields(a);
+      const skuRaw=isAllocation?a[AI.codigo]:(I.sku>=0?a[I.sku]:'');
       const cat=norm(rf.cat).toUpperCase();
       if(cat!=='CALZ' && cat!=='ACC' && cat!=='INSUMO' && cat!=='MATERIALES'){
         if(total%50000===0)self.postMessage({type:'progress',rows:total});
@@ -2510,6 +2523,7 @@ self.onmessage=async(e)=>{
       ev.raw+=rawUnits;
       ev.r++;
       ev.pp+=pp;
+      {const sk0=String(skuRaw==null?'':skuRaw).trim();if(sk0){const kk=d+'\u001f'+sk0;skuAgg.set(kk,(skuAgg.get(kk)||0)+(Number(units)||Number(pp)||0));}}
 
       kept++;
       if(d<minDate)minDate=d;
@@ -2600,6 +2614,7 @@ self.onmessage=async(e)=>{
 
     self.postMessage({
       type:'done',
+      skuAgg:[...skuAgg].map(([k,v])=>{const i=k.indexOf('\u001f');return [k.slice(0,i),k.slice(i+1),v];}),
       records,
       details: details||[],
       stats:{
@@ -2996,7 +3011,7 @@ function processRawFile(file,contextLabel='Archivo',extraParams={}){
         worker.terminate();reject(new Error(`${file.name}: ${m.message}`));
       }else if(m.type==='done'){
         if(handled)return; handled=true;
-        worker.terminate();resolve(m);
+        worker.terminate();(window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[]});resolve(m);
       }
     };
     worker.onerror=e=>{
@@ -3019,7 +3034,7 @@ function runInlineFallback(file,contextLabel,extraParams={}){
         }else if(m.type==='error'){
           reject(new Error(`${file.name}: ${m.message}`));
         }else if(m.type==='done'){
-          resolve(m);
+          (window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[]});resolve(m);
         }
       }
     };
@@ -5222,7 +5237,7 @@ window.saveCloud=saveCloud;
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
-  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],asistencia:window.ASISTENCIA||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
+  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
 };}
 async function saveCloud(){
   if(!sb){const why=!(CLOUD_CFG.url&&CLOUD_CFG.anonKey)?'No se encontró config.js: en GitHub debe llamarse exactamente config.js y estar en la misma carpeta que el HTML.':'No cargó la librería de Supabase (revisa internet o si algo bloquea cdn.jsdelivr.net).';notice('❌ No se pudo guardar: '+why,true);return false;}
@@ -5300,6 +5315,8 @@ async function applyCloudIfAvailable(){
   if(Array.isArray(p.maestro)){window.MAESTRO=p.maestro;window.renderMaestro&&window.renderMaestro();}
   if(Array.isArray(p.usuarios)){window.USUARIOS=p.usuarios;window.renderUsuarios&&window.renderUsuarios();}
   if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
+  if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
+  if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5341,6 +5358,8 @@ async function applyCloud(){
   if(Array.isArray(p.maestro)){window.MAESTRO=p.maestro;window.renderMaestro&&window.renderMaestro();}
   if(Array.isArray(p.usuarios)){window.USUARIOS=p.usuarios;window.renderUsuarios&&window.renderUsuarios();}
   if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
+  if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
+  if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5463,8 +5482,10 @@ updateDayData=async function(fl){
  for(const file of files){
   let up=file,pkInfo=null;if(op==='PACKING'){try{pkInfo=await window.__packingCSV(file);up=pkInfo.file;}catch(err){window.__toast('❌ '+file.name+': '+err.message);continue;}}
   const pd=DAY_DATA.length,pt=DAY_DETAILS.length,pm=DAY_META.length;
+  window.__skuBatch=pkInfo?[window.SKUPROD_FROM(pkInfo.details)]:[];
   await _ud(up);
-  if(DAY_DATA.length===pd&&DAY_META.length===pm)continue;
+  if(DAY_DATA.length===pd&&DAY_META.length===pm){window.__skuBatch=[];continue;}
+  window.SKUPROD_COMMIT(op,'d');
   const sid=newSrc(file.name,op,'Operación del día');const nr=DAY_DATA.slice(pd);tag(DAY_DATA,pd,op,sid);tag(DAY_DETAILS,pt,op,sid);
   const meta=DAY_META.length>pm?DAY_META[DAY_META.length-1]:null;if(meta){meta.op=op;meta.src=sid;}
   let added=meta?meta.added||0:0,dup=meta?meta.duplicates||0:0;
@@ -5480,15 +5501,15 @@ loadHistoricalFiles=async function(fl){
  const files=[...fl];if(!files.length)return;const op=await askOp();if(!op)return;
  const kh=HIST_DATA.filter(r=>opOf(r)!==op),kd=HIST_DETAILS.filter(r=>opOf(r)!==op),km=HIST_META.filter(m=>(m.op||'PICKING')!==op),orig=HIST_DATA;
  let fx=files;const pkis=[];if(op==='PACKING'){try{fx=[];for(const x of files){const pi=await window.__packingCSV(x);pkis.push(pi);fx.push(pi.file);}}catch(err){window.__toast('❌ '+err.message);return;}}
- const acc=[],accD=[],accM=[];let ok=0;
+ const acc=[],accD=[],accM=[];let ok=0;const skuOld=Object.assign({},window.SKUPROD||{});window.SKUPROD_CLEAR(op,'h');
  for(let k=0;k<fx.length;k++){
-  const bf=HIST_DATA;await _lh([fx[k]]);if(HIST_DATA===bf)continue;ok++;
+  const bf=HIST_DATA;window.__skuBatch=pkis[k]?[window.SKUPROD_FROM(pkis[k].details)]:[];await _lh([fx[k]]);if(HIST_DATA===bf){window.__skuBatch=[];continue;}ok++;window.SKUPROD_COMMIT(op,'h');
   const sid=newSrc(files[k].name,op,'Histórico bruto');
   tag(HIST_DATA,0,op,sid);tag(HIST_DETAILS,0,op,sid);HIST_META.forEach(m=>{if(!m.op){m.op=op;m.src=sid;}});
   pushAll(acc,HIST_DATA);pushAll(accD,HIST_DETAILS);pushAll(accM,HIST_META);
   if(pkis[k])pkis[k].details.forEach(d=>{d.op=op;d.src=sid;accD.push(d);});
  }
- if(!ok){HIST_DATA=orig;return;}
+ if(!ok){HIST_DATA=orig;window.SKUPROD=skuOld;return;}
  const seen=new Set(),nr=[];let dup=0;
  acc.forEach(r=>{const s=sig(r);if(seen.has(s))dup+=Number(r.r)||0;else{seen.add(s);nr.push(r);}});
  HIST_DATA=kh.concat(nr);HIST_DETAILS=kd.concat(accD);HIST_META=km.concat(accM);
@@ -5832,8 +5853,8 @@ window.masterCat=s=>window.MAESTRO_MAP[sk(s)]||window.MAESTRO_MAP[sk(s).slice(0,
 function rebuild(){const m={};window.MAESTRO.forEach(r=>{const c=catCode(r.cat);if(c)m[sk(r.sku)]=c;});window.MAESTRO_MAP=m;}
 window.renderMaestro=function(){rebuild();const t=$$('maestroTable');if(!t)return;
  const q=nrm($$('mSearch')?$$('mSearch').value:'');
- const all=window.MAESTRO.filter(r=>!q||nrm([r.sku,NAME[catCode(r.cat)]||r.cat,r.desc].join(' ')).includes(q)),L=all.slice(0,400);
- t.innerHTML='<tr><th>SKU</th><th>Categoría</th><th class="name">Descripción</th><th></th></tr>'+L.map(r=>'<tr><td>'+esc(r.sku)+'</td><td>'+esc(NAME[catCode(r.cat)]||r.cat)+'</td><td class="name">'+esc(r.desc)+'</td><td><button class="mini-btn" data-e="'+esc(r.sku)+'">Editar</button><button class="mini-btn" data-d="'+esc(r.sku)+'">Eliminar</button></td></tr>').join('')+(all.length>L.length?'<tr><td colspan="4">Se muestran 400 de '+all.length.toLocaleString('es-PE')+'. Usa el buscador para ver más.</td></tr>':'');
+ const all=window.MAESTRO.filter(r=>!q||nrm([r.sku,NAME[catCode(r.cat)]||r.cat,r.desc,r.gender,r.marca,r.colec].join(' ')).includes(q)),L=all.slice(0,400);
+ t.innerHTML='<tr><th>SKU</th><th>Categoría</th><th class="name">Descripción</th><th>Gender RIMS</th><th>MarcaStd</th><th>Colección PO</th><th></th></tr>'+L.map(r=>'<tr><td>'+esc(r.sku)+'</td><td>'+esc(NAME[catCode(r.cat)]||r.cat)+'</td><td class="name">'+esc(r.desc)+'</td><td>'+esc(r.gender||'')+'</td><td>'+esc(r.marca||'')+'</td><td>'+esc(r.colec||'')+'</td><td><button class="mini-btn" data-e="'+esc(r.sku)+'">Editar</button><button class="mini-btn" data-d="'+esc(r.sku)+'">Eliminar</button></td></tr>').join('')+(all.length>L.length?'<tr><td colspan="4">Se muestran 400 de '+all.length.toLocaleString('es-PE')+'. Usa el buscador para ver más.</td></tr>':'');
  const n=k=>window.MAESTRO.filter(r=>catCode(r.cat)===k).length;
  const m=window.MAESTRO.length?'Maestro SKU: '+window.MAESTRO.length.toLocaleString('es-PE')+' (Calzado '+n('CALZ')+' · Accesorio '+n('ACC')+' · Insumo '+n('INSUMO')+' · Materiales '+n('MATERIALES')+')':'Sin maestro SKU cargado.';
  ['maestroStatus','maestroStatus2'].forEach(i=>{if($$(i))$$(i).textContent=m;});};
@@ -5843,14 +5864,15 @@ function catFromAny(v,code){
  if(x==='NON COMMERCIAL')return k.length===5?'MATERIALES':(k[0]==='9'?'INSUMO':'');
  return '';}
 function parseMaestro(rows){
- let hi=-1,iS=-1,iC=-1,iD=-1;
+ let hi=-1,iS=-1,iC=-1,iD=-1,iG=-1,iM=-1,iO=-1;
  for(let i=0;i<Math.min(rows.length,20)&&hi<0;i++){const H=Array.from(rows[i]||[],v=>nrm(v));
   const s=H.findIndex(x=>['SKU','CODARTICULO','CODIGO','CODIGO SKU','CODIGO DE ARTICULO','CODIGO ARTICULO','COD ARTICULO','COD SKU','ARTICULO','ITEM'].includes(x));
   let c=H.findIndex(x=>x.startsWith('CATEGORIA')||x==='CAT');if(c<0)c=H.findIndex(x=>x==='G. GENDER');
-  if(s>=0&&c>=0){hi=i;iS=s;iC=c;iD=H.findIndex(x=>x==='SUBCATEGORY RIMS'||x.startsWith('DESCRIP')||x==='NOMBRE');}}
+  if(s>=0&&c>=0){hi=i;iS=s;iC=c;iD=H.findIndex(x=>x==='SUBCATEGORY RIMS'||x.startsWith('DESCRIP')||x==='NOMBRE');
+   iG=H.findIndex(x=>x==='GENDER RIMS'||x==='GENDER');iM=H.findIndex(x=>x==='MARCASTD'||x==='MARCA STD'||x==='MARCA');iO=H.findIndex(x=>x==='COLECCION PO'||x==='COLECCION');}}
  if(hi<0)throw new Error('No encontré las columnas de SKU/Código de artículo y Categoría (o G. Gender) en el archivo.');
  const out=[];let bad=0;
- rows.slice(hi+1).forEach(r=>{if(!r)return;const s=sk(r[iS]);if(!s)return;const c=catFromAny(r[iC],s);if(!c){bad++;return;}out.push({sku:s,cat:c,desc:iD>=0?sk(r[iD]):''});});
+ rows.slice(hi+1).forEach(r=>{if(!r)return;const s=sk(r[iS]);if(!s)return;const c=catFromAny(r[iC],s);if(!c){bad++;return;}out.push({sku:s,cat:c,desc:iD>=0?sk(r[iD]):'',gender:iG>=0?sk(r[iG]):'',marca:iM>=0?sk(r[iM]):'',colec:iO>=0?sk(r[iO]):''});});
  if(!out.length)throw new Error('El archivo no tiene artículos con categoría válida.');
  return {out,bad};
 }
@@ -5900,7 +5922,7 @@ async function cargar(e){const f=e.target.files[0];if(!f)return;
   else{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});}
   const {out,bad}=parseMaestro(rows);
   const m=new Map(window.MAESTRO.map(r=>[sk(r.sku),r])),inFile=new Set();let nuevos=0,act=0;
-  out.forEach(r=>{const k=sk(r.sku);inFile.add(k);const o=m.get(k);if(!o)nuevos++;else if(catCode(o.cat)!==r.cat||(r.desc&&o.desc!==r.desc))act++;m.set(k,{sku:k,cat:r.cat,desc:r.desc||(o?o.desc:'')});});
+  out.forEach(r=>{const k=sk(r.sku);inFile.add(k);const o=m.get(k);if(!o)nuevos++;else if(catCode(o.cat)!==r.cat||(r.desc&&o.desc!==r.desc)||(r.marca&&o.marca!==r.marca)||(r.colec&&o.colec!==r.colec)||(r.gender&&o.gender!==r.gender))act++;m.set(k,{sku:k,cat:r.cat,desc:r.desc||(o?o.desc:''),gender:r.gender||(o?o.gender:'')||'',marca:r.marca||(o?o.marca:'')||'',colec:r.colec||(o?o.colec:'')||''});});
   let cons=0;m.forEach((v,k)=>{if(!inFile.has(k))cons++;});
   window.MAESTRO=[...m.values()];window.renderMaestro();
   window.__toast('Maestro SKU: '+nuevos+' nuevos · '+act+' actualizados · '+cons+' conservados (no estaban en el archivo)'+(bad?' · '+bad+' sin categoría válida omitidos':'')+'.');
@@ -5911,15 +5933,15 @@ async function cargar(e){const f=e.target.files[0];if(!f)return;
 $$('maestroInput').addEventListener('change',cargar);$$('maestroInput2').addEventListener('change',cargar);
 $$('mSearch').addEventListener('input',window.renderMaestro);
 const form=$$('mForm');
-$$('mAddBtn').onclick=()=>{$$('mSku').value='';$$('mDesc').value='';$$('mCat').value='CALZ';form.style.display='grid';$$('mSku').focus();};
+$$('mAddBtn').onclick=()=>{$$('mSku').value='';$$('mDesc').value='';$$('mGen').value='';$$('mMarca').value='';$$('mCol').value='';$$('mCat').value='CALZ';form.style.display='grid';$$('mSku').focus();};
 $$('mCancelBtn').onclick=()=>{form.style.display='none';};
 $$('mSaveBtn').onclick=async()=>{const s=sk($$('mSku').value);if(!s){window.__toast('Escribe el SKU.');return;}
- if(!window.requestUploadAccess())return;const r={sku:s,cat:$$('mCat').value,desc:sk($$('mDesc').value)};
+ if(!window.requestUploadAccess())return;const r={sku:s,cat:$$('mCat').value,desc:sk($$('mDesc').value),gender:sk($$('mGen').value),marca:sk($$('mMarca').value),colec:sk($$('mCol').value)};
  const i=window.MAESTRO.findIndex(x=>sk(x.sku)===s);if(i>=0)window.MAESTRO[i]=r;else window.MAESTRO.push(r);form.style.display='none';window.renderMaestro();await window.saveCloud();};
 $$('maestroTable').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
- if(b.dataset.e){const r=window.MAESTRO.find(x=>sk(x.sku)===sk(b.dataset.e));if(!r)return;$$('mSku').value=r.sku;$$('mCat').value=catCode(r.cat)||'CALZ';$$('mDesc').value=r.desc||'';form.style.display='grid';}
+ if(b.dataset.e){const r=window.MAESTRO.find(x=>sk(x.sku)===sk(b.dataset.e));if(!r)return;$$('mSku').value=r.sku;$$('mCat').value=catCode(r.cat)||'CALZ';$$('mDesc').value=r.desc||'';$$('mGen').value=r.gender||'';$$('mMarca').value=r.marca||'';$$('mCol').value=r.colec||'';form.style.display='grid';}
  if(b.dataset.d){if(!confirm('¿Eliminar el SKU '+b.dataset.d+' del maestro?')||!window.requestUploadAccess())return;window.MAESTRO=window.MAESTRO.filter(x=>sk(x.sku)!==sk(b.dataset.d));window.renderMaestro();await window.saveCloud();}});
-$$('mDownBtn').onclick=()=>{if(!window.MAESTRO.length)return;const ws=XLSX.utils.aoa_to_sheet([['SKU','CATEGORIA','DESCRIPCION']].concat(window.MAESTRO.map(r=>[r.sku,NAME[catCode(r.cat)]||r.cat,r.desc||''])));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'MAESTRO SKU');XLSX.writeFile(wb,'MAESTRO_SKU.xlsx');};
+$$('mDownBtn').onclick=()=>{if(!window.MAESTRO.length)return;const ws=XLSX.utils.aoa_to_sheet([['SKU','CATEGORIA','DESCRIPCION','GENDER RIMS','MARCASTD','COLECCION PO']].concat(window.MAESTRO.map(r=>[r.sku,NAME[catCode(r.cat)]||r.cat,r.desc||'',r.gender||'',r.marca||'',r.colec||''])));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'MAESTRO SKU');XLSX.writeFile(wb,'MAESTRO_SKU.xlsx');};
 window.renderMaestro();
 })();
 </script><script>
@@ -6205,6 +6227,400 @@ $$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const r
  window.ASISTENCIA[wkey()]=rec;window.__toast&&window.__toast('Asistencia de la semana '+$$('asisWeek').value+' guardada.');pintar();if(window.saveCloud)await window.saveCloud();};
 window.renderUsuarios();
 })();
+</script>
+<script type="text/plain" id="rep-css">:root{--bg:#f1f4f7;--card:#fff;--tx:#2d3139;--mu:#5b6b7c;--ln:#e1e7ed;--g:#2d3139;--red:#d9232d;--amb:#e0a43a;--ok:#2f8f5b;--okb:#d9f2e3;--ambb:#fbe9c3;--redb:#f6c9cc;--blu:#dce8fb;box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d2128;--tx:#eef0f2;--mu:#9aa6b2;--ln:#2c323b;--g:#aeb6c1;--okb:#1d3a2b;--ambb:#4a3b17;--redb:#4a1f23;--blu:#233049}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+.hd{display:flex;background:var(--card);border:1px solid var(--ln);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.logo{background:linear-gradient(100deg,#e11d2e,#f0424e);color:#fff;padding:18px 34px 18px 22px;clip-path:polygon(0 0,100% 0,88% 100%,0 100%);display:flex;gap:12px;align-items:center;font-size:20px;min-width:190px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.logo b{font-weight:900}.logo span{font-weight:300}
+.hd h1{margin:0;font-size:24px;font-weight:900}.hd p{margin:2px 0 0;color:var(--mu);font-size:14px}.hd>div:last-child{padding:12px 16px;align-self:center}
+.nav{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);padding:6px 0 10px}
+.nav a{border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:999px;padding:7px 12px;font-size:13px;text-decoration:none}
+.sec{margin:22px 0 10px;border-left:6px solid var(--red);padding-left:10px}.sec h2{margin:0;font-size:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;align-items:center}
+.chip{border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:999px;padding:7px 13px;font:inherit;font-size:14px;cursor:pointer}
+.chip.on{background:var(--g);color:var(--card);border-color:var(--g);font-weight:700}.chip.off{opacity:.45;text-decoration:line-through}
+.lab{color:var(--mu);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.inp{border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;min-width:200px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px}
+.k{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px 14px}.k small{color:var(--mu);font-size:13px}.k b{display:block;font-size:27px;margin-top:2px}
+.k.ok b{color:var(--ok)}.k.am b{color:var(--amb)}.k.rd b{color:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px;min-width:0;margin-bottom:12px}.grid .card{margin-bottom:0}
+.card h2,.card h3{margin:0 0 8px;font-size:17px}.lect{margin:0;padding-left:20px}.lect li{margin:5px 0}
+svg{display:block;width:100%;height:auto}.t1{fill:var(--tx)}.t2{fill:var(--mu)}.gl{stroke:var(--ln)}
+.tw{overflow-x:auto}.sc{max-height:560px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{background:var(--g);color:var(--card);padding:9px 8px;text-align:center;white-space:nowrap;position:sticky;top:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--ln)}td:first-child,th:first-child,td.l,th.l{text-align:left}
+tr.tot td{background:var(--bg);font-weight:700}
+.s-ok{background:var(--okb)}.s-am{background:var(--ambb)}.s-rd{background:var(--redb)}.s-bl{background:var(--blu)}
+.st{display:inline-block;min-width:28px;padding:3px 6px;border-radius:6px;font-weight:700;font-size:13px}
+.obs{font-size:13px;color:var(--red);text-align:left}
+.foot{color:var(--mu);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px}
+.leg{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--mu);margin-bottom:4px}.leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.warn{background:var(--ambb);border:1px solid var(--amb);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:14px}
+.empty{color:var(--mu);padding:14px;text-align:center}
+.top3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.top3 div{border:1px solid var(--ln);border-radius:12px;padding:10px;text-align:center}.top3 b{display:block;font-size:22px}.top3 small{color:var(--mu)}
+@media print{body{background:#fff}.nav,.chips,.noprint,.inp{display:none!important}.wrap{max-width:none;padding:0}.grid{grid-template-columns:1fr 1fr!important;gap:8px}.grid .card,.k{break-inside:avoid}.card{break-inside:auto}.sc{max-height:none;overflow:visible}.sec{break-after:avoid}#sec-asist,#sec-aten,#sec-prod,#sec-marca,#sec-colec,#sec-area,#sec-pick,#sec-pack{break-before:page}#sec-asist{break-before:auto}th{position:static;white-space:normal}tr{break-inside:avoid}.foot{break-before:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4 landscape;margin:8mm}}
+@media (max-width:640px){.logo{min-width:0;padding:14px 26px 14px 14px;font-size:17px}.hd h1{font-size:19px}.top3{grid-template-columns:1fr}}
+</script>
+<script type="text/plain" id="rep-body"><div class="wrap">
+<div class="hd"><div class="logo"><b>Bata</b><span>Adecco</span></div><div><h1 id="rp-title"></h1><p id="rp-sub"></p></div></div>
+<div class="nav"><a href="#sec-asist">1 · Asistencia</a><a href="#sec-aten">2 · % de atención</a><a href="#sec-prod">3 · Picking vs Packing</a><a href="#sec-marca">4 · Marcas y categorías</a><a href="#sec-colec">5 · Colección</a><a href="#sec-area">6 · Área de picking</a><a href="#sec-pick">7 · Reporte Picking</a><a href="#sec-pack">8 · Reporte Packing</a></div>
+
+<section id="sec-asist"><div class="sec"><h2>1 · Asistencia semanal · Picking</h2></div><div id="as-body">
+<div id="as-w"></div><div class="kpis" id="as-k"></div>
+<div class="card"><h3>Lectura ejecutiva</h3><ul class="lect" id="as-l"></ul></div>
+<div class="grid"><div class="card"><h3>% de asistencia por día</h3><div id="as-c"></div></div><div class="card"><h3>Personas con 3 o más faltas</h3><div id="as-r"></div></div></div>
+<div class="card"><h3>Detalle de asistencia</h3><div class="chips"><input class="inp" id="as-q" placeholder="Buscar nombre o DNI…"></div><div class="chips" id="as-f"></div><div class="sc"><table id="as-t"></table></div><div class="foot"><span>A Asistió · T Tardanza · F Faltó · D Descanso · DM Descanso médico · V Vacaciones · L Licencia</span></div></div>
+</div></section>
+
+<section id="sec-aten"><div class="sec"><h2>2 · % de atención de prescripciones</h2></div><div id="at-body">
+<div class="chips" id="at-cats"></div><div class="chips" id="at-days"></div><div class="kpis" id="at-k"></div>
+<div class="card"><h3>Lectura ejecutiva</h3><ul class="lect" id="at-l"></ul></div>
+<div class="grid"><div class="card"><h3>Prescrito vs atendido por día</h3><div class="leg"><span><i style="background:var(--g)"></i>Prescrito</span><span><i style="background:var(--red)"></i>Atendido</span><span>Etiqueta = % atendido</span></div><div id="at-c1"></div></div>
+<div class="card"><h3>Unidades sin atender por motivo</h3><div id="at-c2"></div></div>
+<div class="card"><h3>% atendido por categoría</h3><div id="at-c3"></div></div>
+<div class="card"><h3>Causas de lo sin atender</h3><div id="at-c4"></div></div></div>
+<div class="card"><h3>Resumen por día</h3><div class="tw"><table id="at-t1"></table></div></div>
+<div class="card"><h3>Detalle por día y categoría</h3><div class="tw"><table id="at-t2"></table></div><div class="foot"><span>Semáforo: verde ≥ 97% · ámbar 93% a 97% · rojo &lt; 93%</span></div></div>
+</div></section>
+
+<section id="sec-prod"><div class="sec"><h2>3 · Producción Picking vs Packing (sin insumos)</h2></div><div id="pr-body">
+<div class="kpis" id="pr-k"></div><div class="card"><h3>Lectura ejecutiva</h3><ul class="lect" id="pr-l"></ul></div>
+<div class="grid"><div class="card"><h3>Unidades por día</h3><div class="leg"><span><i style="background:var(--g)"></i>Picking</span><span><i style="background:var(--red)"></i>Packing</span></div><div id="pr-c"></div></div><div class="card"><h3>Participación de la semana</h3><div id="pr-d"></div></div></div>
+<div class="grid"><div class="card"><h3>Top 3 Picking</h3><div id="pr-t3-PICKING"></div></div><div class="card"><h3>Top 3 Packing</h3><div id="pr-t3-PACKING"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Comparativo por día</h3><div class="tw"><table id="pr-t"></table></div></div>
+</div></section>
+
+<section id="sec-marca"><div class="sec"><h2>4 · Producción por marcas y categorías</h2></div><div id="mk-body">
+<div class="chips" id="mk-f"></div><div class="chips" id="mk-cat"></div><div class="kpis" id="mk-k"></div>
+<div class="grid"><div class="card"><h3>Marcas (top 12) por categoría</h3><div id="mk-c"></div></div><div class="card"><h3>Calzado vs accesorio</h3><div id="mk-d"></div></div><div class="card"><h3>Por género RIMS</h3><div id="mk-g"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Detalle por marca</h3><div class="sc"><table id="mk-t"></table></div></div>
+</div></section>
+
+<section id="sec-colec"><div class="sec"><h2>5 · Producción por colección</h2></div><div id="co-body">
+<div class="chips" id="co-f"></div><div class="kpis" id="co-k"></div>
+<div class="grid"><div class="card"><h3>Colecciones (top 15)</h3><div id="co-c"></div></div><div class="card"><h3>Picking vs Packing (top 10)</h3><div id="co-s"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Detalle por colección</h3><div class="sc"><table id="co-t"></table></div></div>
+</div></section>
+
+<section id="sec-area"><div class="sec"><h2>6 · Producción por área de picking</h2></div><div id="ar-body">
+<div class="chips" id="ar-f"></div><div class="kpis" id="ar-k"></div>
+<div class="grid"><div class="card"><h3>Unidades por área</h3><div id="ar-c"></div></div><div class="card"><h3>Participación por área</h3><div id="ar-d"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Áreas por día (top 6)</h3><div id="ar-s"></div></div>
+<div class="card"><h3>Detalle por área y día</h3><div class="sc"><table id="ar-t"></table></div></div>
+</div></section>
+
+<section id="sec-pick"><div class="sec"><h2>7 · Reporte de Picking</h2></div><div id="pk-body">
+<div class="kpis" id="pk-k"></div>
+<div class="grid"><div class="card"><h3>Producción diaria por categoría</h3><div id="pk-c1"></div></div><div class="card"><h3>Producción diaria SOLI PACK / PRE PACK</h3><div id="pk-c2"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Resumen de producción (sin insumos)</h3><div class="tw"><table id="pk-s"></table></div></div>
+<div class="card"><h3 id="pk-tt"></h3><div class="chips" id="pk-tabs"></div><div class="sc"><table id="pk-t"></table></div></div>
+</div></section>
+
+<section id="sec-pack"><div class="sec"><h2>8 · Reporte de Packing</h2></div><div id="pa-body">
+<div class="kpis" id="pa-k"></div>
+<div class="grid"><div class="card"><h3>Producción diaria por categoría</h3><div id="pa-c1"></div></div><div class="card"><h3>Producción diaria SOLI PACK / PRE PACK</h3><div id="pa-c2"></div></div></div>
+<div class="card" style="margin-top:12px"><h3>Resumen de producción (sin insumos)</h3><div class="tw"><table id="pa-s"></table></div></div>
+<div class="card"><h3 id="pa-tt"></h3><div class="chips" id="pa-tabs"></div><div class="sc"><table id="pa-t"></table></div></div>
+</div></section>
+<div class="foot" style="margin-top:14px"><span id="rp-foot"></span><span class="noprint">Toca una barra o un filtro · Ctrl+P para guardar en PDF</span></div>
+</div>
+</script>
+<script type="text/plain" id="rep-js">const $=id=>document.getElementById(id),fm=n=>Math.round(+n||0).toLocaleString('es-PE'),pc=v=>(v*100).toFixed(1).replace('.',',')+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cl=(v,hi,mid)=>v>=hi?'ok':v>=mid?'am':'rd',dl=d=>String(d).charAt(0)+String(d).slice(1).toLowerCase();
+const COL=['var(--g)','var(--red)','var(--amb)','#6b8fb5','var(--ok)','#b04a9c','#8a94a3','#c97a2b'];
+const sv=(w,h,i)=>'<svg viewBox="0 0 '+w+' '+h+'" role="img">'+i+'</svg>';
+const none=(el,m)=>{$(el).innerHTML='<div class="empty">'+m+'</div>';};
+function nice(mx){const s=Math.pow(10,Math.floor(Math.log10(Math.max(mx,1))));return Math.ceil(mx/s*2)/2*s||1;}
+function grid(g,Lm,Tm,pw,ph,top,W){for(let i=0;i<=4;i++){const y=Tm+ph-ph*i/4;g.s+='<line class="gl" x1="'+Lm+'" x2="'+(W-10)+'" y1="'+y+'" y2="'+y+'"/><text class="t2" x="'+(Lm-6)+'" y="'+(y+5)+'" font-size="13" text-anchor="end">'+fm(top*i/4)+'</text>';}}
+// barras agrupadas o apiladas. series:[{n,v:[]}]
+function bars(el,labels,series,o){o=o||{};if(!labels.length){none(el,'Sin datos.');return;}
+ const W=Math.max(620,labels.length*(o.stack?70:96)+90),H=o.h||320,Lm=64,Tm=26,Bm=o.bm||44,pw=W-Lm-10,ph=H-Tm-Bm,tot=labels.map((_,i)=>series.reduce((a,x)=>a+(x.v[i]||0),0));
+ const top=nice(o.stack?Math.max(...tot):Math.max(...series.flatMap(x=>x.v)));const g={s:''};grid(g,Lm,Tm,pw,ph,top,W);
+ labels.forEach((lb,i)=>{const cx=Lm+pw*(i+.5)/labels.length,op=o.sel&&o.sel!==lb?.3:1;g.s+='<g opacity="'+op+'" '+(o.pick?'data-pick="'+esc(lb)+'" style="cursor:pointer"':'')+'>';
+  if(o.stack){const bw=Math.min(64,pw/labels.length*.62);let y=Tm+ph;series.forEach((x,k)=>{const v=x.v[i]||0;if(v>0){const h=ph*v/top;y-=h;g.s+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+h+'" style="fill:'+(x.c||COL[k%8])+'"><title>'+esc(lb+' · '+x.n+': '+fm(v))+'</title></rect>'+(h>18?'<text x="'+cx+'" y="'+(y+h/2+5)+'" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">'+fm(v)+'</text>':'');}});g.s+='<text class="t1" x="'+cx+'" y="'+(y-7)+'" font-size="14" font-weight="700" text-anchor="middle">'+fm(tot[i])+'</text>';}
+  else{const n=series.length,bw=Math.min(34,pw/labels.length*.7/n);series.forEach((x,k)=>{const v=x.v[i]||0,h=ph*v/top,bx=cx-n*bw/2+k*bw+1;g.s+='<rect x="'+bx+'" y="'+(Tm+ph-h)+'" width="'+(bw-2)+'" height="'+h+'" rx="3" style="fill:'+(x.c||COL[k%8])+'"><title>'+esc(lb+' · '+x.n+': '+fm(v))+'</title></rect><text class="t1" x="'+(bx+bw/2-1)+'" y="'+(Tm+ph-h-6)+'" font-size="'+(n>2?11:13)+'" font-weight="700" text-anchor="middle">'+(o.lab?o.lab(v,i,k):fm(v))+'</text>';});}
+  g.s+='<text class="t2" x="'+cx+'" y="'+(H-14)+'" font-size="14" text-anchor="middle">'+esc(lb)+'</text></g>';});
+ $(el).innerHTML=sv(W,H,g.s);}
+function hbars(el,items,o){o=o||{};if(!items.length){none(el,'Sin datos.');return;}const W=640,rh=o.rh||34,H=items.length*rh+10,Lm=o.lm||170,mx=Math.max(1,...items.map(x=>x.v)),tw=W-Lm-90;let g='';
+ items.forEach((x,i)=>{const y=6+i*rh,w=Math.max(2,tw*x.v/(o.max||mx)),c=x.c||COL[(o.one?0:i)%8];g+='<text class="t1" x="0" y="'+(y+19)+'" font-size="14">'+esc(String(x.l).slice(0,o.cut||26))+'</text><rect x="'+Lm+'" y="'+(y+4)+'" width="'+tw+'" height="'+(rh-12)+'" rx="5" style="fill:var(--ln)"/><rect x="'+Lm+'" y="'+(y+4)+'" width="'+w+'" height="'+(rh-12)+'" rx="5" style="fill:'+c+'"><title>'+esc(x.l+': '+(x.t||fm(x.v)))+'</title></rect><text class="t1" x="'+(W-4)+'" y="'+(y+19)+'" font-size="14" font-weight="700" text-anchor="end">'+(x.t||fm(x.v))+'</text>';});
+ $(el).innerHTML=sv(W,H,g);}
+function donut(el,items,center){const tot=items.reduce((a,x)=>a+x.v,0),W=640,H=260,cx=170,cy=130,R=100,r=60;let g='',a0=-Math.PI/2;
+ if(!tot){none(el,'Sin datos.');return;}
+ items.forEach((x,k)=>{if(!x.v)return;const a1=a0+x.v/tot*2*Math.PI-(x.v===tot?.0001:0),big=a1-a0>Math.PI?1:0,p=(q,a)=>[cx+q*Math.cos(a),cy+q*Math.sin(a)],[x0,y0]=p(R,a0),[x1,y1]=p(R,a1),[x2,y2]=p(r,a1),[x3,y3]=p(r,a0);
+  g+='<path d="M'+x0+' '+y0+'A'+R+' '+R+' 0 '+big+' 1 '+x1+' '+y1+'L'+x2+' '+y2+'A'+r+' '+r+' 0 '+big+' 0 '+x3+' '+y3+'Z" style="fill:'+(x.c||COL[k%8])+'"><title>'+esc(x.l+': '+fm(x.v)+' ('+Math.round(x.v/tot*100)+'%)')+'</title></path>';a0=a1;});
+ g+='<text class="t1" x="'+cx+'" y="'+(cy-2)+'" font-size="24" font-weight="700" text-anchor="middle">'+fm(tot)+'</text><text class="t2" x="'+cx+'" y="'+(cy+20)+'" font-size="13" text-anchor="middle">'+esc(center||'')+'</text>';
+ items.forEach((x,k)=>{const y=40+k*36;g+='<rect x="320" y="'+(y-13)+'" width="14" height="14" rx="3" style="fill:'+(x.c||COL[k%8])+'"/><text class="t1" x="342" y="'+y+'" font-size="14" font-weight="700">'+esc(String(x.l).slice(0,32))+'</text><text class="t2" x="342" y="'+(y+16)+'" font-size="13">'+fm(x.v)+' · '+Math.round(x.v/tot*100)+'%</text>';});
+ $(el).innerHTML=sv(W,H,g);}
+const KP=(a)=>a.map(k=>'<div class="k '+(k[2]||'')+'"><small>'+k[0]+'</small><b'+(k[3]?' style="font-size:19px;padding-top:8px"':'')+'>'+k[1]+'</b></div>').join('');
+const LI=a=>a.map(x=>'<li>'+x+'</li>').join('');
+const ST={A:'s-ok',F:'s-rd',T:'s-am',D:'s-bl',DM:'s-bl',V:'s-bl',L:'s-bl'};
+const stCell=v=>v?'<span class="st '+(ST[v]||'')+'">'+v+'</span>':'<span class="t2">·</span>';
+function chips(id,label,items,sel,cb,multi){const el=$(id);el.innerHTML='<span class="lab">'+label+'</span>'+items.map(x=>'<button class="chip'+((multi?sel.has(x.k):sel===x.k)?' on':(multi?' off':''))+'" data-k="'+esc(x.k)+'">'+esc(x.l)+'</button>').join('');el.onclick=e=>{const b=e.target.closest('[data-k]');if(b)cb(b.dataset.k);};}
+// ================= 1 · ASISTENCIA =================
+const AS={f:'all',q:''};
+function secAsis(){const A=R.asis;if(!A||!A.rows.length){none('as-body','Sin asistencia cargada para esta semana.');$('as-body').style.display='block';return;}
+ const nd=A.days.length>6?6:A.days.length,rows=A.rows;let a=0,f=0,d=0,t=0;const pd=[];
+ for(let k=0;k<nd;k++){let ak=0,fk=0;rows.forEach(r=>{const v=r.d[k];if(v==='A'||v==='T'){ak++;}if(v==='F')fk++;});a+=ak;f+=fk;pd.push({l:A.days[k],a:ak,f:fk,p:ak+fk?ak/(ak+fk):0});}
+ rows.forEach(r=>r.d.slice(0,nd).forEach(v=>{if(v==='D'||v==='DM')d++;}));
+ const H=A.header||{},P=H.personal||rows.length,AS_=H.asist||a,FA=H.faltas||f,PCT=H.pct?(+String(H.pct).replace(',','.'))/100:(a+f?a/(a+f):0);
+ $('as-k').innerHTML=KP([['Personal',fm(P)],['Asistencias',fm(AS_)],['Faltas',fm(FA),FA?'rd':'ok'],['% asistencia semana',pc(PCT),cl(PCT,.95,.9)],['Descansos / DM',fm(d)]]);
+ const best=pd.slice().sort((x,y)=>y.p-x.p),f3=rows.map(r=>({n:r.name,c:r.d.slice(0,nd).filter(v=>v==='F').length})).filter(x=>x.c>=3).sort((x,y)=>y.c-x.c);
+ const L=['Asistencia de la semana: '+pc(PCT)+' ('+fm(AS_)+' asistencias y '+fm(FA)+' faltas, '+fm(P)+' personas).'];
+ if(pd.length>1)L.push('Mejor día: '+best[0].l+' con '+pc(best[0].p)+'. Día más bajo: '+best[best.length-1].l+' con '+pc(best[best.length-1].p)+' ('+best[best.length-1].f+' faltas).');
+ L.push(f3.length?fm(f3.length)+' persona'+(f3.length>1?'s':'')+' con 3 o más faltas en la semana.':'Nadie con 3 o más faltas en la semana.');
+ $('as-l').innerHTML=LI(L);
+ $('as-w').innerHTML=(H.personal&&rows.length<H.personal)?'<div class="warn">Se leyeron '+rows.length+' de '+H.personal+' personas del PDF. Los totales de arriba son los del encabezado del PDF.</div>':'';
+ bars('as-c',pd.map(x=>x.l),[{n:'% asistencia',v:pd.map(x=>Math.round(x.p*1000)/10),c:'var(--red)'}],{lab:v=>String(v).replace('.',',')+'%'});
+ hbars('as-r',f3.slice(0,12).map(x=>({l:x.n,v:x.c,t:x.c+' faltas',c:'var(--red)'})),{one:1,lm:260,cut:36});if(!f3.length)none('as-r','Sin personas con 3 o más faltas.');
+ const draw=()=>{const q=AS.q.toUpperCase(),L2=rows.filter(r=>(!q||(r.name+' '+r.dni).toUpperCase().includes(q))&&(AS.f==='all'||(AS.f==='f'&&r.d.slice(0,nd).includes('F'))||(AS.f==='o'&&r.obs)));
+  $('as-t').innerHTML='<tr><th class="l">N°</th><th class="l">Nombre</th><th>DNI</th>'+A.days.slice(0,nd).map(x=>'<th>'+x+'</th>').join('')+'<th class="l">Observaciones</th></tr>'+L2.map(r=>'<tr><td class="l">'+r.n+'</td><td class="l"><b>'+esc(r.name)+'</b></td><td>'+esc(r.dni)+'</td>'+r.d.slice(0,nd).map(v=>'<td>'+stCell(v)+'</td>').join('')+'<td class="obs">'+esc(r.obs)+'</td></tr>').join('')+'<tr class="tot"><td></td><td class="l">% asistencia del día</td><td></td>'+pd.map(x=>'<td>'+Math.round(x.p*100)+'%</td>').join('')+'<td></td></tr>';
+  chips('as-f','Mostrar',[{k:'all',l:'Todos'},{k:'f',l:'Con faltas'},{k:'o',l:'Con observaciones'}],AS.f,k=>{AS.f=k;draw();});};
+ $('as-q').oninput=e=>{AS.q=e.target.value;draw();};draw();}
+// ================= 2 · % DE ATENCIÓN =================
+const AT={cats:null,day:null};
+function secAten(){const A=R.aten;if(!A||!A.rows.length){none('at-body','Sin archivo de % de atención cargado para esta semana.');$('at-body').style.display='block';return;}
+ const D=A.rows,DAYS=A.days,CATS=A.cats,LB=A.labels;if(!AT.cats)AT.cats=new Set(CATS);
+ const sum=a=>a.reduce((o,r)=>({p:o.p+r.p,a:o.a+r.a,s:o.s+r.s,n:o.n+r.n,u:o.u+r.u,f:o.f+r.f}),{p:0,a:0,s:0,n:0,u:0,f:0}),pct=o=>o.p?o.a/o.p:0,sc=v=>'s-'+cl(v,.97,.93);
+ const draw=()=>{const R0=D.filter(r=>AT.cats.has(r.c)),sel=sum(R0.filter(r=>!AT.day||r.d===AT.day)),bd=DAYS.map(d=>({d,...sum(R0.filter(r=>r.d===d))})).filter(x=>x.p>0);
+  chips('at-cats','Categoría',CATS.map(c=>({k:c,l:dl(c)})),AT.cats,k=>{if(AT.cats.has(k)){if(AT.cats.size>1)AT.cats.delete(k);}else AT.cats.add(k);draw();},true);
+  chips('at-days','Día',[{k:'',l:'Toda la semana'}].concat(DAYS.map(d=>({k:d,l:dl(d)}))),AT.day||'',k=>{AT.day=k||null;draw();});
+  const mot=[[LB.n,sel.n],[LB.u,sel.u],[LB.f,sel.f]].sort((a,b)=>b[1]-a[1])[0];
+  $('at-k').innerHTML=KP([['Prescrito'+(AT.day?' · '+dl(AT.day):''),fm(sel.p)],['Atendido',fm(sel.a)],['% atendido',pc(pct(sel)),cl(pct(sel),.97,.93)],['Sin atender',fm(sel.s),sel.s?'rd':'ok'],['Principal causa',sel.s?mot[0]:'Sin pendientes','',1]]);
+  const ord=bd.slice().sort((a,b)=>pct(b)-pct(a)),cs=CATS.filter(c=>AT.cats.has(c)).map(c=>({c,...sum(R0.filter(r=>r.c===c&&(!AT.day||r.d===AT.day)))})).filter(x=>x.p>0).sort((a,b)=>pct(a)-pct(b)),L=[];
+  L.push('Se atendió el '+pc(pct(sel))+' de lo prescrito ('+fm(sel.a)+' de '+fm(sel.p)+' unidades)'+(AT.day?' el '+AT.day.toLowerCase():' en la semana')+'.');
+  if(!AT.day&&ord.length>1)L.push('Mejor día: '+dl(ord[0].d)+' con '+pc(pct(ord[0]))+'. Día más bajo: '+dl(ord[ord.length-1].d)+' con '+pc(pct(ord[ord.length-1]))+' ('+fm(ord[ord.length-1].s)+' sin atender).');
+  if(cs.length>1)L.push('Categoría con menor atención: '+dl(cs[0].c)+' con '+pc(pct(cs[0]))+' ('+fm(cs[0].s)+' sin atender).');
+  if(sel.s)L.push('Principal causa de lo sin atender: '+mot[0].toLowerCase()+' con '+fm(mot[1])+' unidades ('+Math.round(mot[1]/sel.s*100)+'% de lo pendiente).');
+  $('at-l').innerHTML=LI(L);
+  const lab=bd.map(x=>dl(x.d));
+  bars('at-c1',lab,[{n:'Prescrito',v:bd.map(x=>x.p),c:'var(--g)'},{n:'Atendido',v:bd.map(x=>x.a),c:'var(--red)'}],{pick:1,sel:AT.day?dl(AT.day):null,lab:(v,i,k)=>k?pc(pct(bd[i])):fm(v)});
+  bars('at-c2',lab,[{n:LB.n,v:bd.map(x=>x.n),c:'var(--g)'},{n:LB.u,v:bd.map(x=>x.u),c:'var(--amb)'},{n:LB.f,v:bd.map(x=>x.f),c:'var(--red)'}],{stack:1,pick:1,sel:AT.day?dl(AT.day):null});
+  hbars('at-c3',cs.slice().sort((a,b)=>b.p-a.p).map(x=>({l:dl(x.c),v:pct(x),t:pc(x.a/x.p),c:cl(pct(x),.97,.93)==='ok'?'var(--ok)':cl(pct(x),.97,.93)==='am'?'var(--amb)':'var(--red)'})),{max:1,lm:120});
+  donut('at-c4',[{l:LB.n,v:sel.n,c:'var(--g)'},{l:LB.u,v:sel.u,c:'var(--amb)'},{l:LB.f,v:sel.f,c:'var(--red)'}],'sin atender');
+  const T=(x,l)=>'<tr'+(l?' class="tot"':'')+'><td>'+(l||dl(x.d))+'</td><td>'+fm(x.p)+'</td><td>'+fm(x.a)+'</td><td>'+fm(x.s)+'</td><td>'+fm(x.n)+'</td><td>'+fm(x.u)+'</td><td>'+fm(x.f)+'</td><td class="'+sc(pct(x))+'"><b>'+pc(pct(x))+'</b></td></tr>';
+  const H1='<th>Prescrito</th><th>Atendido</th><th>Sin atender</th><th>'+LB.n+'</th><th>'+LB.u+'</th><th>'+LB.f+'</th><th>% atendido</th>';
+  $('at-t1').innerHTML='<tr><th>Día</th>'+H1+'</tr>'+bd.map(x=>T(x)).join('')+T(sum(R0),'Total general');
+  let h2='<tr><th>Día</th><th>Categoría</th>'+H1+'</tr>';DAYS.filter(d=>!AT.day||d===AT.day).forEach(d=>CATS.filter(c=>AT.cats.has(c)).forEach(c=>{const rr=R0.filter(r=>r.d===d&&r.c===c);if(rr.length)h2+=T({...sum(rr),d}).replace('<td>'+dl(d)+'</td>','<td><b>'+dl(d)+'</b></td><td>'+dl(c)+'</td>');}));$('at-t2').innerHTML=h2;};
+ draw();document.addEventListener('click',e=>{const b=e.target.closest('#at-c1 [data-pick],#at-c2 [data-pick]');if(b){const d=DAYS.find(x=>dl(x)===b.dataset.pick);AT.day=AT.day===d?null:d;draw();}});}
+// ================= 3 · PICKING vs PACKING =================
+function secProd(){const P=R.prod||{},a=P.PICKING,b=P.PACKING;if(!a&&!b){none('pr-body','Sin datos de producción para esta semana.');$('pr-body').style.display='block';return;}
+ const days=(a||b).days,ta=a?a.total:0,tb=b?b.total:0;
+ $('pr-k').innerHTML=KP([['Picking · unidades',fm(ta)],['Packing · unidades',fm(tb)],['Operarios Picking',fm(a?a.users:0)],['Operarios Packing',fm(b?b.users:0)],['Prom. por operario (Picking / Packing)',fm(a&&a.users?ta/a.users:0)+' / '+fm(b&&b.users?tb/b.users:0)]]);
+ const L=[];[['Picking',a],['Packing',b]].forEach(([n,x])=>{if(x&&x.total){L.push(n+': '+fm(x.total)+' unidades (sin insumos). Mejor día: '+x.best.l+' con '+fm(x.best.v)+'. Día más bajo: '+x.low.l+' con '+fm(x.low.v)+'.');if(x.top[0])L.push('Top 1 '+n+': '+x.top[0].u+' con '+fm(x.top[0].v)+' unidades.');}});$('pr-l').innerHTML=LI(L);
+ bars('pr-c',days,[{n:'Picking',v:a?a.dayTot:[],c:'var(--g)'},{n:'Packing',v:b?b.dayTot:[],c:'var(--red)'}]);
+ donut('pr-d',[{l:'Picking',v:ta,c:'var(--g)'},{l:'Packing',v:tb,c:'var(--red)'}],'unidades');
+ ['PICKING','PACKING'].forEach(tx=>{const x=P[tx];$('pr-t3-'+tx).innerHTML=x&&x.top.length?'<div class="top3">'+x.top.map((u,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(u.v)+'</b>'+esc(u.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>';});
+ $('pr-t').innerHTML='<tr><th>Día</th><th>Picking</th><th>Packing</th><th>Diferencia</th></tr>'+days.map((d,i)=>{const p=a?a.dayTot[i]:0,k=b?b.dayTot[i]:0;return '<tr><td>'+d+'</td><td>'+fm(p)+'</td><td>'+fm(k)+'</td><td>'+fm(p-k)+'</td></tr>';}).join('')+'<tr class="tot"><td>Total</td><td>'+fm(ta)+'</td><td>'+fm(tb)+'</td><td>'+fm(ta-tb)+'</td></tr>';}
+// ================= 4 y 5 · MARCAS / CATEGORÍAS / COLECCIÓN =================
+const AT2={tx:'ALL',cat:new Set(['CALZADO','ACCESORIO'])};
+function attrRows(){return(R.attr&&R.attr.rows||[]).filter(r=>AT2.cat.has(r.c)).map(r=>({...r,v:AT2.tx==='PICKING'?r.P:AT2.tx==='PACKING'?r.K:r.P+r.K}));}
+function agg(rows,key){const m=new Map();rows.forEach(r=>{const k=r[key]||'SIN DATO';let o=m.get(k);if(!o){o={k,CALZADO:0,ACCESORIO:0,P:0,K:0,v:0};m.set(k,o);}o[r.c]+=r.v;o.P+=r.P;o.K+=r.K;o.v+=r.v;});return[...m.values()].sort((a,b)=>b.v-a.v);}
+function secAttr(){if(!R.attr||!R.attr.rows.length){['mk','co'].forEach(p=>{none(p+'-body',R.attr&&R.attr.msg||'Sin detalle por SKU para esta semana: carga el MAESTRO SKU y el detalle de producción.');$(p+'-body').style.display='block';});return;}
+ const draw=()=>{const tx=[{k:'ALL',l:'Picking + Packing'},{k:'PICKING',l:'Picking'},{k:'PACKING',l:'Packing'}];
+  ['mk-f','co-f'].forEach(id=>chips(id,'Transacción',tx,AT2.tx,k=>{AT2.tx=k;draw();}));
+  chips('mk-cat','Categoría',[{k:'CALZADO',l:'Calzado'},{k:'ACCESORIO',l:'Accesorio'}],AT2.cat,k=>{if(AT2.cat.has(k)){if(AT2.cat.size>1)AT2.cat.delete(k);}else AT2.cat.add(k);draw();},true);
+  const rows=attrRows(),M=agg(rows,'m'),tot=M.reduce((a,x)=>a+x.v,0),top=M.slice(0,12);
+  $('mk-k').innerHTML=KP([['Unidades (sin insumos)',fm(tot)],['Marcas',fm(M.length)],['Marca líder',M[0]?M[0].k:'-','',1],['Participación líder',M[0]&&tot?pc(M[0].v/tot):'-']]);
+  bars('mk-c',top.map(x=>x.k),[{n:'Calzado',v:top.map(x=>x.CALZADO),c:'var(--g)'},{n:'Accesorio',v:top.map(x=>x.ACCESORIO),c:'var(--red)'}],{stack:1,bm:60});
+  donut('mk-d',[{l:'Calzado',v:agg(rows,'c').reduce((a,x)=>a+x.CALZADO,0),c:'var(--g)'},{l:'Accesorio',v:agg(rows,'c').reduce((a,x)=>a+x.ACCESORIO,0),c:'var(--red)'}],'unidades');
+  const G=agg(rows,'g').slice(0,10);hbars('mk-g',G.map(x=>({l:x.k,v:x.v})),{one:1,lm:150});
+  $('mk-t').innerHTML='<tr><th class="l">Marca</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th>'+(AT2.tx==='ALL'?'<th>Picking</th><th>Packing</th>':'')+'</tr>'+M.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td>'+(AT2.tx==='ALL'?'<td>'+fm(x.P)+'</td><td>'+fm(x.K)+'</td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(M.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(M.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(tot)+'</td><td>100%</td>'+(AT2.tx==='ALL'?'<td>'+fm(M.reduce((a,x)=>a+x.P,0))+'</td><td>'+fm(M.reduce((a,x)=>a+x.K,0))+'</td>':'')+'</tr>';
+  const C=agg(rows,'co'),ct=C.reduce((a,x)=>a+x.v,0);
+  $('co-k').innerHTML=KP([['Unidades',fm(ct)],['Colecciones',fm(C.length)],['Colección líder',C[0]?C[0].k:'-','',1],['Participación líder',C[0]&&ct?pc(C[0].v/ct):'-']]);
+  hbars('co-c',C.slice(0,15).map(x=>({l:x.k,v:x.v,t:fm(x.v)+' · '+pc(ct?x.v/ct:0)})),{one:1,lm:190,cut:30});
+  bars('co-s',C.slice(0,10).map(x=>x.k),[{n:'Picking',v:C.slice(0,10).map(x=>x.P),c:'var(--g)'},{n:'Packing',v:C.slice(0,10).map(x=>x.K),c:'var(--red)'}],{bm:60});
+  $('co-t').innerHTML='<tr><th class="l">Colección</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th></tr>'+C.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(ct?x.v/ct:0)+'</td></tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(C.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(C.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(ct)+'</td><td>100%</td></tr>';};
+ draw();}
+// ================= 6 · ÁREA DE PICKING =================
+const AR={day:''};
+function secArea(){const A=R.area;if(!A||!A.rows.length){none('ar-body','Sin detalle de producción de Picking para esta semana.');$('ar-body').style.display='block';return;}
+ const draw=()=>{const days=A.days;chips('ar-f','Día',[{k:'',l:'Toda la semana'}].concat(days.map(d=>({k:d,l:d}))),AR.day,k=>{AR.day=k;draw();});
+  const m=new Map();A.rows.forEach(r=>{let o=m.get(r.a);if(!o){o={a:r.a,v:0,by:{}};m.set(r.a,o);}o.by[r.d]=(o.by[r.d]||0)+r.n;if(!AR.day||r.d===AR.day)o.v+=r.n;});
+  const L=[...m.values()].filter(x=>x.v>0).sort((a,b)=>b.v-a.v),tot=L.reduce((a,x)=>a+x.v,0);
+  $('ar-k').innerHTML=KP([['Unidades Picking',fm(tot)],['Áreas',fm(L.length)],['Área líder',L[0]?L[0].a:'-','',1],['Participación líder',L[0]&&tot?pc(L[0].v/tot):'-']]);
+  hbars('ar-c',L.slice(0,15).map(x=>({l:x.a,v:x.v,t:fm(x.v)+' · '+pc(tot?x.v/tot:0)})),{one:1,lm:150});
+  donut('ar-d',L.slice(0,7).map(x=>({l:x.a,v:x.v})),'unidades');
+  bars('ar-s',days,L.slice(0,6).map((x,k)=>({n:x.a,v:days.map(d=>x.by[d]||0)})),{stack:1});
+  $('ar-t').innerHTML='<tr><th class="l">Área</th>'+days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th><th>%</th></tr>'+L.map(x=>'<tr><td class="l"><b>'+esc(x.a)+'</b></td>'+days.map(d=>'<td>'+fm(x.by[d]||0)+'</td>').join('')+'<td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td></tr>').join('');};
+ draw();document.addEventListener('click',e=>{const b=e.target.closest('#ar-s [data-pick]');if(b){AR.day=AR.day===b.dataset.pick?'':b.dataset.pick;draw();}});}
+// ================= 7 y 8 · REPORTES PICKING / PACKING =================
+function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X){none(id+'-body','Sin producción de '+tx.toLowerCase()+' para esta semana.');$(id+'-body').style.display='block';return;}
+ $(id+'-k').innerHTML=KP([['Total (sin insumos)',fm(X.generalTotal)],['Operarios',fm(X.users)],['Mejor día',X.best?X.best.label+' · '+fm(X.best.v):'-','',1],['Día más bajo',X.low?X.low.label+' · '+fm(X.low.v):'-','',1]].concat(X.gen&&X.gen.pct!=null?[['Cumplimiento de meta',pc(X.gen.pct),cl(X.gen.pct,R.umbral.verde,R.umbral.ambar)]]:[]));
+ bars(id+'-c1',X.chartCat.labels,X.chartCat.series.map(s=>({n:s.name,v:s.values})),{stack:1});
+ bars(id+'-c2',X.chartBlq.labels,X.chartBlq.series.map((s,k)=>({n:s.name,v:s.values,c:k?'var(--amb)':'var(--g)'})),{stack:1});
+ $(id+'-s').innerHTML='<tr><th class="l">Categoría</th>'+X.bloques.map(b=>'<th>'+b+'</th>').join('')+'<th>Cant. cajas</th><th>Total</th></tr>'+X.summary.map(r=>'<tr><td class="l"><b>'+esc(r.cat)+'</b></td>'+X.bloques.map(b=>'<td>'+fm(r.by[b])+'</td>').join('')+'<td>'+fm(r.cajas)+'</td><td><b>'+fm(r.total)+'</b></td></tr>').join('');
+ const st={i:0},draw=()=>{chips(id+'-tabs','Reporte',X.tables.map((t,i)=>({k:String(i),l:t.sheet})),String(st.i),k=>{st.i=+k;draw();});const t=X.tables[st.i],hm=t.general;
+  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?'<th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?'<td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?'<td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
+  $(id+'-tt').textContent=t.title;};draw();}
+// ================= arranque =================
+$('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range;
+[secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING')].forEach(f=>{try{f();}catch(e){console.error(e);}});
+$('rp-foot').textContent='Fuente: Dashboard Logística Picking & Packing WMS (producción), MAESTRO SKU, asistencia y % de atención cargados · Generado el '+R.gen;
+</script>
+<script type="text/plain" id="rep-asis">function parseAsistencia(pages){
+  const clean=s=>String(s||'').replace(/[|_]/g,'').trim();
+  const out={week:null,range:'',days:[],rows:[]};
+  const S=p=>p.w/2504;
+  // cabecera (página 1)
+  const p1=pages[0],txt=p1.words.map(w=>w.t).join(' ');
+  let m=txt.match(/Semana\s*N\S*\s*(\d{1,2})/i);if(m)out.week=+m[1];
+  m=txt.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+al\s+\S+\s+(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if(m){out.range=m[1]+' al '+m[2];const [d,mo,y]=m[1].split('/').map(Number),n=['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+    out.days=n.map((x,i)=>{const dt=new Date(Date.UTC(y,mo-1,d+i));return x+' '+String(dt.getUTCDate()).padStart(2,'0')+'/'+String(dt.getUTCMonth()+1).padStart(2,'0');});}
+  else out.days=['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+  m=txt.match(/(\d{2,3})\s+(\d{2,4})\s+(\d{1,3})\s+(\d{1,3}[.,]\d)\s*%/);
+  out.header=m?{personal:+m[1],asist:+m[2],faltas:+m[3],pct:m[4]}:null;
+  const classify=(p,cx,cy,s)=>{
+    const votes={};
+    [-4,2,8,14,20].forEach(dy=>[-20,0,20].forEach(dx=>{const c=p.px(Math.round(cx+dx*s),Math.round(cy+dy*s));if(!c)return;
+      const r=c[0],g=c[1],b=c[2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);let k='';
+      if(mx-mn<14)return;
+      if(g>=r+6&&g>=b+6)k='A';else if(r>=g+14&&r>=b+10)k='F';else if(b>=r+8&&b>=g+4)k='D';else if(r>=b+25&&g>=b+12)k='T';else return;
+      votes[k]=(votes[k]||0)+1;}));
+    let best='',bn=2;Object.keys(votes).forEach(k=>{if(votes[k]>bn){bn=votes[k];best=k;}});return best;};
+  const lines=(arr,tol)=>{const L=[];arr.slice().sort((a,b)=>a.cy-b.cy).forEach(w=>{const l=L.find(x=>Math.abs(x.cy-w.cy)<tol);if(l)l.w.push(w);else L.push({cy:w.cy,w:[w]});});return L.map(l=>l.w.sort((a,b)=>a.x0-b.x0));};
+  pages.forEach((p,pi)=>{
+    const s=S(p),ws=p.words.map(w=>({t:clean(w.t),x0:w.x0,y0:w.y0,x1:w.x1,y1:w.y1,cy:(w.y0+w.y1)/2})).filter(w=>w.t);
+    const dnis=ws.filter(w=>/^\d{7,9}$/.test(w.t)&&w.x0>560*s&&w.x0<780*s).sort((a,b)=>a.cy-b.cy);
+    if(pi>0){const tw=ws.filter(w=>w.cy<80*s&&w.x0>=130*s&&w.x1<640*s&&!/%|asistencia/i.test(w.t));
+      if(tw.length&&!dnis.some(d=>d.cy<80*s)){const cy0=tw.reduce((q,w)=>q+w.cy,0)/tw.length,d0=[];
+        for(let k=0;k<7;k++)d0.push(classify(p,(882+124*k+17)*s,cy0,s));
+        out.rows.push({n:out.rows.length?out.rows[out.rows.length-1].n+1:1,name:lines(tw,14*s).map(l=>l.map(w=>w.t).join(' ')).join(' '),dni:'',d:d0,obs:'',parcial:true});}}
+    dnis.forEach((dn,i)=>{
+      const cy=dn.cy,nextCy=i+1<dnis.length?dnis[i+1].cy:cy+120*s;
+      const sameLine=ws.filter(w=>Math.abs(w.cy-cy)<16*s);
+      const wrap=lines(ws.filter(w=>w.cy>cy+22*s&&w.cy<Math.min(nextCy-22*s,cy+90*s)),14*s).filter(l=>!l.some(w=>/%|asistencia/i.test(w.t))).reduce((a,l)=>a.concat(l),[]);
+      const numW=sameLine.find(w=>w.x0<120*s&&/^\d+\.?$/.test(w.t));
+      const name=sameLine.filter(w=>w.x0>=130*s&&w.x1<=dn.x0-6*s).concat(wrap.filter(w=>w.x0>=130*s&&w.x1<=dn.x0)).map(w=>w.t).join(' ').replace(/\s+/g,' ').trim();
+      const obs=lines(sameLine.concat(wrap).filter(w=>w.x0>=1690*s),14*s).map(l=>l.map(w=>w.t).join(' ')).join(' · ');
+      const d=[];
+      for(let k=0;k<7;k++){
+        const cx=(882+124*k+17)*s;let v=classify(p,cx,cy,s);
+        if(v==='D'){const tw=sameLine.find(w=>Math.abs((w.x0+w.x1)/2-cx)<40*s);v=tw&&/^D\s*M$|^DM$|^OM$/i.test(tw.t)?'DM':'D';}
+        d.push(v);}
+      out.rows.push({n:numW?parseInt(numW.t):out.rows.length+1,name,dni:dn.t,d,obs});
+    });
+  });
+  return out;
+}
+</script>
+<script>
+(function(){
+const $$=id=>document.getElementById(id);
+const nrm=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_\-]+/g,' ').trim().toUpperCase();
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>window.__toast&&window.__toast(m);
+window.REPSEM=window.REPSEM||{};window.SKUPROD=window.SKUPROD||{};window.__skuBatch=window.__skuBatch||[];
+// ---------- almacén de producción por SKU ----------
+const isoD=d=>{d=String(d||'');const m=d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):d.slice(0,10);};
+window.SKUPROD_CLEAR=(op,k)=>{Object.keys(window.SKUPROD).forEach(x=>{if(x.indexOf(op+'|'+k+'|')===0)delete window.SKUPROD[x];});};
+window.SKUPROD_FROM=details=>{const m=new Map();(details||[]).forEach(r=>{const sku=String(r.sku==null?'':r.sku).trim();if(!sku)return;const k=isoD(r.d)+'\u001f'+sku;m.set(k,(m.get(k)||0)+(Number(r.cantidad)||0));});return {agg:[...m].map(([k,v])=>{const i=k.indexOf('\u001f');return [k.slice(0,i),k.slice(i+1),v];})};};
+window.SKUPROD_COMMIT=(op,k)=>{const b=window.__skuBatch||[];window.__skuBatch=[];const S=window.SKUPROD;
+ if(k==='d'){const ds=new Set();b.forEach(x=>(x.agg||[]).forEach(a=>ds.add(a[0])));Object.keys(S).forEach(x=>{const p=x.split('|');if(p[0]===op&&p[1]==='d'&&ds.has(p[2]))delete S[x];});}
+ b.forEach(x=>(x.agg||[]).forEach(a=>{const key=op+'|'+k+'|'+a[0]+'|'+a[1];S[key]=(S[key]||0)+a[2];}));};
+window.SKUPROD_PACK=()=>Object.keys(window.SKUPROD).map(k=>{const p=k.split('|');return [p[0]==='PACKING'?1:0,p[1],p[2],p.slice(3).join('|'),window.SKUPROD[k]];});
+window.SKUPROD_LOAD=a=>{const S={};a.forEach(r=>{S[(r[0]?'PACKING':'PICKING')+'|'+r[1]+'|'+r[2]+'|'+r[3]]=r[4];});window.SKUPROD=S;};
+// ---------- fechas ----------
+const iso=d=>d.toISOString().slice(0,10),dmy=s=>s.slice(8,10)+'/'+s.slice(5,7);
+function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
+function monday(y,w){const j=new Date(Date.UTC(y,0,4)),d=j.getUTCDay()||7;return new Date(j.getTime()+((w-1)*7-(d-1))*864e5);}
+const key=()=>$$('rsYear').value+'-W'+String($$('rsWeek').value).padStart(2,'0');
+// ---------- asistencia: PDF -> OCR ----------
+function loadScript(u){return new Promise((ok,ko)=>{if(document.querySelector('script[data-u="'+u+'"]'))return ok();const s=document.createElement('script');s.src=u;s.dataset.u=u;s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar '+u+'. Revisa la conexión a internet.'));document.head.appendChild(s);});}
+const PARSE_ASIST=new Function('return ('+document.getElementById('rep-asis').textContent+')')();
+async function leerPDF(file,setMsg){
+ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+ const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+ setMsg('Preparando lector de texto (la primera vez descarga unos MB)…');
+ const wk=await Tesseract.createWorker('eng');const pages=[];
+ for(let n=1;n<=pdf.numPages;n++){
+  setMsg('Leyendo página '+n+' de '+pdf.numPages+'…');
+  const pg=await pdf.getPage(n),v0=pg.getViewport({scale:1}),vp=pg.getViewport({scale:2504/v0.width}),cv=document.createElement('canvas');cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+  const cx=cv.getContext('2d',{willReadFrequently:true});await pg.render({canvasContext:cx,viewport:vp}).promise;
+  const r=await wk.recognize(cv,{},{blocks:true}),words=[];
+  (r.data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(w=>words.push({t:w.text,x0:w.bbox.x0,y0:w.bbox.y0,x1:w.bbox.x1,y1:w.bbox.y1})))));
+  if(!words.length&&r.data.words)r.data.words.forEach(w=>words.push({t:w.text,x0:w.bbox.x0,y0:w.bbox.y0,x1:w.bbox.x1,y1:w.bbox.y1}));
+  const img=cx.getImageData(0,0,cv.width,cv.height);
+  pages.push({w:cv.width,h:cv.height,words,px:(x,y)=>{if(x<0||y<0||x>=img.width||y>=img.height)return null;const i=(y*img.width+x)*4;return [img.data[i],img.data[i+1],img.data[i+2]];}});}
+ await wk.terminate();return PARSE_ASIST(pages);}
+// ---------- % de atención: Excel ----------
+function leerAtencion(wb){
+ const ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});let hi=-1,H=[];
+ for(let i=0;i<Math.min(rows.length,15);i++){const h=(rows[i]||[]).map(nrm);if(h.some(x=>x.indexOf('PRESCRITO')===0)){hi=i;H=h;break;}}
+ if(hi<0)throw new Error('No encontré la columna PRESCRITO en el Excel de % de atención.');
+ const ix=f=>H.findIndex(f),cE=ix(x=>x.indexOf('ETIQUETA')===0),cP=ix(x=>x.indexOf('PRESCRITO')===0),cA=ix(x=>x.indexOf('ATENDIDO')===0),cS=ix(x=>x.indexOf('SIN ATENDER')===0||x.indexOf('NO ATENDIDO')===0),
+  cN=ix(x=>x.indexOf('STOCK')>=0&&x.indexOf('WMS')>=0),cU=ix(x=>x.indexOf('UBICACION')>=0),cF=ix(x=>x.indexOf('NO SE ENCUENTRA')>=0||(x.indexOf('ENCUENTRA')>=0));
+ if(cE<0||cP<0||cA<0)throw new Error('El Excel debe traer ETIQUETA, PRESCRITO y ATENDIDO.');
+ const num=v=>Number(v)||0,out=[];let day='';const days=[],cats=[];
+ rows.slice(hi+1).forEach(r=>{if(!r)return;const a=r[0]==null?'':String(r[0]).trim();if(a&&!/^total/i.test(nrm(a))){const m=nrm(a).replace(/^SEM(ANA)?\s*\d+\s*/,'').replace(/^\s*/,'');day=m||nrm(a);}
+  const e=r[cE]==null?'':String(r[cE]).trim();if(!e||/^total/i.test(nrm(e))||/^total/i.test(nrm(a)))return;
+  const p=num(r[cP]),at=num(r[cA]);if(!p&&!at)return;const ce=nrm(e);
+  out.push({d:day,c:ce,p,a:at,s:cS>=0?num(r[cS]):p-at,n:cN>=0?num(r[cN]):0,u:cU>=0?num(r[cU]):0,f:cF>=0?num(r[cF]):0});if(days.indexOf(day)<0)days.push(day);if(cats.indexOf(ce)<0)cats.push(ce);});
+ if(!out.length)throw new Error('No encontré filas de datos en el Excel.');
+ const ord=['CALZADO','ACCESORIOS','INSUMOS','UNIFORMES'];cats.sort((x,y)=>(ord.indexOf(x)<0?9:ord.indexOf(x))-(ord.indexOf(y)<0?9:ord.indexOf(y)));
+ return {rows:out,days,cats,labels:{n:'SIN STOCK EN UBICACIONES ACTIVAS',u:'UBICACIÓN NO DISPONIBLE',f:'STOCK QUE NO SE ENCUENTRA'}};}
+// ---------- armado de datos de la semana ----------
+const EXC=['INSUMO','MATERIALES'];
+function repTx(y,w,tx){const X=window.WMSX;let rep;try{rep=X._buildReport(X._normRows(),{year:y,week:w,transaccion:tx});}catch(e){return null;}
+ if(!rep||!rep.nRows)return null;const days=rep.days,ids=rep.bloques.map(b=>b.id);
+ const tbl=t=>({title:t.title,sheet:t.sheet,general:!!t.general,users:t.pv.users.map(u=>({u:u.usuario,by:days.map(d=>u.by[d]||0),total:u.total,meta:u.meta||0,pct:u.pct==null?null:u.pct})),byDay:days.map(d=>t.pv.byDay[d]||0),total:t.pv.total,meta:t.pv.meta||0,pct:t.pv.pct==null?null:t.pv.pct});
+ return {generalTotal:rep.generalTotal,users:rep.users,best:rep.best,low:rep.low,gen:{pct:rep.gen.pct==null?null:rep.gen.pct},bloques:ids,days:rep.chartCat.labels,chartCat:rep.chartCat,chartBlq:rep.chartBlq,summary:rep.summary,dayTot:rep.dayTot,datesISO:days,tables:rep.tables.map(tbl)};}
+function maestroIdx(){const m=new Map();(window.MAESTRO||[]).forEach(r=>{m.set(String(r.sku).trim(),r);});return m;}
+function attrData(dates){const S=window.SKUPROD||{},keys=Object.keys(S);if(!keys.length)return {rows:[],msg:'Sin detalle por SKU: vuelve a cargar los archivos de producción (Picking y Packing) para guardar el SKU de cada línea.'};
+ const M=maestroIdx();if(!M.size)return {rows:[],msg:'Falta cargar el MAESTRO SKU para obtener marca, categoría y colección.'};
+ const use={};keys.forEach(k=>{const p=k.split('|'),op=p[0],kind=p[1],d=p[2];if(dates.indexOf(d)<0)return;const t=op+'|'+d;(use[t]=use[t]||{})[kind]=1;});
+ const agg=new Map();let miss=0,tot=0;
+ keys.forEach(k=>{const p=k.split('|'),op=p[0],kind=p[1],d=p[2],sku=p.slice(3).join('|');if(dates.indexOf(d)<0)return;const u=use[op+'|'+d];if(kind==='h'&&u.d)return;
+  const r=M.get(sku)||M.get(sku.slice(0,7));const n=S[k];if(!r){miss+=n;return;}const c=String(r.cat||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const cat=c.indexOf('ACC')===0?'ACCESORIO':'CALZADO';tot+=n;
+  const kk=[r.marca,cat,r.gender,r.colec].join('\u001f');let o=agg.get(kk);if(!o){o={m:r.marca||'SIN MARCA',c:cat,g:r.gender||'SIN DATO',co:r.colec||'SIN COLECCIÓN',P:0,K:0};agg.set(kk,o);}if(op==='PACKING')o.K+=n;else o.P+=n;});
+ return {rows:[...agg.values()],miss,tot,msg:agg.size?'':'No hay producción por SKU en las fechas de esta semana.'};}
+function collect(){
+ const y=+$$('rsYear').value,w=+$$('rsWeek').value,mo=monday(y,w),dates=[0,1,2,3,4,5,6].map(i=>iso(new Date(mo.getTime()+i*864e5))),X=window.WMSX,k=key(),st=window.REPSEM[k]||{};
+ const reps={PICKING:repTx(y,w,'PICKING'),PACKING:repTx(y,w,'PACKING')},prod={};
+ ['PICKING','PACKING'].forEach(tx=>{const r=reps[tx];if(!r){prod[tx]=null;return;}const g=r.tables[0],top=g.users.slice(0,3).map(u=>({u:u.u,v:u.total}));let b=0,l=0;r.dayTot.forEach((v,i)=>{if(v>r.dayTot[b])b=i;if(v<r.dayTot[l])l=i;});
+  prod[tx]={days:r.days,dayTot:r.dayTot,total:r.generalTotal,users:r.users,top,best:{l:r.days[b],v:r.dayTot[b]},low:{l:r.days[l],v:r.dayTot[l]}};});
+ const rp=reps.PICKING,lab={};if(rp)rp.datesISO.forEach((d,i)=>lab[d]=rp.days[i]);
+ const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',kk=a+'|'+lab[f];am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
+ const area={days:rp?rp.days:[],rows:[...am].map(([kk,n])=>{const i=kk.lastIndexOf('|');return {a:kk.slice(0,i),d:kk.slice(i+1),n};}).filter(x=>x.n>0)};
+ return {week:w,year:y,range:dmy(dates[0])+'/'+y+' al '+dmy(dates[6])+'/'+y,gen:new Date().toLocaleString('es-PE'),umbral:(X._cfg&&X._cfg.umbral)||{verde:1,ambar:.8},asis:st.asis||null,aten:st.aten||null,prod,attr:attrData(dates),area,reps};}
+const tpl=id=>document.getElementById(id).textContent;
+function buildHTML(R){return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reporte ejecutivo semanal · Semana '+R.week+'</title><style>'+tpl('rep-css')+'</style></head><body>'+tpl('rep-body')+'<scr'+'ipt>const R='+JSON.stringify(R).replace(/</g,'\\u003c')+';\n'+tpl('rep-js')+'</scr'+'ipt></body></html>';}
+// ---------- interfaz ----------
+function estado(){const k=key(),st=window.REPSEM[k]||{},R=[];
+ R.push(st.asis?'✅ Asistencia: '+st.asis.rows.length+' personas leídas'+(st.asis.header?' (PDF indica '+st.asis.header.personal+')':''):'⚪ Asistencia: sube el PDF');
+ R.push(st.aten?'✅ % de atención: '+st.aten.rows.length+' filas':'⚪ % de atención: sube el Excel');
+ const X=window.WMSX;let np=0,nk=0;if(X){const y=+$$('rsYear').value,w=+$$('rsWeek').value;['PICKING','PACKING'].forEach(tx=>{const r=repTx(y,w,tx);if(r)(tx==='PICKING'?np=r.generalTotal:nk=r.generalTotal);});}
+ R.push((np?'✅':'⚪')+' Producción Picking: '+Math.round(np).toLocaleString('es-PE')+' und · '+(nk?'✅':'⚪')+' Packing: '+Math.round(nk).toLocaleString('es-PE')+' und (del detalle ya cargado)');
+ R.push((window.MAESTRO&&window.MAESTRO.length?'✅':'⚪')+' Maestro SKU: '+((window.MAESTRO||[]).length).toLocaleString('es-PE')+' · detalle por SKU guardado: '+Object.keys(window.SKUPROD||{}).length.toLocaleString('es-PE')+' registros');
+ $$('rsStatus').innerHTML=R.map(x=>'<div>'+x+'</div>').join('');}
+async function persist(){if(window.saveCloud)await window.saveCloud();}
+function init(){const n=isoNow();$$('rsYear').value=n.y;$$('rsWeek').value=Math.max(1,n.w-1);
+ ['rsYear','rsWeek'].forEach(i=>$$(i).addEventListener('change',estado));
+ $$('rsPdf').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!window.requestUploadAccess())return;const set=m=>$$('rsMsg').textContent=m;
+  try{const r=await leerPDF(f,set);if(!r.rows.length)throw new Error('No pude leer filas de asistencia en ese PDF.');if(r.week&&r.week>=1&&r.week<=53)$$('rsWeek').value=r.week;
+   const k=key();(window.REPSEM[k]=window.REPSEM[k]||{}).asis=r;set('Asistencia leída: '+r.rows.length+' personas'+(r.header&&r.rows.length<r.header.personal?' de '+r.header.personal+' (revisa el reporte)':'')+'.');estado();await persist();}
+  catch(err){set('❌ '+err.message);}});
+ $$('rsXls').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!window.requestUploadAccess())return;
+  try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),a=leerAtencion(wb),m=f.name.match(/sem[_\s-]*(\d{1,2})/i);if(m)$$('rsWeek').value=+m[1];const k=key();(window.REPSEM[k]=window.REPSEM[k]||{}).aten=a;$$('rsMsg').textContent='% de atención leído: '+a.rows.length+' filas.';estado();await persist();}
+  catch(err){$$('rsMsg').textContent='❌ '+err.message;}});
+ const make=()=>{if(!window.WMSX){toast('El dashboard aún no terminó de cargar.');return null;}return buildHTML(collect());};
+ $$('rsView').onclick=()=>{const h=make();if(!h)return;const u=URL.createObjectURL(new Blob([h],{type:'text/html'}));window.open(u,'_blank');};
+ $$('rsHtml').onclick=()=>{const h=make();if(!h)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));a.download='Reporte_ejecutivo_semanal_Semana_'+$$('rsWeek').value+'.html';a.click();};
+ $$('rsPdfBtn').onclick=()=>{const h=make();if(!h)return;const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};toast('En la ventana de impresión elige "Guardar como PDF".');};
+ document.querySelectorAll('.viewtab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.view==='repsem')setTimeout(estado,50);}));estado();}
+init();window.__repsemCollect=collect;window.__repsemBuild=buildHTML;
+})();
+
 </script>
 </body>
 </html>
