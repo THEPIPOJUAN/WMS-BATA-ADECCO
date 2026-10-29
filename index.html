@@ -293,7 +293,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     // Un usuario solo "cuenta" el día para la meta si produjo al menos esto ese día (calibrado con el ejemplo: 363 cuenta, 110 no).
     minDiaUnidades: 200,
     // Semáforo (% de la meta): verde >= verde ; ámbar >= ambar ; rojo < ambar
-    umbral: { verde: 1, ambar: 0.8 },
+    umbral: { verde: 0.9, ambar: 0.8 },
     // Bloques por transacción. Si no se define, se deducen de los datos.
     //   conCajas:true => ese bloque aporta la columna "Cant cajas" y su reporte en CAJAS
     bloques: {
@@ -842,6 +842,12 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     return { users: [...map.values()].sort((a, b) => b.total - a.total || a.usuario.localeCompare(b.usuario)), byDay, total };
   }
 
+  // minutos operativos por fecha|usuario (horas realmente trabajadas) tomados de los datos cargados
+  function horasIndex(tx) {
+    const idx = new Map();
+    try { (CFG.getRows() || []).forEach(r => { const m = CFG.mapRow ? CFG.mapRow(r) : r; if (!m || m.transaccion !== tx) return; const mn = Number(r.om) || 0; if (!mn) return; const k = m.fecha + '|' + m.usuario; idx.set(k, (idx.get(k) || 0) + mn); }); } catch (e) { }
+    return idx;
+  }
   function buildReport(all, { year, week, transaccion, sinMeta }) {
     const tx = transaccion;
     const d0 = isoWeekStart(year, week), d6 = addDays(d0, 6);
@@ -872,12 +878,25 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const gRows = rows.filter(r => !excl.includes(r.categoria) && bloques.some(b => b.id === r.bloque));
     const gen = pivot(gRows, days, r => r.unidades);
     const metaDia = CFG.metaDia[tx] || 0;
+    // Meta = meta por hora × horas trabajadas del día (tope: jornada de 7.5 h; sábado media jornada). Sin dato de horas se usa la jornada completa.
+    const JORNADA = 7.5, hIdx = horasIndex(tx);
     gen.users.forEach(u => {
-      let met = 0;
-      const mdU = (tx === 'PICKING' && typeof window.metaDiariaIndividual === 'function' && window.metaDiariaIndividual(u.usuario)) || metaDia;   // meta individual (und/h × 7.5 h) si existe
-      days.forEach(d => { if ((u.by[d] || 0) >= CFG.minDiaUnidades) { const f = CFG.factorDia[dowOf(d)]; met += mdU * (f == null ? 1 : f); } });
-      u.meta = met; u.pct = met ? u.total / met : null;
+      let met = 0, hrs = 0; u.metaBy = {}; u.metaAuto = {};
+      const mi = (tx === 'PICKING' && typeof window.metaIndividual === 'function') ? window.metaIndividual(u.usuario) : null;
+      const rate = mi || (metaDia / JORNADA);
+      days.forEach(d => {
+        let auto = 0;
+        if ((u.by[d] || 0) >= CFG.minDiaUnidades) {
+          const f = CFG.factorDia[dowOf(d)], cap = JORNADA * (f == null ? 1 : f), mn = hIdx.get(d + '|' + u.usuario), h = mn ? Math.min(mn / 60, cap) : cap;
+          hrs += h; auto = rate * h;
+        }
+        u.metaAuto[d] = auto;
+        const ov = typeof window.metaDiaOverride === 'function' ? window.metaDiaOverride(tx, u.usuario, d) : null;   // ajuste manual de ese día / usuario
+        u.metaBy[d] = (ov != null && ov >= 0) ? ov : auto; met += u.metaBy[d];
+      });
+      u.meta = met; u.horas = hrs; u.pct = met ? u.total / met : null;
     });
+    gen.metaDay = {}; days.forEach(d => { gen.metaDay[d] = gen.users.reduce((q, u) => q + (u.metaBy[d] || 0), 0); });
     gen.users.sort((a, b) => (b.pct == null ? -1 : b.pct) - (a.pct == null ? -1 : a.pct) || b.total - a.total);
     gen.meta = gen.users.reduce((s, u) => s + u.meta, 0);
     gen.pct = gen.meta ? gen.total / gen.meta : null;
@@ -1031,11 +1050,11 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     r.tables.forEach(t => {
       doc.addPage(); draw();
       const nd = r.days.length;
-      const head = ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? ['Meta', '% vs Meta'] : []);
+      const head = ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? r.days.map(d => 'Meta ' + DOW[dowOf(d)]) : [], t.general ? ['Meta', '% vs Meta'] : []);
       const body = t.pv.users.map(u => [u.usuario].concat(r.days.map(d => u.by[d] ? fmt(u.by[d]) : ''), [fmt(u.total)],
-        t.general ? [u.meta ? fmt(u.meta) : '', u.pct == null ? '—' : Math.round(u.pct * 100) + '%'] : []));
+        t.general ? r.days.map(d => (u.metaBy && u.metaBy[d]) ? fmt(u.metaBy[d]) : '') : [], t.general ? [u.meta ? fmt(u.meta) : '', u.pct == null ? '—' : Math.round(u.pct * 100) + '%'] : []));
       const foot = [['Total general'].concat(r.days.map(d => fmt(t.pv.byDay[d])), [fmt(t.pv.total)],
-        t.general ? [fmt(t.pv.meta), t.pv.pct == null ? '—' : Math.round(t.pv.pct * 100) + '%'] : [])];
+        t.general ? r.days.map(d => fmt((t.pv.metaDay || {})[d] || 0)) : [], t.general ? [fmt(t.pv.meta), t.pv.pct == null ? '—' : Math.round(t.pv.pct * 100) + '%'] : [])];
       const FS = 10, PADH = 3.2, cols = head.length, cw = new Array(cols).fill(0);
       doc.setFontSize(FS); doc.setFont('helvetica', 'bold');
       [head].concat(body, foot).forEach(row => row.forEach((c, i) => { cw[i] = Math.max(cw[i], doc.getTextWidth(String(c)) + 2 * PADH); }));
@@ -1049,7 +1068,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
         footStyles: { fillColor: [238, 239, 241], textColor: NAVY, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 248, 249] },
         columnStyles: cs, showFoot: 'lastPage',
         didParseCell(h) {
-          if (!t.general || h.column.index !== nd + 3) return;
+          if (!t.general || h.column.index !== 2 * nd + 3) return;
           if (h.section === 'body') {
             const u = t.pv.users[h.row.index]; if (u.pct == null) return;
             const s = SEM[semaforo(u.pct)]; h.cell.styles.fillColor = s.fill; h.cell.styles.textColor = s.text; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center';
@@ -1104,26 +1123,27 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     r.tables.forEach(t => {
       const name = t.sheet.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
       const w = wb.addWorksheet(name, { views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }] });
-      const cols = 1 + r.days.length + 1 + (t.general ? 2 : 0);
+      const cols = 1 + r.days.length + 1 + (t.general ? r.days.length + 2 : 0);
       banner(w, cols, t.title, repSub(r));
       w.getRow(3).height = 6;
-      head(w.getRow(4), ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? ['Meta', '% vs Meta'] : []));
+      head(w.getRow(4), ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? r.days.map(d => 'Meta ' + DOW[dowOf(d)]) : [], t.general ? ['Meta', '% vs Meta'] : []));
       t.pv.users.forEach((u, i) => {
         const row = w.getRow(5 + i); row.getCell(1).value = u.usuario; row.getCell(1).font = { bold: true };
         r.days.forEach((d, j) => { if (u.by[d]) numc(row.getCell(2 + j), u.by[d]); });
         numc(row.getCell(2 + r.days.length), u.total, true);
         if (t.general) {
-          if (u.meta) numc(row.getCell(3 + r.days.length), u.meta);
-          const p = row.getCell(4 + r.days.length); p.alignment = { horizontal: 'center' };
+          r.days.forEach((d, j) => { if (u.metaBy && u.metaBy[d]) numc(row.getCell(3 + r.days.length + j), u.metaBy[d]); });
+          if (u.meta) numc(row.getCell(3 + 2 * r.days.length), u.meta);
+          const p = row.getCell(4 + 2 * r.days.length); p.alignment = { horizontal: 'center' };
           if (u.pct == null) p.value = '—'; else { const s = SEM[semaforo(u.pct)]; p.value = u.pct; p.numFmt = '0%'; p.font = { bold: true, color: { argb: s.hexText } }; p.fill = fillOf(s.hexFill); }
         }
         if (i % 2) for (let c = 1; c <= cols - (t.general ? 1 : 0); c++) { const cell = row.getCell(c); if (!cell.fill || !cell.fill.fgColor) cell.fill = fillOf('FFF7FAFD'); }
       });
       const f = w.getRow(5 + t.pv.users.length); f.getCell(1).value = 'Total general';
       r.days.forEach((d, j) => numc(f.getCell(2 + j), t.pv.byDay[d])); numc(f.getCell(2 + r.days.length), t.pv.total);
-      if (t.general) { numc(f.getCell(3 + r.days.length), t.pv.meta); const p = f.getCell(4 + r.days.length); if (t.pv.pct != null) { p.value = t.pv.pct; p.numFmt = '0%'; p.alignment = { horizontal: 'center' }; } }
+      if (t.general) { r.days.forEach((d, j) => numc(f.getCell(3 + r.days.length + j), (t.pv.metaDay || {})[d] || 0)); numc(f.getCell(3 + 2 * r.days.length), t.pv.meta); const p = f.getCell(4 + 2 * r.days.length); if (t.pv.pct != null) { p.value = t.pv.pct; p.numFmt = '0%'; p.alignment = { horizontal: 'center' }; } }
       for (let c = 1; c <= cols; c++) { const cell = f.getCell(c); cell.font = { bold: true, color: { argb: NAV } }; cell.fill = fillOf('FFEEEFF1'); cell.border = { top: { style: 'medium', color: { argb: NAV } } }; }
-      if (t.general && t.pv.pct != null) { const s = SEM[semaforo(t.pv.pct)]; const p = f.getCell(4 + r.days.length); p.fill = fillOf(s.hexFill); p.font = { bold: true, color: { argb: s.hexText } }; }
+      if (t.general && t.pv.pct != null) { const s = SEM[semaforo(t.pv.pct)]; const p = f.getCell(4 + 2 * r.days.length); p.fill = fillOf(s.hexFill); p.font = { bold: true, color: { argb: s.hexText } }; }
       w.getColumn(1).width = 20; for (let c = 2; c <= cols; c++) w.getColumn(c).width = 13;
     });
     const buf = await wb.xlsx.writeBuffer();
@@ -1891,7 +1911,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
     <div id="view-usuarios" class="viewsection">
       <section class="opsum"><div class="h">Usuarios</div>
         <div class="mod-note">Carga el Excel o el PDF de asistencia semanal (nombre, estados por día, observaciones) o un Excel de personal (NOMBRE, USUARIO, DNI, ÁREA). Antes de guardar verás una vista previa donde puedes corregir o cancelar. También puedes agregar, editar y borrar a mano. Esta lista se usa para la asistencia.</div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel o PDF<input id="usrInput" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf" hidden></label><button class="btn" id="usrAddBtn" type="button">➕ Agregar usuario</button><button class="btn" id="usrAsisBtn" type="button">🗓 Asistencia</button><button class="btn" id="metaBtn" type="button">🎯 META</button><button class="btn" id="usrDownBtn" type="button">⬇ Descargar Excel</button></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel o PDF<input id="usrInput" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf" hidden></label><button class="btn" id="usrAddBtn" type="button">➕ Agregar usuario</button><button class="btn" id="metaBtn" type="button">🎯 META</button><button class="btn" id="usrDownBtn" type="button">⬇ Descargar Excel</button></div>
         <div id="usrPrev" class="opsum" style="display:none;margin:10px 0"></div>
         <div class="h" style="font-size:15px;margin-top:10px">Resumen ejecutivo</div>
         <div class="mod-actions" id="usrAreas"></div>
@@ -1900,7 +1920,11 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="rform" id="usrForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto"><input id="uNom" placeholder="Nombre completo"><input id="uUsr" placeholder="Usuario WMS"><input id="uDni" placeholder="DNI"><input id="uArea" placeholder="Área"><input id="uGrp" placeholder="Grupo"><span style="display:flex;gap:6px"><button class="btn" id="usrSaveBtn" type="button">Guardar</button><button class="btn" id="usrCancelBtn" type="button">Cancelar</button></span></div>
         <div class="mod-actions" style="margin-top:10px"><input id="usrSearch" class="pdetsel" placeholder="Buscar usuario, DNI, nombre o área…" style="min-width:260px"></div>
         <div class="mod-status" id="usrStatus">Sin usuarios cargados.</div>
-        <div class="heatbox" style="max-height:560px"><table class="heatmap" id="usrTable"></table></div>
+        <div class="mod-actions" style="margin-top:12px;align-items:center"><b style="font-size:15px">Asistencia semanal</b><button class="btn" id="asisPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="asisYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="asisWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="asisNext" type="button">▶</button><button class="btn" id="asisNow" type="button">Semana actual</button><span id="asisTag" style="font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:#eef0f2"></span><span id="asisRange" style="font-size:13px;color:#5b6b7c"></span></div>
+        <div class="mod-actions"><button class="btn" id="asisAllA" type="button">Marcar todos «A»</button><button class="btn" id="asisUnlock" type="button" style="display:none">✏️ Habilitar edición</button><button class="btn" id="asisSave" type="button">💾 Guardar asistencia</button><span id="asisSum" style="font-size:13px;color:#41536a"></span></div>
+        <div class="mod-note">A = Asistió · T = Tardanza · F = Faltó · D = Descanso · DM = Descanso médico · V = Vacaciones · L = Licencia · P = Permiso. Elige de la lista o escribe la letra. El sábado es medio día.</div>
+        <div style="overflow-x:auto"><table class="heatmap asis-t" id="usrTable"></table></div>
+        <datalist id="asisOpts"><option value="A"><option value="T"><option value="F"><option value="D"><option value="DM"><option value="V"><option value="L"><option value="P"></datalist>
       </section>
       <section class="opsum" id="metaPanel" style="display:none;margin-top:12px"><div class="h">META individual por usuario</div>
         <div class="mod-note">La meta por hora de picking se mide según la categoría de cada persona. La meta de packing es estándar (500 und/h). La meta diaria usa 7.5 horas, que ya descuenta los tiempos muertos; el sábado es medio día. Solo cuenta la meta de quienes aparecen en algún reporte de producción. Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
@@ -1917,7 +1941,12 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
           <label class="btn">📄 Cargar asistencia (PDF o Excel)<input id="rsPdf" type="file" accept=".pdf,.xlsx,.xls" hidden></label><label class="btn">📊 Cargar % de atención (Excel)<input id="rsXls" type="file" accept=".xlsx,.xls" hidden></label></div>
         <div class="mod-status" id="rsMsg">La lectura del PDF usa reconocimiento de texto y puede tardar un minuto.</div>
         <div class="mod-status" id="rsStatus" style="line-height:1.7"></div>
-        <div class="mod-actions"><button class="btn" id="rsView" type="button">👁 Ver reporte</button><button class="btn" id="rsHtml" type="button">⬇ Descargar HTML</button><button class="btn" id="rsPdfBtn" type="button">⬇ Descargar PDF</button></div>
+        <div class="mod-actions"><button class="btn" id="rsView" type="button">👁 Ver reporte</button><button class="btn" id="rsHtml" type="button">⬇ Descargar HTML</button><button class="btn" id="rsPdfBtn" type="button">⬇ Descargar PDF</button><button class="btn" id="rsMeta" type="button">🎯 Meta por día</button></div>
+      </section>
+      <section class="opsum" id="rsMetaPanel" style="display:none;margin-top:12px"><div class="h">Meta por día y por usuario · semana seleccionada</div>
+        <div class="mod-note" id="rsMetaInfo"></div>
+        <div class="mod-actions" id="rsMetaTabs"><button class="btn on" data-tx="PICKING" type="button">Picking</button><button class="btn" data-tx="PACKING" type="button">Packing</button><button class="btn" id="rsMetaReset" type="button">↺ Restaurar la semana</button><button class="btn" id="rsMetaSave" type="button">💾 Guardar ajustes</button></div>
+        <div class="heatbox" style="max-height:none"><table class="heatmap" id="rsMetaTable"></table></div>
       </section>
     </div>
     <div id="view-maestro" class="viewsection">
@@ -5251,7 +5280,7 @@ window.saveCloud=saveCloud;
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
-  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
+  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),metasdia:window.METASDIA||{},repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
 };}
 async function saveCloud(){
   if(!sb){const why=!(CLOUD_CFG.url&&CLOUD_CFG.anonKey)?'No se encontró config.js: en GitHub debe llamarse exactamente config.js y estar en la misma carpeta que el HTML.':'No cargó la librería de Supabase (revisa internet o si algo bloquea cdn.jsdelivr.net).';notice('❌ No se pudo guardar: '+why,true);return false;}
@@ -5332,6 +5361,7 @@ async function applyCloudIfAvailable(){
   if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
   if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
+  if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5376,6 +5406,7 @@ async function applyCloud(){
   if(p.asistencia&&typeof p.asistencia==='object'){window.ASISTENCIA=p.asistencia;}
   if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
+  if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -6140,6 +6171,7 @@ Object.keys(SPEC).forEach(id=>{const t=document.getElementById(id);if(!t)return;
 document.getElementById('filtersBtn').addEventListener('click',function(){const w=document.getElementById('filtersWrap'),on=w.style.display==='none';w.style.display=on?'block':'none';this.classList.toggle('active',on);this.innerHTML=on?'🔎 Ocultar filtros':'🔎 Filtros';});
 </script>
 <style>
+.asis-in{width:48px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;text-transform:uppercase;font-size:14px}
 .asis-back{position:fixed;inset:0;background:rgba(20,24,30,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
 .asis-back.show{display:flex}
 .asis-box{background:#fff;border-radius:16px;width:min(1100px,100%);max-height:92vh;overflow:auto;padding:18px}
@@ -6151,12 +6183,6 @@ document.getElementById('filtersBtn').addEventListener('click',function(){const 
 .asis-t select{font-size:14px;padding:5px;border:1px solid #d9e2e8;border-radius:8px}
 .as-A{background:#d9f2e3}.as-T{background:#fbe9c3}.as-F{background:#f6c9cc}.as-P{background:#e3e6ea}
 </style>
-<div class="asis-back" id="asisBack"><div class="asis-box">
- <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div class="h">Asistencia semanal</div><div class="mini">A = Asistió · T = Tardanza · F = Faltó · P = Permiso. Sábado es medio día.</div></div><button class="btn" id="asisClose" type="button">Cerrar</button></div>
- <div class="asis-top"><button class="btn" id="asisPrev" type="button">◀</button><label>Año <input id="asisYear" type="number" min="2024" max="2100"></label><label>Semana <input id="asisWeek" type="number" min="1" max="53"></label><button class="btn" id="asisNext" type="button">▶</button><button class="btn" id="asisNow" type="button">Semana actual</button><span class="tag" id="asisTag"></span><span id="asisRange" style="font-size:13px;color:#41536a"></span></div>
- <div class="mod-actions"><button class="btn" id="asisAllA" type="button">Marcar todos «A»</button><button class="btn" id="asisUnlock" type="button" style="display:none">✏️ Habilitar edición</button><button class="btn" id="asisSave" type="button">💾 Guardar asistencia</button><span id="asisSum" style="font-size:13px;color:#41536a"></span></div>
- <div class="heatbox" style="max-height:60vh"><table class="heatmap asis-t" id="asisTable"></table></div>
-</div></div>
 <script>
 (function(){
 const $$=id=>document.getElementById(id);
@@ -6204,7 +6230,7 @@ window.renderUsuarios=function(){
  resumen(all);
  const L=all.filter(r=>(!US.area||(r.area||'SIN ÁREA')===US.area)&&(!q||nrm([r.usuario,r.dni,nm(r),r.area,r.grupo].join(' ')).includes(q)));
  $$('usrStatus').textContent=all.length?'Usuarios: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):''):'Sin usuarios cargados.';
- t.innerHTML='<tr><th class="name">NOMBRE</th><th>USUARIO</th><th>DNI</th><th>ÁREA</th><th>GRUPO</th><th></th></tr>'+L.map(r=>'<tr><td class="name"><b>'+esc(nm(r))+'</b></td><td>'+esc(r.usuario||'—')+'</td><td>'+esc(r.dni||'')+'</td><td>'+esc(r.area||'')+'</td><td>'+esc(r.grupo||'')+'</td><td><button class="btn pw-btn" data-e="'+esc(kid(r))+'" type="button">Editar</button> <button class="btn pw-btn" data-d="'+esc(kid(r))+'" type="button">Borrar</button></td></tr>').join('');
+ if(window.__pintarAsis)window.__pintarAsis();
  if($$('metaPanel')&&$$('metaPanel').style.display!=='none')renderMetas();};
 const persist=async()=>{window.renderUsuarios();if(window.saveCloud)await window.saveCloud();};
 $$('usrAreas').addEventListener('click',e=>{const b=e.target.closest('[data-area]');if(!b)return;US.area=b.dataset.area;window.renderUsuarios();});
@@ -6311,38 +6337,46 @@ $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.ta
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
 $$('mtDown').onclick=()=>{const rows=[['USUARIO','NOMBRE','AREA','GRUPO','CATEGORIA','META_X_HORA_PICKING']].concat(window.METAS.map(m=>[m.usuario||'',m.nombre||'',m.area||'',m.grupo||'',m.categoria||'',m.meta]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'META');XLSX.writeFile(wb,'META_INDIVIDUAL.xlsx');};
 
-// ---- Asistencia semanal ----
+// ---- Asistencia semanal en línea (siempre muestra la semana actual) ----
+const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
 function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
 function monday(y,w){const j=new Date(Date.UTC(y,0,4)),d=j.getUTCDay()||7;return new Date(j.getTime()+((w-1)*7-(d-1))*864e5);}
-const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fm=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
-let unlocked=false;
-const wkey=()=>$$('asisYear').value+'-W'+String($$('asisWeek').value).padStart(2,'0');
-function estado(){const n=isoNow(),y=+$$('asisYear').value,w=+$$('asisWeek').value,a=y*100+w,b=n.y*100+n.w;return a<b?'past':a>b?'future':'now';}
-function pintar(){
- const y=+$$('asisYear').value,w=+$$('asisWeek').value;if(!y||!w)return;const mo=monday(y,w),st=estado(),ro=st==='past'&&!unlocked,saved=window.ASISTENCIA[wkey()]||{};
- $$('asisRange').textContent='del '+fm(mo)+' al '+fm(new Date(mo.getTime()+5*864e5));
- $$('asisTag').textContent=st==='now'?'Semana actual · se puede llenar':st==='future'?'Semana futura · se puede llenar':(ro?'Semana anterior · solo lectura':'Semana anterior · edición habilitada');
- $$('asisUnlock').style.display=st==='past'&&ro?'':'none';$$('asisSave').style.display=ro?'none':'';$$('asisAllA').style.display=ro?'none':'';
- const us=window.USUARIOS.slice().sort((a,b)=>String(a.area).localeCompare(String(b.area))||nm(a).localeCompare(nm(b)));
- if(!us.length){$$('asisTable').innerHTML='<tr><td>Primero agrega usuarios en este módulo.</td></tr>';$$('asisSum').textContent='';return;}
- let cnt={A:0,T:0,F:0,P:0};
- const head='<tr><th class="l">USUARIO</th><th class="l">NOMBRE</th><th>ÁREA</th>'+DN.map((d,i)=>'<th>'+d+'<br>'+fm(new Date(mo.getTime()+i*864e5))+'</th>').join('')+'</tr>';
- const body=us.map(r=>{const rec=saved[nk(r)]||{};return '<tr><td class="l"><b>'+esc(r.usuario||'—')+'</b></td><td class="l">'+esc(fullName(r))+'</td><td>'+esc(r.area)+'</td>'+DN.map((d,i)=>{const v=rec['d'+i]||'';if(cnt[v]!=null)cnt[v]++;
-  return ro?'<td class="'+(v?'as-'+v:'')+'"><b>'+(v||'—')+'</b></td>':'<td class="'+(v?'as-'+v:'')+'"><select data-u="'+esc(nk(r))+'" data-d="d'+i+'"><option value=""></option>'+['A','T','F','D','DM','V','L','P'].map(o=>'<option'+(o===v?' selected':'')+'>'+o+'</option>').join('')+'</select></td>';}).join('')+'</tr>';}).join('');
- $$('asisTable').innerHTML=head+body;
- $$('asisSum').textContent=Object.keys(saved).length?'Registrado: Asistió '+cnt.A+' · Tardanza '+cnt.T+' · Faltó '+cnt.F+' · Permiso '+cnt.P:(st==='past'?'Sin asistencia registrada para esta semana.':'Aún sin registrar.');}
-function abrir(){const n=isoNow();$$('asisYear').value=n.y;$$('asisWeek').value=n.w;unlocked=false;$$('asisBack').classList.add('show');pintar();}
-$$('usrAsisBtn').onclick=abrir;$$('asisClose').onclick=()=>$$('asisBack').classList.remove('show');
-['asisYear','asisWeek'].forEach(i=>$$(i).addEventListener('change',()=>{unlocked=false;pintar();}));
-const mover=k=>{let y=+$$('asisYear').value,w=+$$('asisWeek').value+k;if(w<1){y--;w=52;}if(w>52){const mx=isoWeeks(y);if(w>mx){w=1;y++;}}$$('asisYear').value=y;$$('asisWeek').value=w;unlocked=false;pintar();};
 function isoWeeks(y){const d=new Date(Date.UTC(y,11,28)),t=new Date(d);t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));return Math.ceil(((t-Date.UTC(t.getUTCFullYear(),0,1))/864e5+1)/7);}
-$$('asisPrev').onclick=()=>mover(-1);$$('asisNext').onclick=()=>mover(1);$$('asisNow').onclick=abrir;
-$$('asisUnlock').onclick=()=>{unlocked=true;pintar();};
-$$('asisAllA').onclick=()=>{$$('asisTable').querySelectorAll('select').forEach(s=>{if(!s.value){s.value='A';s.parentElement.className='as-A';}});};
-$$('asisTable').addEventListener('change',e=>{const s=e.target.closest('select');if(s)s.parentElement.className=s.value?'as-'+s.value:'';});
-$$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const rec={};
- $$('asisTable').querySelectorAll('select').forEach(s=>{if(s.value){const u=s.dataset.u;(rec[u]=rec[u]||{})[s.dataset.d]=s.value;}});
- {const old=window.ASISTENCIA[wkey()]||{};Object.keys(rec).forEach(u=>{if(old[u]&&old[u].obs)rec[u].obs=old[u].obs;});}window.ASISTENCIA[wkey()]=rec;window.__toast&&window.__toast('Asistencia de la semana '+$$('asisWeek').value+' guardada.');pintar();if(window.saveCloud)await window.saveCloud();};
+let unlocked=false;const draft={};
+const wkey=()=>$$('asisYear').value+'-W'+String($$('asisWeek').value).padStart(2,'0');
+function estado(){const n=isoNow(),a=(+$$('asisYear').value)*100+(+$$('asisWeek').value),b=n.y*100+n.w;return a<b?'past':a>b?'future':'now';}
+function filtrar(){const q=nrm($$('usrSearch').value);return window.USUARIOS.slice().sort((a,b)=>nm(a).localeCompare(nm(b))).filter(r=>(!US.area||(r.area||'SIN ÁREA')===US.area)&&(!q||nrm([r.usuario,r.dni,nm(r),r.area,r.grupo].join(' ')).includes(q)));}
+function pintar(){
+ const t=$$('usrTable');if(!t)return;if(!$$('asisYear').value){const n=isoNow();$$('asisYear').value=n.y;$$('asisWeek').value=n.w;}
+ const y=+$$('asisYear').value,w=+$$('asisWeek').value,mo=monday(y,w),st=estado(),ro=st==='past'&&!unlocked,k=wkey(),rec=window.ASISTENCIA[k]||{},dr=draft[k]||{},L=filtrar();
+ $$('asisRange').textContent='del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5));
+ $$('asisTag').textContent=st==='now'?'Semana actual':st==='future'?'Semana futura':(ro?'Semana anterior · solo lectura':'Semana anterior · edición habilitada');
+ $$('asisUnlock').style.display=st==='past'&&ro?'':'none';$$('asisSave').style.display=ro?'none':'';$$('asisAllA').style.display=ro?'none':'';
+ $$('usrStatus').textContent=window.USUARIOS.length?'Personas: '+fmn(window.USUARIOS.length)+(L.length!==window.USUARIOS.length?' · mostrando '+fmn(L.length):''):'Sin usuarios cargados.';
+ if(!window.USUARIOS.length){t.innerHTML='<tr><td>Carga el Excel o el PDF de asistencia, o agrega usuarios.</td></tr>';$$('asisSum').textContent='';return;}
+ const val=(key,i)=>{const d=dr[key];return d&&d['d'+i]!==undefined?d['d'+i]:((rec[key]||{})['d'+i]||'');};
+ t.innerHTML='<tr><th>N°</th><th class="l">Nombre</th>'+DN.map((d,i)=>'<th>'+d+'<br>'+fd(new Date(mo.getTime()+i*864e5))+'</th>').join('')+'<th></th></tr>'
+  +L.map((r,n)=>{const key=nk(r);return '<tr><td>'+(n+1)+'</td><td class="l"><b>'+esc(nm(r))+'</b></td>'+DN.map((d,i)=>{const v=val(key,i);return ro?'<td class="'+(v?'as-'+v:'')+'"><b>'+(v||'—')+'</b></td>':'<td class="'+(v?'as-'+v:'')+'"><input class="asis-in" list="asisOpts" maxlength="2" autocomplete="off" data-u="'+esc(key)+'" data-k="'+i+'" value="'+esc(v)+'"></td>';}).join('')+'<td style="white-space:nowrap"><button class="btn pw-btn" data-e="'+esc(kid(r))+'" type="button">Editar</button> <button class="btn pw-btn" data-d="'+esc(kid(r))+'" type="button">Borrar</button></td></tr>';}).join('')
+  +'<tr class="tot"><td></td><td class="l">% asistencia del día</td>'+DN.map((d,i)=>'<td data-pc="'+i+'"></td>').join('')+'<td></td></tr>';
+ calc();}
+function calc(){const t=$$('usrTable');if(!t)return;const y=+$$('asisYear').value,w=+$$('asisWeek').value,k=wkey(),rec=window.ASISTENCIA[k]||{},dr=draft[k]||{},L=filtrar();let A=0,F=0,tot=[0,0,0,0,0,0].map(()=>({a:0,f:0}));
+ L.forEach(r=>{const key=nk(r);for(let i=0;i<6;i++){const d=dr[key],v=d&&d['d'+i]!==undefined?d['d'+i]:((rec[key]||{})['d'+i]||'');if(v==='A'||v==='T'){tot[i].a++;A++;}if(v==='F'){tot[i].f++;F++;}}});
+ t.querySelectorAll('[data-pc]').forEach(td=>{const x=tot[+td.dataset.pc];td.textContent=x.a+x.f?Math.round(x.a/(x.a+x.f)*100)+'%':'';});
+ $$('asisSum').textContent=A+F?'Asistió '+A+' · Faltó '+F+' · '+Math.round(A/(A+F)*100)+'% de asistencia':'Aún sin registrar.';}
+function mover(dk){let y=+$$('asisYear').value,w=+$$('asisWeek').value+dk;if(w<1){y--;w=isoWeeks(y);}else if(w>isoWeeks(y)){w=1;y++;}$$('asisYear').value=y;$$('asisWeek').value=w;unlocked=false;pintar();}
+function hoy(){const n=isoNow();$$('asisYear').value=n.y;$$('asisWeek').value=n.w;unlocked=false;pintar();}
+window.__pintarAsis=pintar;
+['asisYear','asisWeek'].forEach(i=>$$(i).addEventListener('change',()=>{unlocked=false;pintar();}));
+$$('asisPrev').onclick=()=>mover(-1);$$('asisNext').onclick=()=>mover(1);$$('asisNow').onclick=hoy;$$('asisUnlock').onclick=()=>{unlocked=true;pintar();};
+$$('usrTable').addEventListener('input',e=>{const inp=e.target.closest('.asis-in');if(!inp)return;inp.value=inp.value.toUpperCase().replace(/[^A-Z]/g,'');const v=inp.value;
+ if(v&&OKST.indexOf(v)<0){inp.parentElement.className='';if(v.length>=2){inp.style.borderColor='#d9232d';}else inp.style.borderColor='';return;}
+ inp.style.borderColor='';inp.parentElement.className=v?'as-'+v:'';const k=wkey();((draft[k]=draft[k]||{})[inp.dataset.u]=draft[k][inp.dataset.u]||{})['d'+inp.dataset.k]=v;calc();});
+$$('usrTable').addEventListener('change',e=>{const inp=e.target.closest('.asis-in');if(inp&&inp.value&&OKST.indexOf(inp.value)<0){window.__toast&&window.__toast('Usa A, T, F, D, DM, V, L o P.');inp.value='';inp.style.borderColor='';inp.parentElement.className='';const k=wkey();if(draft[k]&&draft[k][inp.dataset.u])draft[k][inp.dataset.u]['d'+inp.dataset.k]='';calc();}});
+$$('asisAllA').onclick=()=>{$$('usrTable').querySelectorAll('.asis-in').forEach(s=>{if(!s.value){s.value='A';s.parentElement.className='as-A';const k=wkey();((draft[k]=draft[k]||{})[s.dataset.u]=draft[k][s.dataset.u]||{})['d'+s.dataset.k]='A';}});calc();};
+$$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const k=wkey(),rec=Object.assign({},window.ASISTENCIA[k]||{}),keys=new Set();
+ $$('usrTable').querySelectorAll('.asis-in').forEach(s=>{const u=s.dataset.u;keys.add(u);const o=rec[u]=Object.assign({},rec[u]||{});if(s.value&&OKST.indexOf(s.value)>=0)o['d'+s.dataset.k]=s.value;else delete o['d'+s.dataset.k];});
+ keys.forEach(u=>{const o=rec[u],has=[0,1,2,3,4,5].some(i=>o['d'+i]);if(!has&&!o.obs)delete rec[u];});
+ window.ASISTENCIA[k]=rec;delete draft[k];window.__toast&&window.__toast('Asistencia de la semana '+$$('asisWeek').value+' guardada.');window.renderUsuarios();if(window.saveCloud)await window.saveCloud();};
 window.renderUsuarios();
 })();
 </script>
@@ -6576,7 +6610,7 @@ function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X
  bars(id+'-c2',X.chartBlq.labels,X.chartBlq.series.map((s,k)=>({n:s.name,v:s.values,c:k?'var(--amb)':'var(--g)'})),{stack:1});
  $(id+'-s').innerHTML='<tr><th class="l">Categoría</th>'+X.bloques.map(b=>'<th>'+b+'</th>').join('')+'<th>Cant. cajas</th><th>Total</th></tr>'+X.summary.map(r=>'<tr><td class="l"><b>'+esc(r.cat)+'</b></td>'+X.bloques.map(b=>'<td>'+fm(r.by[b])+'</td>').join('')+'<td>'+fm(r.cajas)+'</td><td><b>'+fm(r.total)+'</b></td></tr>').join('');
  const st={i:0},draw=()=>{chips(id+'-tabs','Reporte',X.tables.map((t,i)=>({k:String(i),l:t.sheet})),String(st.i),k=>{st.i=+k;draw();});const t=X.tables[st.i],hm=t.general;
-  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?'<th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?'<td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?'<td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
+  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?X.days.map(d=>'<th>Meta '+d.split(' ')[0]+'</th>').join('')+'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?(u.metaBy||[]).map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td>'+(u.hrs?u.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?(t.metaDay||[]).map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+t.users.reduce((a,u)=>a+(u.hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
   $(id+'-tt').textContent=t.title;};draw();}
 // ================= arranque =================
 $('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range;
@@ -6636,7 +6670,8 @@ const $$=id=>document.getElementById(id);
 const nrm=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_\-]+/g,' ').trim().toUpperCase();
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>window.__toast&&window.__toast(m);
-window.REPSEM=window.REPSEM||{};window.SKUPROD=window.SKUPROD||{};window.__skuBatch=window.__skuBatch||[];
+window.REPSEM=window.REPSEM||{};window.SKUPROD=window.SKUPROD||{};window.METASDIA=window.METASDIA||{};
+window.metaDiaOverride=(tx,u,d)=>{const v=window.METASDIA[tx+'|'+String(u).toLowerCase()+'|'+d];return v===undefined?null:Number(v);};window.__skuBatch=window.__skuBatch||[];
 // ---------- almacén de producción por SKU ----------
 const isoD=d=>{d=String(d||'');const m=d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):d.slice(0,10);};
 window.SKUPROD_CLEAR=(op,k)=>{Object.keys(window.SKUPROD).forEach(x=>{if(x.indexOf(op+'|'+k+'|')===0)delete window.SKUPROD[x];});};
@@ -6709,7 +6744,7 @@ function leerAtencion(wb){
 const EXC=['INSUMO','MATERIALES'];
 function repTx(y,w,tx){const X=window.WMSX;let rep;try{rep=X._buildReport(X._normRows(),{year:y,week:w,transaccion:tx});}catch(e){return null;}
  if(!rep||!rep.nRows)return null;const days=rep.days,ids=rep.bloques.map(b=>b.id);
- const tbl=t=>({title:t.title,sheet:t.sheet,general:!!t.general,users:t.pv.users.map(u=>({u:u.usuario,by:days.map(d=>u.by[d]||0),total:u.total,meta:u.meta||0,pct:u.pct==null?null:u.pct})),byDay:days.map(d=>t.pv.byDay[d]||0),total:t.pv.total,meta:t.pv.meta||0,pct:t.pv.pct==null?null:t.pv.pct});
+ const tbl=t=>({title:t.title,sheet:t.sheet,general:!!t.general,users:t.pv.users.map(u=>({u:u.usuario,by:days.map(d=>u.by[d]||0),total:u.total,hrs:u.horas||0,metaBy:days.map(d=>(u.metaBy&&u.metaBy[d])||0),meta:u.meta||0,pct:u.pct==null?null:u.pct})),byDay:days.map(d=>t.pv.byDay[d]||0),metaDay:days.map(d=>(t.pv.metaDay&&t.pv.metaDay[d])||0),total:t.pv.total,meta:t.pv.meta||0,pct:t.pv.pct==null?null:t.pv.pct});
  return {generalTotal:rep.generalTotal,users:rep.users,best:rep.best,low:rep.low,gen:{pct:rep.gen.pct==null?null:rep.gen.pct},bloques:ids,days:rep.chartCat.labels,chartCat:rep.chartCat,chartBlq:rep.chartBlq,summary:rep.summary,dayTot:rep.dayTot,datesISO:days,tables:rep.tables.map(tbl)};}
 function maestroIdx(){const m=new Map();(window.MAESTRO||[]).forEach(r=>{m.set(String(r.sku).trim(),r);});return m;}
 function attrData(dates){const S=window.SKUPROD||{},keys=Object.keys(S);if(!keys.length)return {rows:[],msg:'Sin detalle por SKU: vuelve a cargar los archivos de producción (Picking y Packing) para guardar el SKU de cada línea.'};
@@ -6737,11 +6772,11 @@ const tpl=id=>document.getElementById(id).textContent;
 function buildHTML(R){return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reporte ejecutivo semanal · Semana '+R.week+'</title><style>'+tpl('rep-css')+'</style></head><body>'+tpl('rep-body')+'<scr'+'ipt>const R='+JSON.stringify(R).replace(/</g,'\\u003c')+';\n'+tpl('rep-js')+'</scr'+'ipt></body></html>';}
 // ---------- interfaz ----------
 function estado(){const k=key(),st=window.REPSEM[k]||{},R=[];
- R.push(st.asis?'✅ Asistencia: '+st.asis.rows.length+' personas leídas'+(st.asis.header?' (PDF indica '+st.asis.header.personal+')':''):'⚪ Asistencia: sube el PDF');
+ const recU=(window.ASISTENCIA||{})[k],nU=recU?Object.keys(recU).length:0;R.push(st.asis?'✅ Asistencia (archivo cargado aquí): '+st.asis.rows.length+' personas'+(st.asis.header?' (PDF indica '+st.asis.header.personal+')':'')+(nU?' · <a href="#" id="rsUseUsr">usar la de USUARIOS ('+nU+')</a>':''):(nU?'✅ Asistencia (de USUARIOS): '+nU+' personas':'⚪ Asistencia: llénala en USUARIOS o sube el PDF o Excel'));
  R.push(st.aten?'✅ % de atención: '+st.aten.rows.length+' filas':'⚪ % de atención: sube el Excel');
  const X=window.WMSX;let np=0,nk=0;if(X){const y=+$$('rsYear').value,w=+$$('rsWeek').value;['PICKING','PACKING'].forEach(tx=>{const r=repTx(y,w,tx);if(r)(tx==='PICKING'?np=r.generalTotal:nk=r.generalTotal);});}
  R.push((np?'✅':'⚪')+' Producción Picking: '+Math.round(np).toLocaleString('es-PE')+' und · '+(nk?'✅':'⚪')+' Packing: '+Math.round(nk).toLocaleString('es-PE')+' und (del detalle ya cargado)');
- R.push((window.MAESTRO&&window.MAESTRO.length?'✅':'⚪')+' Maestro SKU: '+((window.MAESTRO||[]).length).toLocaleString('es-PE')+' · detalle por SKU guardado: '+Object.keys(window.SKUPROD||{}).length.toLocaleString('es-PE')+' registros');
+ R.push((window.MAESTRO&&window.MAESTRO.length?'✅':'⚪')+' Maestro SKU: '+((window.MAESTRO||[]).length).toLocaleString('es-PE')+' · detalle por SKU guardado: '+Object.keys(window.SKUPROD||{}).length.toLocaleString('es-PE')+' registros'+(Object.keys(window.SKUPROD||{}).length?'':' → vuelve a cargar los archivos de Picking y Packing para llenar marcas y colección'));
  $$('rsStatus').innerHTML=R.map(x=>'<div>'+x+'</div>').join('');}
 async function persist(){if(window.saveCloud)await window.saveCloud();}
 function init(){const n=isoNow();$$('rsYear').value=n.y;$$('rsWeek').value=Math.max(1,n.w-1);
@@ -6758,6 +6793,22 @@ function init(){const n=isoNow();$$('rsYear').value=n.y;$$('rsWeek').value=Math.
  $$('rsHtml').onclick=()=>{const h=make();if(!h)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));a.download='Reporte_ejecutivo_semanal_Semana_'+$$('rsWeek').value+'.html';a.click();};
  $$('rsPdfBtn').onclick=()=>{const h=make();if(!h)return;const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};toast('En la ventana de impresión elige "Guardar como PDF".');};
  document.querySelectorAll('.viewtab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.view==='repsem')setTimeout(estado,50);}));estado();}
+const fmt0=n=>Math.round(Number(n)||0).toLocaleString('es-PE');
+let mdTx='PICKING';const DOWL=['dom','lun','mar','mié','jue','vie','sáb'],dl2=d=>DOWL[new Date(d+'T00:00:00Z').getUTCDay()]+' '+d.slice(8,10)+'/'+d.slice(5,7);
+function metaRep(tx){const X=window.WMSX;try{const r=X._buildReport(X._normRows(),{year:+$$('rsYear').value,week:+$$('rsWeek').value,transaccion:tx});return r&&r.nRows?r:null;}catch(e){return null;}}
+function renderMetaDia(){const box=$$('rsMetaTable');$$('rsMetaTabs').querySelectorAll('[data-tx]').forEach(b=>b.classList.toggle('on',b.dataset.tx===mdTx));
+ const r=metaRep(mdTx);if(!r){box.innerHTML='<tr><td>Sin producción de '+mdTx.toLowerCase()+' para esta semana.</td></tr>';$$('rsMetaInfo').textContent='';return;}
+ const days=r.days,us=r.tables[0].pv.users;let ov=0;
+ box.innerHTML='<tr><th class="name">USUARIO</th>'+days.map(d=>'<th>'+dl2(d)+'</th>').join('')+'<th>META semana</th><th>Producción</th></tr>'+us.map(u=>'<tr><td class="name"><b>'+esc(u.usuario)+'</b></td>'+days.map(d=>{const key=mdTx+'|'+String(u.usuario).toLowerCase()+'|'+d,has=window.METASDIA[key]!==undefined;if(has)ov++;return '<td'+(has?' style="background:#fbe9c3"':'')+'><input type="number" min="0" step="1" class="pdetsel" style="width:78px;text-align:center" data-k="'+esc(key)+'" data-a="'+Math.round(u.metaAuto[d]||0)+'" value="'+Math.round(u.metaBy[d]||0)+'"></td>';}).join('')+'<td class="num"><b>'+fmt0(u.meta)+'</b></td><td class="num">'+fmt0(u.total)+'</td></tr>').join('');
+ $$('rsMetaInfo').textContent='Cada celda parte de la meta original (meta por hora × horas trabajadas del día). Si cambias un valor queda en amarillo y se usa en los reportes de Producción vs Meta. Ajustes manuales en esta semana: '+ov+'.';}
+$$('rsMeta').onclick=()=>{const p=$$('rsMetaPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';$$('rsMeta').textContent=on?'🎯 Ocultar meta por día':'🎯 Meta por día';if(on)renderMetaDia();};
+$$('rsMetaTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tx]');if(b){mdTx=b.dataset.tx;renderMetaDia();}});
+$$('rsMetaTable').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const v=i.value===''?null:Number(i.value),a=Number(i.dataset.a);
+ if(v==null||isNaN(v)||Math.abs(v-a)<0.5)delete window.METASDIA[i.dataset.k];else window.METASDIA[i.dataset.k]=Math.round(v);renderMetaDia();});
+$$('rsMetaReset').onclick=()=>{const r=metaRep(mdTx);if(!r)return;if(!confirm('¿Restaurar la meta original de esta semana en '+mdTx.toLowerCase()+'?'))return;Object.keys(window.METASDIA).forEach(k=>{const p=k.split('|');if(p[0]===mdTx&&r.days.indexOf(p[2])>=0)delete window.METASDIA[k];});renderMetaDia();};
+$$('rsMetaSave').onclick=async()=>{if(!window.requestUploadAccess())return;if(window.saveCloud)await window.saveCloud();toast('Ajustes de meta guardados.');};
+['rsYear','rsWeek'].forEach(i=>$$(i).addEventListener('change',()=>{if($$('rsMetaPanel').style.display!=='none')renderMetaDia();}));
+$$('rsStatus').addEventListener('click',async e=>{if(e.target.id!=='rsUseUsr')return;e.preventDefault();const k=key();if(window.REPSEM[k])delete window.REPSEM[k].asis;estado();await persist();});
 window.__leerPDFAsist=leerPDF;init();window.__repsemCollect=collect;window.__repsemBuild=buildHTML;
 })();
 
