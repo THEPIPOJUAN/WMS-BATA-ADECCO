@@ -6804,7 +6804,7 @@ function renderMetaDia(){const box=$$('rsMetaTable');$$('rsMetaTabs').querySelec
 $$('rsMeta').onclick=()=>{const p=$$('rsMetaPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';$$('rsMeta').textContent=on?'🎯 Ocultar meta por día':'🎯 Meta por día';if(on)renderMetaDia();};
 $$('rsMetaTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tx]');if(b){mdTx=b.dataset.tx;renderMetaDia();}});
 $$('rsMetaTable').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const v=i.value===''?null:Number(i.value),a=Number(i.dataset.a);
- if(v==null||isNaN(v)||Math.abs(v-a)<0.5)delete window.METASDIA[i.dataset.k];else window.METASDIA[i.dataset.k]=Math.round(v);renderMetaDia();});
+ if(v==null||isNaN(v)||Math.abs(v-a)<0.5)delete window.METASDIA[i.dataset.k];else window.METASDIA[i.dataset.k]=Math.round(v);setTimeout(renderMetaDia,0);});
 $$('rsMetaReset').onclick=()=>{const r=metaRep(mdTx);if(!r)return;if(!confirm('¿Restaurar la meta original de esta semana en '+mdTx.toLowerCase()+'?'))return;Object.keys(window.METASDIA).forEach(k=>{const p=k.split('|');if(p[0]===mdTx&&r.days.indexOf(p[2])>=0)delete window.METASDIA[k];});renderMetaDia();};
 $$('rsMetaSave').onclick=async()=>{if(!window.requestUploadAccess())return;if(window.saveCloud)await window.saveCloud();toast('Ajustes de meta guardados.');};
 ['rsYear','rsWeek'].forEach(i=>$$(i).addEventListener('change',()=>{if($$('rsMetaPanel').style.display!=='none')renderMetaDia();}));
