@@ -882,11 +882,11 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     const JORNADA = 7.5, hIdx = horasIndex(tx);
     gen.users.forEach(u => {
       let met = 0, hrs = 0; u.metaBy = {}; u.metaAuto = {};
-      const mi = (tx === 'PICKING' && typeof window.metaIndividual === 'function') ? window.metaIndividual(u.usuario) : null;
-      const rate = mi || (metaDia / JORNADA);
       days.forEach(d => {
         let auto = 0;
         if ((u.by[d] || 0) >= CFG.minDiaUnidades) {
+          const mi = (tx === 'PICKING' && typeof window.metaIndividual === 'function') ? window.metaIndividual(u.usuario, d) : null;   // meta por hora vigente ese día
+          const rate = mi || (metaDia / JORNADA);
           const f = CFG.factorDia[dowOf(d)], cap = JORNADA * (f == null ? 1 : f), mn = hIdx.get(d + '|' + u.usuario), h = mn ? Math.min(mn / 60, cap) : cap;
           hrs += h; auto = rate * h;
         }
@@ -1050,11 +1050,11 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     r.tables.forEach(t => {
       doc.addPage(); draw();
       const nd = r.days.length;
-      const head = ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? r.days.map(d => 'Meta ' + DOW[dowOf(d)]) : [], t.general ? ['Meta', '% vs Meta'] : []);
+      const head = ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? ['Meta', '% vs Meta'] : []);
       const body = t.pv.users.map(u => [u.usuario].concat(r.days.map(d => u.by[d] ? fmt(u.by[d]) : ''), [fmt(u.total)],
-        t.general ? r.days.map(d => (u.metaBy && u.metaBy[d]) ? fmt(u.metaBy[d]) : '') : [], t.general ? [u.meta ? fmt(u.meta) : '', u.pct == null ? '—' : Math.round(u.pct * 100) + '%'] : []));
+        t.general ? [u.meta ? fmt(u.meta) : '', u.pct == null ? '—' : Math.round(u.pct * 100) + '%'] : []));
       const foot = [['Total general'].concat(r.days.map(d => fmt(t.pv.byDay[d])), [fmt(t.pv.total)],
-        t.general ? r.days.map(d => fmt((t.pv.metaDay || {})[d] || 0)) : [], t.general ? [fmt(t.pv.meta), t.pv.pct == null ? '—' : Math.round(t.pv.pct * 100) + '%'] : [])];
+        t.general ? [fmt(t.pv.meta), t.pv.pct == null ? '—' : Math.round(t.pv.pct * 100) + '%'] : [])];
       const FS = 10, PADH = 3.2, cols = head.length, cw = new Array(cols).fill(0);
       doc.setFontSize(FS); doc.setFont('helvetica', 'bold');
       [head].concat(body, foot).forEach(row => row.forEach((c, i) => { cw[i] = Math.max(cw[i], doc.getTextWidth(String(c)) + 2 * PADH); }));
@@ -1068,7 +1068,7 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
         footStyles: { fillColor: [238, 239, 241], textColor: NAVY, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 248, 249] },
         columnStyles: cs, showFoot: 'lastPage',
         didParseCell(h) {
-          if (!t.general || h.column.index !== 2 * nd + 3) return;
+          if (!t.general || h.column.index !== nd + 3) return;
           if (h.section === 'body') {
             const u = t.pv.users[h.row.index]; if (u.pct == null) return;
             const s = SEM[semaforo(u.pct)]; h.cell.styles.fillColor = s.fill; h.cell.styles.textColor = s.text; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center';
@@ -1123,27 +1123,26 @@ table.heatmap th.name{background:#f0f4f7;z-index:3}
     r.tables.forEach(t => {
       const name = t.sheet.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
       const w = wb.addWorksheet(name, { views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }] });
-      const cols = 1 + r.days.length + 1 + (t.general ? r.days.length + 2 : 0);
+      const cols = 1 + r.days.length + 1 + (t.general ? 2 : 0);
       banner(w, cols, t.title, repSub(r));
       w.getRow(3).height = 6;
-      head(w.getRow(4), ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? r.days.map(d => 'Meta ' + DOW[dowOf(d)]) : [], t.general ? ['Meta', '% vs Meta'] : []));
+      head(w.getRow(4), ['Usuario'].concat(r.days.map(d => DOW[dowOf(d)] + ' ' + dm(d)), ['Total'], t.general ? ['Meta', '% vs Meta'] : []));
       t.pv.users.forEach((u, i) => {
         const row = w.getRow(5 + i); row.getCell(1).value = u.usuario; row.getCell(1).font = { bold: true };
         r.days.forEach((d, j) => { if (u.by[d]) numc(row.getCell(2 + j), u.by[d]); });
         numc(row.getCell(2 + r.days.length), u.total, true);
         if (t.general) {
-          r.days.forEach((d, j) => { if (u.metaBy && u.metaBy[d]) numc(row.getCell(3 + r.days.length + j), u.metaBy[d]); });
-          if (u.meta) numc(row.getCell(3 + 2 * r.days.length), u.meta);
-          const p = row.getCell(4 + 2 * r.days.length); p.alignment = { horizontal: 'center' };
+          if (u.meta) numc(row.getCell(3 + r.days.length), u.meta);
+          const p = row.getCell(4 + r.days.length); p.alignment = { horizontal: 'center' };
           if (u.pct == null) p.value = '—'; else { const s = SEM[semaforo(u.pct)]; p.value = u.pct; p.numFmt = '0%'; p.font = { bold: true, color: { argb: s.hexText } }; p.fill = fillOf(s.hexFill); }
         }
         if (i % 2) for (let c = 1; c <= cols - (t.general ? 1 : 0); c++) { const cell = row.getCell(c); if (!cell.fill || !cell.fill.fgColor) cell.fill = fillOf('FFF7FAFD'); }
       });
       const f = w.getRow(5 + t.pv.users.length); f.getCell(1).value = 'Total general';
       r.days.forEach((d, j) => numc(f.getCell(2 + j), t.pv.byDay[d])); numc(f.getCell(2 + r.days.length), t.pv.total);
-      if (t.general) { r.days.forEach((d, j) => numc(f.getCell(3 + r.days.length + j), (t.pv.metaDay || {})[d] || 0)); numc(f.getCell(3 + 2 * r.days.length), t.pv.meta); const p = f.getCell(4 + 2 * r.days.length); if (t.pv.pct != null) { p.value = t.pv.pct; p.numFmt = '0%'; p.alignment = { horizontal: 'center' }; } }
+      if (t.general) { numc(f.getCell(3 + r.days.length), t.pv.meta); const p = f.getCell(4 + r.days.length); if (t.pv.pct != null) { p.value = t.pv.pct; p.numFmt = '0%'; p.alignment = { horizontal: 'center' }; } }
       for (let c = 1; c <= cols; c++) { const cell = f.getCell(c); cell.font = { bold: true, color: { argb: NAV } }; cell.fill = fillOf('FFEEEFF1'); cell.border = { top: { style: 'medium', color: { argb: NAV } } }; }
-      if (t.general && t.pv.pct != null) { const s = SEM[semaforo(t.pv.pct)]; const p = f.getCell(4 + 2 * r.days.length); p.fill = fillOf(s.hexFill); p.font = { bold: true, color: { argb: s.hexText } }; }
+      if (t.general && t.pv.pct != null) { const s = SEM[semaforo(t.pv.pct)]; const p = f.getCell(4 + r.days.length); p.fill = fillOf(s.hexFill); p.font = { bold: true, color: { argb: s.hexText } }; }
       w.getColumn(1).width = 20; for (let c = 2; c <= cols; c++) w.getColumn(c).width = 13;
     });
     const buf = await wb.xlsx.writeBuffer();
@@ -1927,11 +1926,13 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <datalist id="asisOpts"><option value="A"><option value="T"><option value="F"><option value="D"><option value="DM"><option value="V"><option value="L"><option value="P"></datalist>
       </section>
       <section class="opsum" id="metaPanel" style="display:none;margin-top:12px"><div class="h">META individual por usuario</div>
-        <div class="mod-note">La meta por hora de picking se mide según la categoría de cada persona. La meta de packing es estándar (500 und/h). La meta diaria usa 7.5 horas, que ya descuenta los tiempos muertos; el sábado es medio día. Solo cuenta la meta de quienes aparecen en algún reporte de producción. Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
+        <div class="mod-note">Cada celda es la meta por hora de picking de ese día, según la última carga. Si cambias una celda, el nuevo monto rige desde ese día en adelante y no modifica los días anteriores. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
+        <div class="mod-actions" style="align-items:center"><b style="font-size:15px">Semana</b><button class="btn" id="mtPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="mtYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="mtWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="mtNext" type="button">▶</button><button class="btn" id="mtNow" type="button">Semana actual</button><span id="mtRange" style="font-size:13px;color:#5b6b7c"></span></div>
+        <div class="mod-actions" style="align-items:center"><label style="display:flex;gap:6px;align-items:center"><b>Vigente desde</b> <input id="mtSince" type="date" class="pdetsel"></label><span style="font-size:12px;color:#5b6b7c">Fecha desde la que rige lo que cargues con Excel o agregues con el botón; los cambios hechos en la tabla rigen desde la fecha de cada celda.</span></div>
         <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><input id="mtSearch" class="pdetsel" placeholder="Buscar…" style="min-width:200px"></div>
         <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" placeholder="Área"><input id="mtGrp" placeholder="Grupo"><input id="mtCat" placeholder="Categoría"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
         <div class="mod-status" id="mtStatus"></div>
-        <div class="heatbox" style="max-height:480px"><table class="heatmap" id="mtTable"></table></div>
+        <div style="overflow-x:auto"><table class="heatmap" id="mtTable"></table></div>
       </section>
     </div>
     <div id="view-repsem" class="viewsection">
@@ -3709,6 +3710,18 @@ function renderSupervisor(baseArr,meta){
 }
 
 
+// ===== Meta por usuario y día: meta por hora vigente ese día × horas trabajadas (tope jornada 7.5 h; sábado media jornada) =====
+let __mdRef=null,__mdLen=-1,__mdIdx=null;
+function metaIdx(){if(__mdIdx&&__mdRef===DATA&&__mdLen===DATA.length)return __mdIdx;const m=new Map();
+  DATA.forEach(r=>{const k=(r.op||'PICKING')+'|'+r.d+'|'+r.u;let e=m.get(k);if(!e){e={om:0,hs:new Set()};m.set(k,e);}e.om+=(r.om||0);if((r.n||0)>0)e.hs.add(r.h);});
+  __mdIdx=m;__mdRef=DATA;__mdLen=DATA.length;return m;}
+function metaUsuarioDia(user,d,op){op=op==='PACKING'?'PACKING':'PICKING';const e=metaIdx().get(op+'|'+d+'|'+user);if(!e)return {meta:0,hrs:0};
+  const dow=new Date(d+'T00:00:00Z').getUTCDay(),cap=7.5*(dow===0?0:(dow===6?0.5:1)),h=Math.min(e.om>0?e.om/60:e.hs.size,cap);
+  const mi=(op==='PICKING'&&window.metaIndividual)?window.metaIndividual(user,d):null,rate=mi||(op==='PACKING'?(Number(SETTINGS.metaPack)||500):(Number(SETTINGS.meta)||160));
+  return {meta:rate*h,hrs:h};}
+function metaFilaMatriz(user,dates,total){if(isOnlyPP(supSelectedCats()))return {meta:0,pct:null};const op=window.OPSEL==='PACKING'?'PACKING':'PICKING';
+  const meta=dates.reduce((s,d)=>s+metaUsuarioDia(user,d,op).meta,0);return {meta,pct:meta?total/meta:null};}
+function metaCeldas(f){if(!f.meta)return '<td class="heat-empty">-</td><td class="heat-empty">-</td>';const c=f.pct>=0.9?'heat-high':(f.pct>=0.8?'heat-mid':'heat-low');return `<td class="heat-total">${fmt(Math.round(f.meta))}</td><td class="${c}"><b>${Math.round(f.pct*100)}%</b></td>`;}
 function renderSupervisorHeatmap(baseArr){
   const table=$('supHeatTable');
   if(!table) return;
@@ -3730,13 +3743,14 @@ function renderSupervisorHeatmap(baseArr){
       const n=Object.values(o.days).filter(v=>v>0).length;
       return {...o,avg:n?o.total/n:0};
     }).sort((a,b)=>b.total-a.total);
-    lastHeatmapRows=drows.map(r=>({mode:'day',dayKeys,user:r.user,total:r.total,avg:r.avg,days:r.days,category:supCategoryLabel(),unit:supUnitLabel()}));
+    const mdr=new Map(drows.map(r=>[r.user,metaFilaMatriz(r.user,Object.keys(r.days).filter(d=>r.days[d]>0),r.total)]));
+    lastHeatmapRows=drows.map(r=>({mode:'day',dayKeys,user:r.user,total:r.total,avg:r.avg,days:r.days,meta:mdr.get(r.user).meta,pct:mdr.get(r.user).pct,category:supCategoryLabel(),unit:supUnitLabel()}));
     const lg=$('heatLegend');
     if(lg) lg.textContent=`${supCategoryLabel()} · ${supUnitLabel()} · semáforo por día: meta individual ${fmt(target)}`;
     let t='<tr><th class="name">Usuario</th>';
     const multiY=new Set(dayKeys.map(d=>d.slice(0,4))).size>1;
     dayKeys.forEach(d=>{const L=labelDate(d);t+=`<th>${multiY?L.slice(0,6)+L.slice(8):L.slice(0,5)}</th>`;});
-    t+=`<th>${isOnlyPP(supSelectedCats())?'CAJAS':'TOTAL'}</th><th>PROM./DÍA</th></tr>`;
+    t+=`<th>${isOnlyPP(supSelectedCats())?'CAJAS':'TOTAL'}</th><th>PROM./DÍA</th><th>META (período)</th><th>% META</th></tr>`;
     t+=drows.map(r=>{
       const nameCls='name heatname-click'+(selectedHeatUsers.has(r.user)?' heatname-selected':'');
       let row=`<tr><td class="${nameCls}" data-user="${escapeHtml(r.user)}" title="Click para comparar la evolución de este usuario arriba">${escapeHtml(r.user)}</td>`;
@@ -3746,7 +3760,7 @@ function renderSupervisorHeatmap(baseArr){
         row+=`<td class="${c}" title="${labelDate(d)}">${v?fmt(v):'-'}</td>`;
       });
       const ac=r.avg>=target?'good':(r.avg>=target*0.8?'mid':'bad');
-      return row+`<td class="heat-total">${fmt(r.total)}</td><td class="heat-total heat-avg ${ac}">${fmt(Math.round(r.avg))}</td></tr>`;
+      return row+`<td class="heat-total">${fmt(r.total)}</td><td class="heat-total heat-avg ${ac}">${fmt(Math.round(r.avg))}</td>${metaCeldas(mdr.get(r.user))}</tr>`;
     }).join('');
     if(!drows.length) t='<tr><th class="name">Usuario</th><th>Sin datos para los filtros/categorías seleccionados</th></tr>';
     table.innerHTML=t;
@@ -3771,12 +3785,13 @@ function renderSupervisorHeatmap(baseArr){
     const avg=hours.length?obj.total/hours.length:0;
     return {...obj, avg};
   }).sort((a,b)=>b.total-a.total);
-  lastHeatmapRows=rows.map(r=>({date:day,user:r.user,total:r.total,avg:r.avg,hours:r.hours,start,end,category:supCategoryLabel(),unit:supUnitLabel()}));
+  const mhr=new Map(rows.map(r=>[r.user,metaFilaMatriz(r.user,[day],r.total)]));
+  lastHeatmapRows=rows.map(r=>({date:day,user:r.user,total:r.total,avg:r.avg,hours:r.hours,start,end,meta:mhr.get(r.user).meta,pct:mhr.get(r.user).pct,category:supCategoryLabel(),unit:supUnitLabel()}));
   const legend=$('heatLegend');
   if(legend) legend.textContent=`${supCategoryLabel()} · ${supUnitLabel()} · semáforo por hora: meta ${fmt1(heatMeta)}`;
   let htm='<tr><th class="name">Usuario</th>';
   hours.forEach(h=> htm += `<th>${String(h).padStart(2,'0')}:00</th>`);
-  htm += `<th>${isOnlyPP(supSelectedCats())?'CAJAS':'TOTAL'}</th><th>PROM./H</th></tr>`;
+  htm += `<th>${isOnlyPP(supSelectedCats())?'CAJAS':'TOTAL'}</th><th>PROM./H</th><th>META (día)</th><th>% META</th></tr>`;
   htm += rows.map(r=>{
     const nameCls='name heatname-click'+(selectedHeatUsers.has(r.user)?' heatname-selected':'');
     let row=`<tr><td class="${nameCls}" data-user="${escapeHtml(r.user)}" title="Click para comparar la evolución de este usuario arriba">${escapeHtml(r.user)}</td>`;
@@ -3787,7 +3802,7 @@ function renderSupervisorHeatmap(baseArr){
       row += `<td class="${cls}"${attrs}>${v?fmt(v):'-'}</td>`;
     });
     const avgClass = r.avg>=SETTINGS.highThr?'good':(r.avg>SETTINGS.lowThr?'mid':'bad');
-    row += `<td class="heat-total">${fmt(r.total)}</td><td class="heat-total heat-avg ${avgClass}">${fmt(Math.round(r.avg))}</td></tr>`;
+    row += `<td class="heat-total">${fmt(r.total)}</td><td class="heat-total heat-avg ${avgClass}">${fmt(Math.round(r.avg))}</td>${metaCeldas(mhr.get(r.user))}</tr>`;
     return row;
   }).join('');
   if(!rows.length) htm='<tr><th class="name">Usuario</th><th>Sin datos para la fecha/filtros/categorías seleccionados</th></tr>';
@@ -4578,8 +4593,8 @@ $('anotherBtn').onclick=()=>{
 $('exportHeatmapBtn').onclick=()=>{
   if(lastHeatmapRows[0]?.mode==='day'){
     const dk=lastHeatmapRows[0].dayKeys;
-    const rowsD=[['Categoria','Unidad','Usuario',...dk.map(labelDate),'TOTAL','PROM_DIA']];
-    lastHeatmapRows.forEach(r=>rowsD.push([r.category,r.unit,r.user,...dk.map(d=>Math.round(r.days[d]||0)),Math.round(r.total),Math.round(r.avg)]));
+    const rowsD=[['Categoria','Unidad','Usuario',...dk.map(labelDate),'TOTAL','PROM_DIA','META_PERIODO','PCT_META']];
+    lastHeatmapRows.forEach(r=>rowsD.push([r.category,r.unit,r.user,...dk.map(d=>Math.round(r.days[d]||0)),Math.round(r.total),Math.round(r.avg),Math.round(r.meta||0),r.pct==null?'':Math.round(r.pct*100)+'%']));
     const csvD='\uFEFF'+rowsD.map(x=>x.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
     const aD=document.createElement('a');aD.href=URL.createObjectURL(new Blob([csvD],{type:'text/csv;charset=utf-8'}));
     aD.download='Matriz_Supervision_por_dia.csv';aD.click();URL.revokeObjectURL(aD.href);
@@ -4589,12 +4604,12 @@ $('exportHeatmapBtn').onclick=()=>{
   const end = lastHeatmapRows[0]?.end ?? Number($('supEndHour').value||SETTINGS.endHour);
   const header=['Fecha','Usuario'];
   for(let h=start; h<=end; h++) header.push(String(h).padStart(2,'0')+':00');
-  header.push('TOTAL','PROM_H');
+  header.push('TOTAL','PROM_H','META_DIA','PCT_META');
   const rows=[['Categoria','Unidad',...header]];
   lastHeatmapRows.forEach(r=>{
     const row=[r.category||supCategoryLabel(), r.unit||supUnitLabel(), labelDate(r.date), r.user];
     for(let h=start; h<=end; h++) row.push(Math.round(r.hours[h]||0));
-    row.push(Math.round(r.total), Math.round(r.avg));
+    row.push(Math.round(r.total), Math.round(r.avg), Math.round(r.meta||0), r.pct==null?'':Math.round(r.pct*100)+'%');
     rows.push(row);
   });
   const csv='\uFEFF'+rows.map(x=>x.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
@@ -6152,7 +6167,7 @@ const SPEC={
   return H.map(h=>h==='#'?'':h==='USUARIO'?'TOTAL GENERAL':h==='UNIDADES'?fmt(u):h==='HH OPER.'?fmt(ho):h==='UND/HH OPER.'?fmt(div(u,ho)):h==='CUMPL.'?P(div(div(u,ho),meta())*100):h==='UTILIZ.'?P(div(he,ho)*100):'-');},
  supHourTable:(t,H)=>{const a=lastSupervisorRows||[],u=sum(a,'units'),hh=sum(a,'hh'),last=a[a.length-1]||{};
   return H.map(h=>h==='HORA'?'TOTAL GENERAL':h==='UNID.'?fmt(u):h==='ACUM.'?fmt(last.cumUnits||u):h==='UND/HH'?fmt(div(u,hh)):h==='BRECHA'?((last.gap>0?'+':'')+fmt(last.gap||0)):'-');},
- supHeatTable:(t,H)=>H.map((h,i)=>i===0?'TOTAL GENERAL':h.startsWith('PROM')?'-':fmt(colSum(t,i))),
+ supHeatTable:(t,H)=>{const ti=H.findIndex(h=>h==='TOTAL'||h==='CAJAS'),mi=H.findIndex(h=>h.startsWith('META'));return H.map((h,i)=>i===0?'TOTAL GENERAL':h.startsWith('PROM')?'-':h.startsWith('% META')?(mi>=0&&colSum(t,mi)>0?Math.round(colSum(t,ti)/colSum(t,mi)*100)+'%':'-'):fmt(colSum(t,i)));},
  heatDetailTable:(t,H)=>H.map((h,i)=>h==='FECHA'?'TOTAL GENERAL':h==='ORDEN'?body(t).length+' líneas':h==='CANTIDAD'?fmt(colSum(t,i)):'-')
 };
 function apply(t,fn){
@@ -6171,6 +6186,7 @@ Object.keys(SPEC).forEach(id=>{const t=document.getElementById(id);if(!t)return;
 document.getElementById('filtersBtn').addEventListener('click',function(){const w=document.getElementById('filtersWrap'),on=w.style.display==='none';w.style.display=on?'block':'none';this.classList.toggle('active',on);this.innerHTML=on?'🔎 Ocultar filtros':'🔎 Filtros';});
 </script>
 <style>
+.mt-in{width:68px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;font-size:14px}
 .asis-in{width:48px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;text-transform:uppercase;font-size:14px}
 .asis-back{position:fixed;inset:0;background:rgba(20,24,30,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
 .asis-back.show{display:flex}
@@ -6190,11 +6206,29 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const nrm=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_\-]+/g,' ').trim().toUpperCase();
 const ukey=u=>String(u||'').trim().toLowerCase();
 window.USUARIOS=window.USUARIOS||[];window.ASISTENCIA=window.ASISTENCIA||{};window.METAS=window.METAS||[];
-const nm=r=>String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim();
-const nameKey=s=>nrm(s).replace(/\s+/g,' ');
+const cleanName=s=>String(s||'').replace(/^\s*\d+\s*[.)\-]?\s+/,'').replace(/\s+/g,' ').trim();   // quita el número de fila (ej. "1 ALAMAS…")
+const rawNm=r=>String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim();
+const nm=r=>cleanName(rawNm(r));
+const nameKey=s=>nrm(cleanName(s)).replace(/\s+/g,' ');
 const nk=r=>nameKey(nm(r));
 const kid=r=>ukey(r.usuario)||ukey(r.dni)||nk(r);
-const findUser=o=>window.USUARIOS.find(x=>(o.usuario&&ukey(x.usuario)===ukey(o.usuario))||(o.dni&&x.dni&&ukey(x.dni)===ukey(o.dni))||((o.nombre||o.name)&&nk(x)===nameKey(o.nombre||o.name)));
+const tokens=s=>nameKey(s).split(' ').filter(Boolean),compact=s=>nameKey(s).replace(/\s+/g,'');
+// busca por nombre: igual (sin espacios) o con todas las palabras de uno dentro del otro (mínimo 2) y un único candidato
+function matchByName(name,list){const c=compact(name);if(!c)return null;const ex=list.find(x=>compact(nm(x))===c);if(ex)return ex;
+ const A=new Set(tokens(name));if(A.size<2)return null;const cand=[];
+ list.forEach(x=>{const B=new Set(tokens(nm(x)));if(B.size<2)return;let i=0;A.forEach(t=>{if(B.has(t))i++;});if(i>=2&&i===Math.min(A.size,B.size))cand.push(x);});return cand.length===1?cand[0]:null;}
+const findUser=o=>window.USUARIOS.find(x=>(o.usuario&&ukey(x.usuario)===ukey(o.usuario))||(o.dni&&x.dni&&ukey(x.dni)===ukey(o.dni)))||matchByName(o.nombre||o.name||'',window.USUARIOS);
+// une duplicados ya cargados (nombres con número de fila o escritos distinto) y mueve su asistencia
+window.USUARIOS_FIX=()=>{const out=[],remap=[];let merged=0,ren=0;
+ window.USUARIOS.forEach(u=>{const raw=rawNm(u),clean=cleanName(raw),oldKey=nrm(raw).replace(/\s+/g,' ');if(clean!==raw){u.nombre=clean;ren++;}
+  const ex=clean?matchByName(clean,out):null;
+  if(ex){['usuario','dni','area','grupo'].forEach(k=>{if(!ex[k]&&u[k])ex[k]=u[k];});merged++;remap.push([oldKey,nk(ex)]);}else{out.push(u);remap.push([oldKey,nk(u)]);}});
+ if(merged||ren)window.USUARIOS=out;
+ const mv=(rec,a,b)=>{if(a===b||!rec[a])return false;const y=rec[a],o=Object.assign({},rec[b]||{});for(let i=0;i<6;i++){if(!o['d'+i]&&y['d'+i])o['d'+i]=y['d'+i];}if(!o.obs&&y.obs)o.obs=y.obs;rec[b]=o;delete rec[a];return true;};
+ let moved=0;Object.keys(window.ASISTENCIA).forEach(w=>{const rec=window.ASISTENCIA[w];if(!rec)return;
+  if(merged||ren)remap.forEach(([a,b])=>{if(mv(rec,a,b))moved++;});
+  Object.keys(rec).forEach(k=>{const ck=nameKey(k);if(ck!==k&&mv(rec,k,ck))moved++;});});   // llaves guardadas con número de fila
+ if(merged||ren||moved)window.__toast&&window.__toast('Se unieron '+merged+' personas duplicadas, se limpiaron '+ren+' nombres y se corrigieron '+moved+' registros de asistencia.');};
 window.__metaPackStd=()=>{try{return Number(SETTINGS.metaPack)||500;}catch(e){return 500;}};
 const HORAS=7.5;            // la producción se calcula en 7.5 h/día (ya descuenta tiempos muertos); sábado = media jornada
 const fmn=n=>Math.round(Number(n)||0).toLocaleString('es-PE');
@@ -6226,7 +6260,7 @@ function resumen(all){
  $$('usrKpis').innerHTML=k.map(x=>'<div style="border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;min-width:150px;flex:1"><small style="color:#5b6b7c">'+x[0]+'</small><div style="font-size:'+(x[1].length>8?'17':'24')+'px;font-weight:800;margin-top:2px">'+esc(x[1])+'</div></div>').join('');
  hb('usrC1',byA,sel);vb('usrC2',['Lu','Ma','Mi','Ju','Vi','Sá'],pd.map(x=>x.a+x.f?Math.round(x.a/(x.a+x.f)*100):0),true);}
 window.renderUsuarios=function(){
- const t=$$('usrTable');if(!t)return;const q=nrm($$('usrSearch').value),all=window.USUARIOS.slice().sort((a,b)=>String(a.area).localeCompare(String(b.area))||nm(a).localeCompare(nm(b)));
+ const t=$$('usrTable');if(!t)return;window.USUARIOS_FIX();const q=nrm($$('usrSearch').value),all=window.USUARIOS.slice().sort((a,b)=>String(a.area).localeCompare(String(b.area))||nm(a).localeCompare(nm(b)));
  resumen(all);
  const L=all.filter(r=>(!US.area||(r.area||'SIN ÁREA')===US.area)&&(!q||nrm([r.usuario,r.dni,nm(r),r.area,r.grupo].join(' ')).includes(q)));
  $$('usrStatus').textContent=all.length?'Usuarios: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):''):'Sin usuarios cargados.';
@@ -6268,29 +6302,31 @@ function parseUsersExcel(wb){
 window.__parseAsisExcel=parseAsisExcel;
 // ---- Vista previa editable: Confirmar o Cancelar ----
 const WKL=k=>k.replace('-W',' · Sem ');
+function matchCell(r){const mt=findUser({usuario:r.usuario,dni:r.dni,nombre:r.nombre||r.name});return mt?'<td style="font-size:12px;color:#2f8f5b;white-space:nowrap">✔ '+esc(nm(mt))+'</td>':'<td style="font-size:12px;font-weight:700;color:#b26a00;background:#fbe9c3">➕ NUEVO</td>';}
 function drawPrev(){const box=$$('usrPrev');if(!prev){box.style.display='none';box.innerHTML='';return;}box.style.display='block';
  const as=prev.kind==='asis',inp=(i,f,v,w)=>'<td><input data-i="'+i+'" data-f="'+f+'" value="'+esc(v||'')+'" style="width:'+(w||'100%')+';min-width:'+(w||'90px')+';border:1px solid #d9e2e8;border-radius:8px;padding:5px"></td>';
- let h='<tr><th>Nombre</th><th>Usuario</th>'+(as?prev.days.map(d=>'<th>'+esc(d)+'</th>').join('')+'<th>Observaciones</th>':'<th>DNI</th><th>Área</th><th>Grupo</th>')+'<th></th></tr>';
- prev.rows.forEach((r,i)=>{h+='<tr>'+inp(i,'nombre',r.nombre||r.name,'210px')+inp(i,'usuario',r.usuario,'110px')+(as?prev.days.map((d,k)=>'<td><input data-i="'+i+'" data-k="'+k+'" value="'+esc((r.d||[])[k]||'')+'" style="width:44px;text-align:center;border:1px solid #d9e2e8;border-radius:8px;padding:5px"></td>').join('')+inp(i,'obs',r.obs,'200px'):inp(i,'dni',r.dni,'90px')+inp(i,'area',r.area,'110px')+inp(i,'grupo',r.grupo,'110px'))+'<td><button class="btn pw-btn" data-x="'+i+'" type="button">Quitar</button></td></tr>';});
+ let h='<tr><th>Nombre</th><th>Usuario</th>'+(as?prev.days.map(d=>'<th>'+esc(d)+'</th>').join('')+'<th>Observaciones</th>':'<th>DNI</th><th>Área</th><th>Grupo</th>')+'<th>Coincide con</th><th></th></tr>';
+ prev.rows.forEach((r,i)=>{h+='<tr>'+inp(i,'nombre',r.nombre||r.name,'210px')+inp(i,'usuario',r.usuario,'110px')+(as?prev.days.map((d,k)=>'<td><input data-i="'+i+'" data-k="'+k+'" value="'+esc((r.d||[])[k]||'')+'" style="width:44px;text-align:center;border:1px solid #d9e2e8;border-radius:8px;padding:5px"></td>').join('')+inp(i,'obs',r.obs,'200px'):inp(i,'dni',r.dni,'90px')+inp(i,'area',r.area,'110px')+inp(i,'grupo',r.grupo,'110px'))+matchCell(r)+'<td><button class="btn pw-btn" data-x="'+i+'" type="button">Quitar</button></td></tr>';});
  box.innerHTML='<div class="h" style="font-size:15px">Vista previa: '+esc(prev.name)+' · '+prev.rows.length+' filas'+(as?' · asistencia de la '+WKL(prev.wk):'')+'</div><div class="mod-note">'+esc(prev.note||'Revisa y corrige lo que haga falta. Nada se guarda hasta confirmar.')+'</div><div class="heatbox" style="max-height:380px"><table class="heatmap">'+h+'</table></div><div class="mod-actions" style="margin-top:8px"><button class="btn" id="usrPrevOk" type="button">✔ Confirmar carga</button><button class="btn" id="usrPrevNo" type="button">✖ Cancelar</button></div>';}
+$$('usrPrev').addEventListener('change',e=>{const t=e.target;if(prev&&t.dataset&&['nombre','usuario','dni'].indexOf(t.dataset.f)>=0)drawPrev();});
 $$('usrPrev').addEventListener('input',e=>{const t=e.target;if(!prev||t.dataset.i==null)return;const r=prev.rows[+t.dataset.i];if(t.dataset.k!=null){r.d=r.d||[];r.d[+t.dataset.k]=t.value.trim().toUpperCase();}else{r[t.dataset.f]=t.value;if(t.dataset.f==='nombre')r.name=t.value;}});
-function upsert(o,m){const ex=findUser(o);const n={usuario:String(o.usuario||'').trim(),dni:String(o.dni||'').trim(),nombre:String(o.nombre||o.name||'').trim(),area:String(o.area||'').trim(),grupo:String(o.grupo||'').trim()};
- if(ex){Object.keys(n).forEach(k=>{if(n[k])ex[k]=n[k];});m.ac++;return ex;}if(!(n.usuario||n.dni||n.nombre)){m.om++;return null;}const u=Object.assign({},n);window.USUARIOS.push(u);m.nu++;return u;}
+function upsert(o,m){const ex=findUser(o);const n={usuario:String(o.usuario||'').trim(),dni:String(o.dni||'').trim(),nombre:cleanName(o.nombre||o.name||''),area:String(o.area||'').trim(),grupo:String(o.grupo||'').trim()};
+ if(ex){Object.keys(n).forEach(k=>{if(n[k]&&(k!=='nombre'||!nm(ex)))ex[k]=n[k];});m.ac++;return ex;}if(!(n.usuario||n.dni||n.nombre)){m.om++;return null;}const u=Object.assign({},n);window.USUARIOS.push(u);m.nu++;return u;}
 $$('usrPrev').addEventListener('click',async e=>{const x=e.target.closest('[data-x]');if(x&&prev){prev.rows.splice(+x.dataset.x,1);drawPrev();return;}
  if(e.target.id==='usrPrevNo'){prev=null;drawPrev();window.__toast&&window.__toast('Carga cancelada. No se guardó nada.');return;}
  if(e.target.id==='usrPrevOk'&&prev){if(!window.requestUploadAccess())return;const m={nu:0,ac:0,om:0};
-  if(prev.kind==='asis'){const rec=Object.assign({},window.ASISTENCIA[prev.wk]||{});
-   prev.rows.forEach(r=>{const u=upsert(r,m);if(!u)return;const o={};(r.d||[]).forEach((v,k)=>{if(v)o['d'+k]=v;});if(r.obs)o.obs=r.obs;rec[nk(u)]=o;});window.ASISTENCIA[prev.wk]=rec;}
+  if(prev.kind==='asis'){const rec=Object.assign({},window.ASISTENCIA[prev.wk]||{});let dias=0;
+   prev.rows.forEach(r=>{const u=upsert(r,m);if(!u)return;const key=nk(u),o=Object.assign({},rec[key]||{});(r.d||[]).forEach((v,k)=>{if(v&&OKST.indexOf(v)>=0){if(o['d'+k]!==v)dias++;o['d'+k]=v;}});if(r.obs)o.obs=r.obs;rec[key]=o;});window.ASISTENCIA[prev.wk]=rec;m.dias=dias;}
   else prev.rows.forEach(r=>upsert(r,m));
-  const msg='Usuarios: '+m.nu+' nuevos · '+m.ac+' actualizados'+(prev.kind==='asis'?' · asistencia de la '+WKL(prev.wk)+' guardada':'')+(m.om?' · '+m.om+' filas omitidas':'')+'.';prev=null;drawPrev();window.__toast&&window.__toast(msg);await persist();}});
+  const msg='Usuarios: '+m.nu+' nuevos · '+m.ac+' ya existían'+(prev.kind==='asis'?' · '+m.dias+' casillas de asistencia actualizadas ('+WKL(prev.wk)+')':'')+(m.om?' · '+m.om+' filas omitidas':'')+'.';prev=null;drawPrev();window.__toast&&window.__toast(msg);await persist();}});
 async function cargar(e){const f=e.target.files[0];e.target.value='';if(!f)return;
  try{
   if(/\.pdf$/i.test(f.name)){if(!window.__leerPDFAsist)throw new Error('El lector de PDF aún no está listo. Recarga la página.');
    window.__toast&&window.__toast('Leyendo el PDF…');const r=await window.__leerPDFAsist(f,m=>{$$('usrStatus').textContent=m;});
    if(!r.rows.length)throw new Error('No encontré personas en ese PDF.');const wk=(r.year||new Date().getFullYear())+'-W'+String(r.week||1).padStart(2,'0');
-   prev={kind:'asis',name:f.name,wk,days:(r.days||[]).slice(0,6),rows:r.rows.map(x=>({nombre:x.name,usuario:'',dni:x.dni||'',d:x.d.slice(0,6),obs:x.obs||''})),note:'Asistencia leída del PDF. Revisa los nombres y los estados (A, T, F, D, DM, V, L, P). Si el PDF no trae el usuario WMS, se completa luego con el Excel de metas.'+(r.header&&r.rows.length<r.header.personal?' Se leyeron '+r.rows.length+' de '+r.header.personal+' personas.':'')};}
+   prev={kind:'asis',name:f.name,wk,days:(r.days||[]).slice(0,6),rows:r.rows.map(x=>({nombre:cleanName(x.name),usuario:'',dni:x.dni||'',d:x.d.slice(0,6),obs:x.obs||''})),note:'Asistencia leída del PDF. Revisa los nombres y los estados (A, T, F, D, DM, V, L, P). Si el PDF no trae el usuario WMS, se completa luego con el Excel de metas.'+(r.header&&r.rows.length<r.header.personal?' Se leyeron '+r.rows.length+' de '+r.header.personal+' personas.':'')};}
   else{const wb=await leer(f),a=parseAsisExcel(wb);
-   if(a)prev={kind:'asis',name:f.name,wk:a.year+'-W'+String(a.week).padStart(2,'0'),days:a.days,rows:a.rows.map(x=>({nombre:x.name,usuario:'',dni:'',d:x.d,obs:x.obs})),note:'Asistencia leída del Excel. Revisa y confirma.'};
+   if(a)prev={kind:'asis',name:f.name,wk:a.year+'-W'+String(a.week).padStart(2,'0'),days:a.days,rows:a.rows.map(x=>({nombre:cleanName(x.name),usuario:'',dni:'',d:x.d,obs:x.obs})),note:'Asistencia leída del Excel. Revisa y confirma.'};
    else if(parseMetaExcel(wb))throw new Error('Este archivo trae metas por persona. Súbelo con el botón 🎯 META.');
    else{const u=parseUsersExcel(wb);if(!u||!u.rows.length)throw new Error('No reconocí el archivo. Usa un Excel con NOMBRE, USUARIO, DNI, ÁREA, o el Excel/PDF de asistencia.');prev={kind:'users',name:f.name,rows:u.rows};}}
   if(!prev.rows.length)throw new Error('No encontré personas en el archivo.');
@@ -6311,32 +6347,57 @@ $$('usrTable').addEventListener('click',async e=>{const b=e.target.closest('butt
  if(b.dataset.d){if(!confirm('¿Borrar a esta persona?')||!window.requestUploadAccess())return;window.USUARIOS=window.USUARIOS.filter(x=>kid(x)!==b.dataset.d);await persist();}});
 $$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUPO']].concat(window.USUARIOS.map(r=>[nm(r),r.usuario||'',r.dni||'',r.area||'',r.grupo||'']));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
-// ---- META individual (solo se ve al pulsar el botón) ----
-const mp=$$('metaPanel');let mEdit=null;
+// ---- META individual por día (solo se ve al pulsar el botón) ----
+// Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
+const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;
+const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
+const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0}];return m.hist;};
+const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
+function setMetaFrom(m,d,v){const h=histOf(m).filter(e=>e.d<d);h.push({d,m:v});m.hist=h;m.meta=v;}
+function findMeta(u){const k=ukey(u);if(!k)return null;let m=window.METAS.find(x=>ukey(x.usuario)===k);
+ if(!m){const r=window.USUARIOS.find(x=>ukey(x.usuario)===k);if(r){const n=nk(r);m=window.METAS.find(x=>(x.dni&&r.dni&&ukey(x.dni)===ukey(r.dni))||(x.nombre&&nameKey(x.nombre)===n));}}return m||null;}
+window.metaIndividual=(u,fecha)=>{const m=findMeta(u);if(!m)return null;const v=fecha?metaAt(m,fecha):Number(m.meta);return v>0?Number(v):null;};
+window.metaDiariaIndividual=(u,f)=>{const v=window.metaIndividual(u,f);return v?v*HORAS:null;};
 $$('metaBtn').onclick=()=>{const on=mp.style.display==='none';mp.style.display=on?'block':'none';$$('metaBtn').textContent=on?'🎯 Ocultar META':'🎯 META';if(on)renderMetas();};
 const mk=m=>ukey(m.usuario)||ukey(m.dni)||nameKey(m.nombre||'').toLowerCase();
-function renderMetas(){const q=nrm($$('mtSearch').value),all=window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))),L=all.filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q));
+function renderMetas(){
+ if(!$$('mtYear').value){const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;}if(!$$('mtSince').value)$$('mtSince').value=todayISO();
+ const y=+$$('mtYear').value,w=+$$('mtWeek').value,mo=monday(y,w),days=[0,1,2,3,4,5].map(i=>new Date(mo.getTime()+i*864e5).toISOString().slice(0,10));
+ $$('mtRange').textContent='del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5));
+ const q=nrm($$('mtSearch').value),all=window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))),L=all.filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q));
  const avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0;
- $$('mtStatus').textContent=all.length?'Metas de picking: '+fmn(all.length)+' · promedio '+fmn(avg)+' und/h ('+fmn(avg*HORAS)+' por día) · día de '+HORAS+' h, sábado medio día. Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
- $$('mtTable').innerHTML='<tr><th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th><th>CATEGORÍA</th><th>META und/h</th><th>META por día ('+HORAS+' h)</th><th>META sábado</th><th></th></tr>'+L.map(m=>'<tr><td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td><td>'+esc(m.categoria||'')+'</td><td class="num"><b>'+fmn(m.meta)+'</b></td><td class="num">'+fmn(m.meta*HORAS)+'</td><td class="num">'+fmn(m.meta*HORAS/2)+'</td><td><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');}
-$$('mtSearch').addEventListener('input',renderMetas);
+ $$('mtStatus').textContent=all.length?'Personas con meta: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):'')+' · promedio actual '+fmn(avg)+' und/h · Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
+ $$('mtTable').innerHTML='<tr><th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th><th>CATEGORÍA</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th>').join('')+'<th></th></tr>'
+  +L.map(m=>'<tr><td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td><td>'+esc(m.categoria||'')+'</td>'
+   +days.map(d=>{const v=metaAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER);return '<td'+(chg?' style="background:#fbe9c3"':'')+'><input type="number" min="1" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td>';}).join('')
+   +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');}
+const moverM=dk=>{let y=+$$('mtYear').value,w=+$$('mtWeek').value+dk;if(w<1){y--;w=isoWeeks(y);}else if(w>isoWeeks(y)){w=1;y++;}$$('mtYear').value=y;$$('mtWeek').value=w;renderMetas();};
+$$('mtPrev').onclick=()=>moverM(-1);$$('mtNext').onclick=()=>moverM(1);$$('mtNow').onclick=()=>{const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;renderMetas();};
+['mtYear','mtWeek'].forEach(i=>$$(i).addEventListener('change',renderMetas));$$('mtSearch').addEventListener('input',renderMetas);
+$$('mtTable').addEventListener('change',async e=>{const i=e.target.closest('.mt-in');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;const v=Number(i.value),d=i.dataset.d;
+ if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');setTimeout(renderMetas,0);return;}
+ if(Number(metaAt(m,d))===v)return;if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
+ setMetaFrom(m,d,v);setTimeout(renderMetas,0);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+v+' und/h desde el '+d.slice(8,10)+'/'+d.slice(5,7)+' en adelante. Los días anteriores no cambian.');if(window.saveCloud)await window.saveCloud();});
 $$('mtAddBtn').onclick=()=>{mEdit=null;['mtUsr','mtNom','mtArea','mtGrp','mtCat','mtMeta'].forEach(i=>$$(i).value='');$$('mtForm').style.display='grid';$$('mtUsr').focus();};
 $$('mtCancel').onclick=()=>{$$('mtForm').style.display='none';mEdit=null;};
-$$('mtSave').onclick=async()=>{const o={usuario:$$('mtUsr').value.trim(),nombre:$$('mtNom').value.trim(),area:$$('mtArea').value.trim(),grupo:$$('mtGrp').value.trim(),categoria:$$('mtCat').value.trim(),meta:Number($$('mtMeta').value)||0};
- if(!(o.usuario||o.nombre)||o.meta<=0){window.__toast&&window.__toast('Escribe el usuario (o nombre) y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;
- const i=mEdit?window.METAS.findIndex(x=>mk(x)===mEdit):window.METAS.findIndex(x=>mk(x)===mk(o));if(i>=0)window.METAS[i]=Object.assign({},window.METAS[i],o);else window.METAS.push(o);
+$$('mtSave').onclick=async()=>{const o={usuario:$$('mtUsr').value.trim(),nombre:$$('mtNom').value.trim(),area:$$('mtArea').value.trim(),grupo:$$('mtGrp').value.trim(),categoria:$$('mtCat').value.trim()},v=Number($$('mtMeta').value)||0,since=$$('mtSince').value||todayISO();
+ if(!(o.usuario||o.nombre)||v<=0){window.__toast&&window.__toast('Escribe el usuario (o nombre) y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;
+ const i=mEdit?window.METAS.findIndex(x=>mk(x)===mEdit):window.METAS.findIndex(x=>mk(x)===mk(o));
+ if(i>=0){const m=window.METAS[i];Object.assign(m,o);if(Number(m.meta)!==v)setMetaFrom(m,since,v);}else window.METAS.push(Object.assign({},o,{meta:v,hist:[{d:FOREVER,m:v}]}));
  $$('mtForm').style.display='none';mEdit=null;renderMetas();if(window.saveCloud)await window.saveCloud();};
 $$('mtTable').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
- if(b.dataset.me){const m=window.METAS.find(x=>mk(x)===b.dataset.me);if(!m)return;mEdit=b.dataset.me;$$('mtUsr').value=m.usuario||'';$$('mtNom').value=m.nombre||'';$$('mtArea').value=m.area||'';$$('mtGrp').value=m.grupo||'';$$('mtCat').value=m.categoria||'';$$('mtMeta').value=m.meta;$$('mtForm').style.display='grid';}
- if(b.dataset.md){if(!confirm('¿Eliminar esta meta?')||!window.requestUploadAccess())return;window.METAS=window.METAS.filter(x=>mk(x)!==b.dataset.md);renderMetas();if(window.saveCloud)await window.saveCloud();}});
+ if(b.dataset.me){const m=window.METAS.find(x=>mk(x)===b.dataset.me);if(!m)return;mEdit=b.dataset.me;$$('mtUsr').value=m.usuario||'';$$('mtNom').value=m.nombre||'';$$('mtArea').value=m.area||'';$$('mtGrp').value=m.grupo||'';$$('mtCat').value=m.categoria||'';$$('mtMeta').value=m.meta;$$('mtForm').style.display='grid';$$('mtForm').scrollIntoView({behavior:'smooth',block:'center'});}
+ if(b.dataset.md){if(!confirm('¿Eliminar la meta de esta persona (todo su historial)?')||!window.requestUploadAccess())return;window.METAS=window.METAS.filter(x=>mk(x)!==b.dataset.md);renderMetas();if(window.saveCloud)await window.saveCloud();}});
 $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  try{const r=parseMetaExcel(await leer(f));if(!r)throw new Error('No encontré las columnas USUARIO y META (por hora). Ejemplo: Usuario, Nombre, Área, Grupo, Categoría, Meta x hora Picking.');if(!window.requestUploadAccess())return;
-  const mp2=new Map(window.METAS.map(x=>[mk(x),x])),um={nu:0,ac:0,om:0};let nu=0,ac=0,sin=0;
-  r.rows.forEach(x=>{upsert(x,um);if(!(x.meta>0)){sin++;return;}const k=mk(x);if(mp2.has(k))ac++;else nu++;mp2.set(k,x);});
-  window.METAS=[...mp2.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ac+' actualizadas'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+' · usuarios: '+um.nu+' nuevos, '+um.ac+' actualizados.');renderMetas();window.renderUsuarios();if(window.saveCloud)await window.saveCloud();
+  const since=$$('mtSince').value||todayISO(),map=new Map(window.METAS.map(x=>[mk(x),x])),um={nu:0,ac:0,om:0};let nu=0,ch=0,sin=0,igual=0;
+  r.rows.forEach(x=>{upsert(x,um);if(!(x.meta>0)){sin++;return;}const k=mk(x);let m=map.get(k);
+   if(!m){m={usuario:x.usuario,dni:x.dni,nombre:x.nombre,area:x.area,grupo:x.grupo,categoria:x.categoria,meta:x.meta,hist:[{d:FOREVER,m:x.meta}]};map.set(k,m);nu++;return;}
+   ['usuario','dni','nombre','area','grupo','categoria'].forEach(c=>{if(x[c])m[c]=x[c];});
+   if(Number(metaAt(m,since))!==x.meta||Number(m.meta)!==x.meta){setMetaFrom(m,since,x.meta);ch++;}else igual++;});
+  window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();if(window.saveCloud)await window.saveCloud();
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
 $$('mtDown').onclick=()=>{const rows=[['USUARIO','NOMBRE','AREA','GRUPO','CATEGORIA','META_X_HORA_PICKING']].concat(window.METAS.map(m=>[m.usuario||'',m.nombre||'',m.area||'',m.grupo||'',m.categoria||'',m.meta]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'META');XLSX.writeFile(wb,'META_INDIVIDUAL.xlsx');};
-
 // ---- Asistencia semanal en línea (siempre muestra la semana actual) ----
 const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
 function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
@@ -6416,8 +6477,11 @@ tr.tot td{background:var(--bg);font-weight:700}
 .leg{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--mu);margin-bottom:4px}.leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .warn{background:var(--ambb);border:1px solid var(--amb);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:14px}
 .empty{color:var(--mu);padding:14px;text-align:center}
+.txh{display:inline-block;margin:18px 0 8px;padding:6px 14px;border-radius:8px;background:var(--g);color:var(--card);font-size:17px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.txblock{margin-bottom:14px}
+thead{display:table-header-group}
 .top3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.top3 div{border:1px solid var(--ln);border-radius:12px;padding:10px;text-align:center}.top3 b{display:block;font-size:22px}.top3 small{color:var(--mu)}
-@media print{body{background:#fff}.nav,.chips,.noprint,.inp{display:none!important}.wrap{max-width:none;padding:0}.grid{grid-template-columns:1fr 1fr!important;gap:8px}.grid .card,.k{break-inside:avoid}.card{break-inside:auto}.sc{max-height:none;overflow:visible}.sec{break-after:avoid}#sec-asist,#sec-aten,#sec-prod,#sec-marca,#sec-colec,#sec-area,#sec-pick,#sec-pack{break-before:page}#sec-asist{break-before:auto}th{position:static;white-space:normal}tr{break-inside:avoid}.foot{break-before:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4 landscape;margin:8mm}}
+@media print{body{background:#fff}.nav,.chips,.noprint,.inp{display:none!important}.wrap{max-width:none;padding:0}.grid{grid-template-columns:1fr 1fr!important;gap:8px}.grid .card,.k{break-inside:avoid}.card{break-inside:auto}.sc{max-height:none;overflow:visible}.sec{break-after:avoid}#sec-asist,#sec-aten,#sec-prod,#sec-marca,#sec-colec,#sec-area,#sec-pick,#sec-pack{break-before:page}#sec-asist{break-before:auto}th{position:static;white-space:normal}tr{break-inside:avoid}.foot{break-before:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4 landscape;margin:9mm 9mm 13mm;@bottom-right{content:"Página " counter(page) " de " counter(pages);font:11px Helvetica,Arial,sans-serif;color:#5b6b7c}@bottom-left{content:"Reporte ejecutivo semanal · Bata Adecco";font:11px Helvetica,Arial,sans-serif;color:#5b6b7c}}.txblock,.txh{break-after:avoid}.txblock>.card{break-inside:auto}}
 @media (max-width:640px){.logo{min-width:0;padding:14px 26px 14px 14px;font-size:17px}.hd h1{font-size:19px}.top3{grid-template-columns:1fr}}
 </script>
 <script type="text/plain" id="rep-body"><div class="wrap">
@@ -6449,17 +6513,9 @@ tr.tot td{background:var(--bg);font-weight:700}
 <div class="card" style="margin-top:12px"><h3>Comparativo por día</h3><div class="tw"><table id="pr-t"></table></div></div>
 </div></section>
 
-<section id="sec-marca"><div class="sec"><h2>4 · Producción por marcas y categorías</h2></div><div id="mk-body">
-<div class="chips" id="mk-f"></div><div class="chips" id="mk-cat"></div><div class="kpis" id="mk-k"></div>
-<div class="grid"><div class="card"><h3>Marcas (top 12) por categoría</h3><div id="mk-c"></div></div><div class="card"><h3>Calzado vs accesorio</h3><div id="mk-d"></div></div><div class="card"><h3>Por género RIMS</h3><div id="mk-g"></div></div></div>
-<div class="card" style="margin-top:12px"><h3>Detalle por marca</h3><div class="sc"><table id="mk-t"></table></div></div>
-</div></section>
+<section id="sec-marca"><div class="sec"><h2>4 · Producción por marcas y categorías</h2></div><div id="mk-body"><div class="chips" id="mk-f"></div><div class="chips" id="mk-cat"></div><div id="mk-blocks"></div></div></section>
 
-<section id="sec-colec"><div class="sec"><h2>5 · Producción por colección</h2></div><div id="co-body">
-<div class="chips" id="co-f"></div><div class="kpis" id="co-k"></div>
-<div class="grid"><div class="card"><h3>Colecciones (top 15)</h3><div id="co-c"></div></div><div class="card"><h3>Picking vs Packing (top 10)</h3><div id="co-s"></div></div></div>
-<div class="card" style="margin-top:12px"><h3>Detalle por colección</h3><div class="sc"><table id="co-t"></table></div></div>
-</div></section>
+<section id="sec-colec"><div class="sec"><h2>5 · Producción por colección</h2></div><div id="co-body"><div class="chips" id="co-f"></div><div class="chips" id="co-cat"></div><div id="co-blocks"></div></div></section>
 
 <section id="sec-area"><div class="sec"><h2>6 · Producción por área de picking</h2></div><div id="ar-body">
 <div class="chips" id="ar-f"></div><div class="kpis" id="ar-k"></div>
@@ -6571,25 +6627,33 @@ function secProd(){const P=R.prod||{},a=P.PICKING,b=P.PACKING;if(!a&&!b){none('p
  donut('pr-d',[{l:'Picking',v:ta,c:'var(--g)'},{l:'Packing',v:tb,c:'var(--red)'}],'unidades');
  ['PICKING','PACKING'].forEach(tx=>{const x=P[tx];$('pr-t3-'+tx).innerHTML=x&&x.top.length?'<div class="top3">'+x.top.map((u,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(u.v)+'</b>'+esc(u.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>';});
  $('pr-t').innerHTML='<tr><th>Día</th><th>Picking</th><th>Packing</th><th>Diferencia</th></tr>'+days.map((d,i)=>{const p=a?a.dayTot[i]:0,k=b?b.dayTot[i]:0;return '<tr><td>'+d+'</td><td>'+fm(p)+'</td><td>'+fm(k)+'</td><td>'+fm(p-k)+'</td></tr>';}).join('')+'<tr class="tot"><td>Total</td><td>'+fm(ta)+'</td><td>'+fm(tb)+'</td><td>'+fm(ta-tb)+'</td></tr>';}
-// ================= 4 y 5 · MARCAS / CATEGORÍAS / COLECCIÓN =================
-const AT2={tx:'ALL',cat:new Set(['CALZADO','ACCESORIO'])};
-function attrRows(){return(R.attr&&R.attr.rows||[]).filter(r=>AT2.cat.has(r.c)).map(r=>({...r,v:AT2.tx==='PICKING'?r.P:AT2.tx==='PACKING'?r.K:r.P+r.K}));}
-function agg(rows,key){const m=new Map();rows.forEach(r=>{const k=r[key]||'SIN DATO';let o=m.get(k);if(!o){o={k,CALZADO:0,ACCESORIO:0,P:0,K:0,v:0};m.set(k,o);}o[r.c]+=r.v;o.P+=r.P;o.K+=r.K;o.v+=r.v;});return[...m.values()].sort((a,b)=>b.v-a.v);}
+// ================= 4 y 5 · MARCAS / CATEGORÍAS / COLECCIÓN (Picking y Packing por separado) =================
+const AT2={show:new Set(['PICKING','PACKING']),cat:new Set(['CALZADO','ACCESORIO'])},TXN={PICKING:'Picking',PACKING:'Packing'};
+function attrRows(tx){return(R.attr&&R.attr.rows||[]).filter(r=>AT2.cat.has(r.c)).map(r=>({m:r.m,c:r.c,g:r.g,co:r.co,v:tx==='PICKING'?r.P:r.K})).filter(r=>r.v>0);}
+function agg(rows,key){const m=new Map();rows.forEach(r=>{const k=r[key]||'SIN DATO';let o=m.get(k);if(!o){o={k,CALZADO:0,ACCESORIO:0,v:0};m.set(k,o);}o[r.c]+=r.v;o.v+=r.v;});return[...m.values()].sort((a,b)=>b.v-a.v);}
+// barras horizontales apiladas: cada nombre tiene su propia fila, así nunca se tapan entre sí
+function hstack(el,items,series,tot){if(!items.length){none(el,'Sin datos.');return;}
+ const W=860,rh=38,H=items.length*rh+34,Lm=250,Rm=150,tw=W-Lm-Rm,mx=Math.max(1,...items.map(x=>x.v));let g='';
+ series.forEach((s,k)=>{g+='<rect x="'+(Lm+k*130)+'" y="6" width="12" height="12" rx="3" style="fill:'+s.c+'"/><text class="t2" x="'+(Lm+k*130+18)+'" y="17" font-size="13">'+esc(s.n)+'</text>';});
+ items.forEach((x,i)=>{const y=30+i*rh;let cx=Lm;
+  g+='<text class="t1" x="0" y="'+(y+21)+'" font-size="15" font-weight="700">'+esc(String(x.k).slice(0,30))+'</text><rect x="'+Lm+'" y="'+(y+5)+'" width="'+tw+'" height="'+(rh-14)+'" rx="5" style="fill:var(--ln)" opacity=".45"/>';
+  series.forEach(s=>{const v=x[s.key]||0;if(v>0){const w=Math.max(2,tw*v/mx);g+='<rect x="'+cx+'" y="'+(y+5)+'" width="'+w+'" height="'+(rh-14)+'" style="fill:'+s.c+'"><title>'+esc(x.k+' · '+s.n+': '+fm(v))+'</title></rect>'+(w>52?'<text x="'+(cx+w/2)+'" y="'+(y+21)+'" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">'+fm(v)+'</text>':'');cx+=w;}});
+  g+='<text class="t1" x="'+(W-4)+'" y="'+(y+21)+'" font-size="15" font-weight="700" text-anchor="end">'+fm(x.v)+' <tspan class="t2" font-size="13" font-weight="400">· '+pc(tot?x.v/tot:0)+'</tspan></text>';});
+ $(el).innerHTML=sv(W,H,g);}
+const SER=[{key:'CALZADO',n:'Calzado',c:'var(--g)'},{key:'ACCESORIO',n:'Accesorio',c:'var(--red)'}];
+function txBlock(host,tx,kind){const rows=attrRows(tx),key=kind==='m'?'m':'co',L=agg(rows,key),tot=L.reduce((a,x)=>a+x.v,0),id=(kind==='m'?'mk':'co')+'-'+tx,nm=kind==='m'?'Marca':'Colección',pl=kind==='m'?'Marcas':'Colecciones';
+ const h='<div class="txblock"><h3 class="txh">'+TXN[tx]+'</h3><div class="kpis" id="'+id+'-k"></div><div class="grid"><div class="card"><h3>'+pl+' por categoría (top 15)</h3><div id="'+id+'-c"></div></div>'+(kind==='m'?'<div class="card"><h3>Calzado vs accesorio</h3><div id="'+id+'-d"></div><h3 style="margin-top:12px">Por género RIMS</h3><div id="'+id+'-g"></div></div>':'<div class="card"><h3>Calzado vs accesorio</h3><div id="'+id+'-d"></div></div>')+'</div><div class="card"><h3>Detalle por '+nm.toLowerCase()+'</h3><table id="'+id+'-t"></table></div></div>';
+ host.insertAdjacentHTML('beforeend',h);
+ $(id+'-k').innerHTML=KP([['Unidades '+TXN[tx]+' (sin insumos)',fm(tot)],[pl,fm(L.length)],[nm+' líder',L[0]?L[0].k:'-','',1],['Participación líder',L[0]&&tot?pc(L[0].v/tot):'-']]);
+ hstack(id+'-c',L.slice(0,15),SER,tot);
+ donut(id+'-d',[{l:'Calzado',v:L.reduce((a,x)=>a+x.CALZADO,0),c:'var(--g)'},{l:'Accesorio',v:L.reduce((a,x)=>a+x.ACCESORIO,0),c:'var(--red)'}],'unidades');
+ if(kind==='m'){const G=agg(rows,'g').slice(0,8);hbars(id+'-g',G.map(x=>({l:x.k,v:x.v,t:fm(x.v)+' · '+pc(tot?x.v/tot:0)})),{one:1,lm:170,cut:24});}
+ $(id+'-t').innerHTML='<tr><th class="l">'+nm+'</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th></tr>'+L.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td></tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(L.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(L.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(tot)+'</td><td>100%</td></tr>';}
 function secAttr(){if(!R.attr||!R.attr.rows.length){['mk','co'].forEach(p=>{none(p+'-body',R.attr&&R.attr.msg||'Sin detalle por SKU para esta semana: carga el MAESTRO SKU y el detalle de producción.');$(p+'-body').style.display='block';});return;}
- const draw=()=>{const tx=[{k:'ALL',l:'Picking + Packing'},{k:'PICKING',l:'Picking'},{k:'PACKING',l:'Packing'}];
-  ['mk-f','co-f'].forEach(id=>chips(id,'Transacción',tx,AT2.tx,k=>{AT2.tx=k;draw();}));
-  chips('mk-cat','Categoría',[{k:'CALZADO',l:'Calzado'},{k:'ACCESORIO',l:'Accesorio'}],AT2.cat,k=>{if(AT2.cat.has(k)){if(AT2.cat.size>1)AT2.cat.delete(k);}else AT2.cat.add(k);draw();},true);
-  const rows=attrRows(),M=agg(rows,'m'),tot=M.reduce((a,x)=>a+x.v,0),top=M.slice(0,12);
-  $('mk-k').innerHTML=KP([['Unidades (sin insumos)',fm(tot)],['Marcas',fm(M.length)],['Marca líder',M[0]?M[0].k:'-','',1],['Participación líder',M[0]&&tot?pc(M[0].v/tot):'-']]);
-  bars('mk-c',top.map(x=>x.k),[{n:'Calzado',v:top.map(x=>x.CALZADO),c:'var(--g)'},{n:'Accesorio',v:top.map(x=>x.ACCESORIO),c:'var(--red)'}],{stack:1,bm:60});
-  donut('mk-d',[{l:'Calzado',v:agg(rows,'c').reduce((a,x)=>a+x.CALZADO,0),c:'var(--g)'},{l:'Accesorio',v:agg(rows,'c').reduce((a,x)=>a+x.ACCESORIO,0),c:'var(--red)'}],'unidades');
-  const G=agg(rows,'g').slice(0,10);hbars('mk-g',G.map(x=>({l:x.k,v:x.v})),{one:1,lm:150});
-  $('mk-t').innerHTML='<tr><th class="l">Marca</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th>'+(AT2.tx==='ALL'?'<th>Picking</th><th>Packing</th>':'')+'</tr>'+M.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td>'+(AT2.tx==='ALL'?'<td>'+fm(x.P)+'</td><td>'+fm(x.K)+'</td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(M.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(M.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(tot)+'</td><td>100%</td>'+(AT2.tx==='ALL'?'<td>'+fm(M.reduce((a,x)=>a+x.P,0))+'</td><td>'+fm(M.reduce((a,x)=>a+x.K,0))+'</td>':'')+'</tr>';
-  const C=agg(rows,'co'),ct=C.reduce((a,x)=>a+x.v,0);
-  $('co-k').innerHTML=KP([['Unidades',fm(ct)],['Colecciones',fm(C.length)],['Colección líder',C[0]?C[0].k:'-','',1],['Participación líder',C[0]&&ct?pc(C[0].v/ct):'-']]);
-  hbars('co-c',C.slice(0,15).map(x=>({l:x.k,v:x.v,t:fm(x.v)+' · '+pc(ct?x.v/ct:0)})),{one:1,lm:190,cut:30});
-  bars('co-s',C.slice(0,10).map(x=>x.k),[{n:'Picking',v:C.slice(0,10).map(x=>x.P),c:'var(--g)'},{n:'Packing',v:C.slice(0,10).map(x=>x.K),c:'var(--red)'}],{bm:60});
-  $('co-t').innerHTML='<tr><th class="l">Colección</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th></tr>'+C.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(ct?x.v/ct:0)+'</td></tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(C.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(C.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(ct)+'</td><td>100%</td></tr>';};
+ const draw=()=>{const tx=[{k:'PICKING',l:'Picking'},{k:'PACKING',l:'Packing'}];
+  ['mk','co'].forEach(p=>{chips(p+'-f','Mostrar',tx,AT2.show,k=>{if(AT2.show.has(k)){if(AT2.show.size>1)AT2.show.delete(k);}else AT2.show.add(k);draw();},true);
+   chips(p+'-cat','Categoría',[{k:'CALZADO',l:'Calzado'},{k:'ACCESORIO',l:'Accesorio'}],AT2.cat,k=>{if(AT2.cat.has(k)){if(AT2.cat.size>1)AT2.cat.delete(k);}else AT2.cat.add(k);draw();},true);
+   $(p+'-blocks').innerHTML='';['PICKING','PACKING'].forEach(t=>{if(AT2.show.has(t))txBlock($(p+'-blocks'),t,p==='mk'?'m':'c');});});};
  draw();}
 // ================= 6 · ÁREA DE PICKING =================
 const AR={day:''};
@@ -6610,11 +6674,15 @@ function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X
  bars(id+'-c2',X.chartBlq.labels,X.chartBlq.series.map((s,k)=>({n:s.name,v:s.values,c:k?'var(--amb)':'var(--g)'})),{stack:1});
  $(id+'-s').innerHTML='<tr><th class="l">Categoría</th>'+X.bloques.map(b=>'<th>'+b+'</th>').join('')+'<th>Cant. cajas</th><th>Total</th></tr>'+X.summary.map(r=>'<tr><td class="l"><b>'+esc(r.cat)+'</b></td>'+X.bloques.map(b=>'<td>'+fm(r.by[b])+'</td>').join('')+'<td>'+fm(r.cajas)+'</td><td><b>'+fm(r.total)+'</b></td></tr>').join('');
  const st={i:0},draw=()=>{chips(id+'-tabs','Reporte',X.tables.map((t,i)=>({k:String(i),l:t.sheet})),String(st.i),k=>{st.i=+k;draw();});const t=X.tables[st.i],hm=t.general;
-  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?X.days.map(d=>'<th>Meta '+d.split(' ')[0]+'</th>').join('')+'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?(u.metaBy||[]).map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td>'+(u.hrs?u.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?(t.metaDay||[]).map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+t.users.reduce((a,u)=>a+(u.hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
+  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?'<td>'+(u.hrs?u.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?'<td>'+t.users.reduce((a,u)=>a+(u.hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
   $(id+'-tt').textContent=t.title;};draw();}
 // ================= arranque =================
 $('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range;
+const fixHead=t=>{if(!t.tHead&&t.rows[0]&&t.rows[0].querySelector('th')){const h=t.createTHead();h.appendChild(t.rows[0]);}};
+document.querySelectorAll('table').forEach(t=>new MutationObserver(()=>fixHead(t)).observe(t,{childList:true}));
+const _obs=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.querySelectorAll)n.querySelectorAll('table').forEach(t=>{fixHead(t);new MutationObserver(()=>fixHead(t)).observe(t,{childList:true});});})));_obs.observe(document.body,{childList:true,subtree:true});
 [secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING')].forEach(f=>{try{f();}catch(e){console.error(e);}});
+document.querySelectorAll('table').forEach(fixHead);
 $('rp-foot').textContent='Fuente: Dashboard Logística Picking & Packing WMS (producción), MAESTRO SKU, asistencia y % de atención cargados · Generado el '+R.gen;
 </script>
 <script type="text/plain" id="rep-asis">function parseAsistencia(pages){
@@ -6756,7 +6824,7 @@ function attrData(dates){const S=window.SKUPROD||{},keys=Object.keys(S);if(!keys
   const kk=[r.marca,cat,r.gender,r.colec].join('\u001f');let o=agg.get(kk);if(!o){o={m:r.marca||'SIN MARCA',c:cat,g:r.gender||'SIN DATO',co:r.colec||'SIN COLECCIÓN',P:0,K:0};agg.set(kk,o);}if(op==='PACKING')o.K+=n;else o.P+=n;});
  return {rows:[...agg.values()],miss,tot,msg:agg.size?'':'No hay producción por SKU en las fechas de esta semana.'};}
 function asisDesdeModulo(k,dates){const rec=(window.ASISTENCIA||{})[k];if(!rec||!Object.keys(rec).length)return null;
- const nmf=r=>String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim(),nkf=s=>nrm(s).replace(/\s+/g,' '),byK=new Map((window.USUARIOS||[]).map(r=>[nkf(nmf(r)),r])),lb=['Lu','Ma','Mi','Ju','Vi','Sá'];
+ const nmf=r=>String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim().replace(/^\s*\d+\s*[.)\-]?\s+/,''),nkf=s=>nrm(String(s).replace(/^\s*\d+\s*[.)\-]?\s+/,'')).replace(/\s+/g,' '),byK=new Map((window.USUARIOS||[]).map(r=>[nkf(nmf(r)),r])),lb=['Lu','Ma','Mi','Ju','Vi','Sá'];
  const rows=Object.keys(rec).map(key=>{const u=byK.get(key),o=rec[key];return {name:u?nmf(u):key,dni:u&&u.dni||'',d:[0,1,2,3,4,5].map(i=>o['d'+i]||''),obs:o.obs||''};}).sort((a,b)=>a.name.localeCompare(b.name)).map((r,i)=>Object.assign({n:i+1},r));
  return {rows,days:lb.map((x,i)=>x+' '+dmy(dates[i])),header:null};}
 function collect(){
