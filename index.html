@@ -1916,7 +1916,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-actions" id="usrAreas"></div>
         <div id="usrKpis" style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px"><div class="pchart"><b style="font-size:14px">Personal por área</b> <small style="color:#5b6b7c">(toca una barra para filtrar)</small><div id="usrC1"></div></div><div class="pchart"><b style="font-size:14px">% de asistencia por día · última semana registrada</b><div id="usrC2"></div></div></div>
-        <div class="rform" id="usrForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto"><input id="uNom" placeholder="Nombre completo"><input id="uUsr" placeholder="Usuario WMS"><input id="uDni" placeholder="DNI"><input id="uArea" placeholder="Área"><input id="uGrp" placeholder="Grupo"><span style="display:flex;gap:6px"><button class="btn" id="usrSaveBtn" type="button">Guardar</button><button class="btn" id="usrCancelBtn" type="button">Cancelar</button></span></div>
+        <div class="rform" id="usrForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto"><input id="uNom" placeholder="Nombre completo"><input id="uUsr" placeholder="Usuario WMS"><input id="uDni" placeholder="DNI"><input id="uArea" list="dlArea" placeholder="Área (elige o escribe)" autocomplete="off"><input id="uGrp" list="dlGrupo" placeholder="Grupo (elige o escribe)" autocomplete="off"><span style="display:flex;gap:6px"><button class="btn" id="usrSaveBtn" type="button">Guardar</button><button class="btn" id="usrCancelBtn" type="button">Cancelar</button></span></div>
         <div class="mod-actions" style="margin-top:10px"><input id="usrSearch" class="pdetsel" placeholder="Buscar usuario, DNI, nombre o área…" style="min-width:260px"></div>
         <div class="mod-status" id="usrStatus">Sin usuarios cargados.</div>
         <div class="mod-actions" style="margin-top:12px;align-items:center"><b style="font-size:15px">Asistencia semanal</b><button class="btn" id="asisPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="asisYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="asisWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="asisNext" type="button">▶</button><button class="btn" id="asisNow" type="button">Semana actual</button><span id="asisTag" style="font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:#eef0f2"></span><span id="asisRange" style="font-size:13px;color:#5b6b7c"></span></div>
@@ -1930,8 +1930,15 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-note">Cada celda es la meta por hora de picking de ese día, según la última carga. Si cambias una celda, el nuevo monto rige desde ese día en adelante y no modifica los días anteriores. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
         <div class="mod-actions" style="align-items:center"><b style="font-size:15px">Semana</b><button class="btn" id="mtPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="mtYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="mtWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="mtNext" type="button">▶</button><button class="btn" id="mtNow" type="button">Semana actual</button><span id="mtRange" style="font-size:13px;color:#5b6b7c"></span></div>
         <div class="mod-actions" style="align-items:center"><label style="display:flex;gap:6px;align-items:center"><b>Vigente desde</b> <input id="mtSince" type="date" class="pdetsel"></label><span style="font-size:12px;color:#5b6b7c">Fecha desde la que rige lo que cargues con Excel o agregues con el botón; los cambios hechos en la tabla rigen desde la fecha de cada celda.</span></div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><input id="mtSearch" class="pdetsel" placeholder="Buscar…" style="min-width:200px"></div>
-        <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" placeholder="Área"><input id="mtGrp" placeholder="Grupo"><input id="mtCat" placeholder="Categoría"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><input id="mtSearch" class="pdetsel" placeholder="Buscar…" style="min-width:200px"></div>
+        <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" list="dlArea" placeholder="Área (elige o escribe)" autocomplete="off"><input id="mtGrp" list="dlGrupo" placeholder="Grupo (elige o escribe)" autocomplete="off"><input id="mtCat" list="dlCat" placeholder="Categoría (elige o escribe)" autocomplete="off"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
+        <datalist id="dlArea"></datalist><datalist id="dlGrupo"></datalist><datalist id="dlCat"></datalist>
+        <div id="mtGrpPanel" style="display:none;border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;margin:8px 0"><div class="h" style="font-size:15px">Meta por grupo (und/hora)</div>
+          <div class="mod-note">Al actualizar el monto de un grupo, cambia la meta de todas las personas de ese grupo desde la fecha «Vigente desde» en adelante, sin tocar los días anteriores. También puedes agregar un grupo nuevo con su meta.</div>
+          <div class="rform" style="grid-template-columns:1fr 1fr auto auto"><input id="grNom" list="dlGrupo" placeholder="Grupo nuevo (elige o escribe)" autocomplete="off"><input id="grMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><button class="btn" id="grAdd" type="button">➕ Agregar grupo y meta</button><button class="btn" id="grClose" type="button">Cerrar</button></div>
+          <div style="overflow-x:auto;margin-top:8px"><table class="heatmap" id="grTable"></table></div></div>
+        <div class="mod-actions" id="mtSelBar" style="display:none;background:#fbe9c3;border-radius:12px;padding:8px 10px;align-items:center"><b id="mtSelCount">0 seleccionados</b><button class="btn" id="mtSelAllBtn" type="button">Seleccionar todo</button><button class="btn" id="mtSelNoneBtn" type="button">Quitar selección</button><button class="btn" id="mtSelEditBtn" type="button">✏️ Editar seleccionados</button><button class="btn" id="mtSelDelBtn" type="button" style="color:#b3141e">🗑 Eliminar seleccionados</button><button class="btn" id="mtSelExitBtn" type="button">Salir de selección masiva</button></div>
+        <div class="rform" id="mmForm" style="display:none;grid-template-columns:repeat(4,1fr) auto"><input id="mmArea" list="dlArea" placeholder="Área (vacío = sin cambio)" autocomplete="off"><input id="mmGrp" list="dlGrupo" placeholder="Grupo (vacío = sin cambio)" autocomplete="off"><input id="mmCat" list="dlCat" placeholder="Categoría (vacío = sin cambio)" autocomplete="off"><input id="mmMeta" type="number" min="1" step="1" placeholder="Meta und/hora (vacío = sin cambio)"><span style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;display:flex;gap:4px;align-items:center"><input id="mmUseG" type="checkbox" checked> usar la meta del grupo</label><button class="btn" id="mmApply" type="button">Aplicar</button><button class="btn" id="mmCancel" type="button">Cancelar</button></span></div>
         <div class="mod-status" id="mtStatus"></div>
         <div style="overflow-x:auto"><table class="heatmap" id="mtTable"></table></div>
       </section>
@@ -5297,7 +5304,7 @@ window.saveCloud=saveCloud;
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
-  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),metasdia:window.METASDIA||{},repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
+  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),metasdia:window.METASDIA||{},metagrupos:window.METAGRUPOS||{},repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
 };}
 async function saveCloud(){
   if(!sb){const why=!(CLOUD_CFG.url&&CLOUD_CFG.anonKey)?'No se encontró config.js: en GitHub debe llamarse exactamente config.js y estar en la misma carpeta que el HTML.':'No cargó la librería de Supabase (revisa internet o si algo bloquea cdn.jsdelivr.net).';notice('❌ No se pudo guardar: '+why,true);return false;}
@@ -5379,6 +5386,7 @@ async function applyCloudIfAvailable(){
   if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
+  if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5424,6 +5432,7 @@ async function applyCloud(){
   if(Array.isArray(p.skuprod)&&window.SKUPROD_LOAD)window.SKUPROD_LOAD(p.skuprod);
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
+  if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -6293,7 +6302,7 @@ function parseAsisExcel(wb){
  for(const rs of sheets(wb)){for(let i=0;i<Math.min(rs.length,15);i++){const H=(rs[i]||[]).map(nrm),dc=[];H.forEach((h,k)=>{if(DAYRE.test(h))dc.push(k);});const nc=H.findIndex(h=>h==='NOMBRE'||h==='NOMBRES'||h==='PERSONAL');
   if(dc.length>=3&&nc>=0){const oc=H.findIndex(h=>h.indexOf('OBSERV')===0),m=H[dc[0]].match(/(\d{1,2})\/(\d{1,2})/),w=isoWeekOfMonday(+m[1],+m[2]),rows=[];
    rs.slice(i+1).forEach(r=>{const name=r&&r[nc]!=null?String(r[nc]).trim():'';if(!name||/^(TOTAL|%|RESUMEN|PERSONAL)/.test(nrm(name)))return;
-    rows.push({n:rows.length+1,name,dni:'',d:dc.slice(0,6).map(k=>{const v=r[k]==null?'':nrm(r[k]).replace(/\s+/g,'');return OKST.indexOf(v)>=0?v:'';}),obs:oc>=0&&r[oc]!=null?String(r[oc]).trim():''});});
+    rows.push({n:rows.length+1,name:name.replace(/^\s*\d+\s*[.)\-]?\s+/,''),dni:'',d:dc.slice(0,6).map(k=>{const v=r[k]==null?'':nrm(r[k]).replace(/\s+/g,'');return OKST.indexOf(v)>=0?v:'';}),obs:oc>=0&&r[oc]!=null?String(r[oc]).trim():''});});
    return {kind:'asis',week:w.week,year:w.year,days:dc.slice(0,6).map(k=>String(rs[i][k]).trim()),rows};}}}
  return null;}
 function parseMetaExcel(wb){
@@ -6359,7 +6368,7 @@ $$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUP
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
 // ---- META individual por día (solo se ve al pulsar el botón) ----
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
-const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;
+const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};
 const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
 const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0}];return m.hist;};
 const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
@@ -6370,17 +6379,25 @@ window.metaIndividual=(u,fecha)=>{const m=findMeta(u);if(!m)return null;const v=
 window.metaDiariaIndividual=(u,f)=>{const v=window.metaIndividual(u,f);return v?v*HORAS:null;};
 $$('metaBtn').onclick=()=>{const on=mp.style.display==='none';mp.style.display=on?'block':'none';$$('metaBtn').textContent=on?'🎯 Ocultar META':'🎯 META';if(on)renderMetas();};
 const mk=m=>ukey(m.usuario)||ukey(m.dni)||nameKey(m.nombre||'').toLowerCase();
+function metasFiltradas(){const q=nrm($$('mtSearch').value);return window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))).filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q));}
+function refreshLists(){const A=new Set(),G=new Set(),C=new Set();
+ const ok=v=>v&&String(v).trim()&&String(v).trim()!=='-';
+ window.METAS.forEach(m=>{if(ok(m.area))A.add(m.area);if(ok(m.grupo))G.add(m.grupo);if(ok(m.categoria))C.add(m.categoria);});
+ window.USUARIOS.forEach(u=>{if(ok(u.area))A.add(u.area);if(ok(u.grupo))G.add(u.grupo);});Object.keys(window.METAGRUPOS).forEach(g=>G.add(g));
+ const fill=(id,S)=>{$$(id).innerHTML=[...S].sort().map(v=>'<option value="'+esc(v)+'">').join('');};fill('dlArea',A);fill('dlGrupo',G);fill('dlCat',C);}
 function renderMetas(){
  if(!$$('mtYear').value){const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;}if(!$$('mtSince').value)$$('mtSince').value=todayISO();
+ refreshLists();
  const y=+$$('mtYear').value,w=+$$('mtWeek').value,mo=monday(y,w),days=[0,1,2,3,4,5].map(i=>new Date(mo.getTime()+i*864e5).toISOString().slice(0,10));
  $$('mtRange').textContent='del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5));
- const q=nrm($$('mtSearch').value),all=window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))),L=all.filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q));
- const avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0;
+ const all=window.METAS,L=metasFiltradas(),avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0;
  $$('mtStatus').textContent=all.length?'Personas con meta: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):'')+' · promedio actual '+fmn(avg)+' und/h · Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
- $$('mtTable').innerHTML='<tr><th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th><th>CATEGORÍA</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th>').join('')+'<th></th></tr>'
-  +L.map(m=>'<tr><td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td><td>'+esc(m.categoria||'')+'</td>'
+ $$('mtSelBar').style.display=metaMass?'flex':'none';$$('mtSelCount').textContent=MSEL.size+' seleccionado'+(MSEL.size===1?'':'s');$$('mtSelEditBtn').disabled=!MSEL.size;$$('mtSelDelBtn').disabled=!MSEL.size;
+ $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th><th>CATEGORÍA</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th>').join('')+'<th></th></tr>'
+  +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td><td>'+esc(m.categoria||'')+'</td>'
    +days.map(d=>{const v=metaAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER);return '<td'+(chg?' style="background:#fbe9c3"':'')+'><input type="number" min="1" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td>';}).join('')
-   +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');}
+   +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');
+ if($$('mtGrpPanel').style.display!=='none')renderGrupos();}
 const moverM=dk=>{let y=+$$('mtYear').value,w=+$$('mtWeek').value+dk;if(w<1){y--;w=isoWeeks(y);}else if(w>isoWeeks(y)){w=1;y++;}$$('mtYear').value=y;$$('mtWeek').value=w;renderMetas();};
 $$('mtPrev').onclick=()=>moverM(-1);$$('mtNext').onclick=()=>moverM(1);$$('mtNow').onclick=()=>{const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;renderMetas();};
 ['mtYear','mtWeek'].forEach(i=>$$(i).addEventListener('change',renderMetas));$$('mtSearch').addEventListener('input',renderMetas);
@@ -6408,6 +6425,36 @@ $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.ta
   window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();if(window.saveCloud)await window.saveCloud();
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
 $$('mtDown').onclick=()=>{const rows=[['USUARIO','NOMBRE','AREA','GRUPO','CATEGORIA','META_X_HORA_PICKING']].concat(window.METAS.map(m=>[m.usuario||'',m.nombre||'',m.area||'',m.grupo||'',m.categoria||'',m.meta]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'META');XLSX.writeFile(wb,'META_INDIVIDUAL.xlsx');};
+// ---- Meta por grupo ----
+function gruposInfo(){const m=new Map();window.METAS.forEach(x=>{const g=String(x.grupo||'').trim();if(!g||g==='-')return;const o=m.get(g)||{g,n:0,vals:{}};o.n++;const v=Number(x.meta)||0;o.vals[v]=(o.vals[v]||0)+1;m.set(g,o);});
+ Object.keys(window.METAGRUPOS).forEach(g=>{if(!m.has(g))m.set(g,{g,n:0,vals:{}});});
+ return [...m.values()].map(o=>{const def=window.METAGRUPOS[o.g];let moda=null,best=0;Object.keys(o.vals).forEach(v=>{if(o.vals[v]>best){best=o.vals[v];moda=Number(v);}});return {g:o.g,n:o.n,meta:def!=null?Number(def):moda,def:def!=null};}).sort((a,b)=>a.g.localeCompare(b.g));}
+function renderGrupos(){const G=gruposInfo();
+ $$('grTable').innerHTML='<tr><th class="name">GRUPO</th><th>PERSONAS</th><th>META und/h</th><th>META por día (7.5 h)</th><th></th></tr>'+(G.length?G.map(x=>'<tr><td class="name"><b>'+esc(x.g)+'</b></td><td>'+x.n+'</td><td><input type="number" min="1" step="1" class="mt-in" data-gr="'+esc(x.g)+'" value="'+(x.meta==null?'':x.meta)+'"></td><td class="num">'+(x.meta?fmn(x.meta*HORAS):'')+'</td><td><button class="btn pw-btn" data-gu="'+esc(x.g)+'" type="button">Actualizar a todo el grupo</button></td></tr>').join(''):'<tr><td colspan="5">Aún no hay grupos. Agrega uno o carga el Excel de metas.</td></tr>');}
+async function aplicarGrupo(g,v){const since=$$('mtSince').value||todayISO();if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;
+ window.METAGRUPOS[g]=v;let n=0;window.METAS.forEach(m=>{if(String(m.grupo||'').trim()===g&&Number(metaAt(m,since))!==v){setMetaFrom(m,since,v);n++;}});
+ renderMetas();renderGrupos();window.__toast&&window.__toast('Grupo '+g+': '+v+' und/h desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+n+' persona'+(n===1?'':'s')+' actualizada'+(n===1?'':'s')+'. Los días anteriores no cambian.');if(window.saveCloud)await window.saveCloud();}
+$$('mtGrpBtn').onclick=()=>{const p=$$('mtGrpPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';if(on)renderGrupos();};
+$$('grClose').onclick=()=>{$$('mtGrpPanel').style.display='none';};
+$$('grAdd').onclick=()=>aplicarGrupo($$('grNom').value.trim(),Number($$('grMeta').value)||0).then(()=>{if(window.METAGRUPOS[$$('grNom').value.trim()]!=null){$$('grNom').value='';$$('grMeta').value='';}});
+$$('grTable').addEventListener('click',e=>{const b=e.target.closest('[data-gu]');if(!b)return;const inp=$$('grTable').querySelector('input[data-gr="'+b.dataset.gu.replace(/"/g,'\\"')+'"]');aplicarGrupo(b.dataset.gu,Number(inp&&inp.value)||0);});
+// ---- Selección masiva en META (pide contraseña): editar o eliminar varias personas ----
+$$('mtMassBtn').onclick=()=>{if(metaMass){metaMass=false;MSEL.clear();$$('mmForm').style.display='none';renderMetas();return;}if(!window.requestMassAccess())return;metaMass=true;renderMetas();};
+$$('mtSelExitBtn').onclick=()=>{metaMass=false;MSEL.clear();$$('mmForm').style.display='none';renderMetas();};
+$$('mtSelAllBtn').onclick=()=>{metasFiltradas().forEach(m=>MSEL.add(mk(m)));renderMetas();};
+$$('mtSelNoneBtn').onclick=()=>{MSEL.clear();renderMetas();};
+$$('mtTable').addEventListener('change',e=>{const c=e.target;if(c.id==='mtSelAll'){metasFiltradas().forEach(m=>{if(c.checked)MSEL.add(mk(m));else MSEL.delete(mk(m));});renderMetas();return;}
+ if(c.classList&&c.classList.contains('mt-ck')){if(c.checked)MSEL.add(c.dataset.k);else MSEL.delete(c.dataset.k);renderMetas();}});
+$$('mtSelEditBtn').onclick=()=>{if(!MSEL.size)return;['mmArea','mmGrp','mmCat','mmMeta'].forEach(i=>$$(i).value='');$$('mmUseG').checked=true;$$('mmForm').style.display='grid';$$('mmForm').scrollIntoView({behavior:'smooth',block:'center'});};
+$$('mmCancel').onclick=()=>{$$('mmForm').style.display='none';};
+$$('mmApply').onclick=async()=>{const A=$$('mmArea').value.trim(),G=$$('mmGrp').value.trim(),C=$$('mmCat').value.trim(),V=Number($$('mmMeta').value)||0,since=$$('mtSince').value||todayISO();
+ if(!MSEL.size){window.__toast&&window.__toast('Selecciona al menos una persona.');return;}if(!(A||G||C||V>0)){window.__toast&&window.__toast('Indica al menos un cambio (área, grupo, categoría o meta).');return;}if(!window.requestUploadAccess())return;
+ let n=0;[...MSEL].forEach(k=>{const m=window.METAS.find(x=>mk(x)===k);if(!m)return;if(A)m.area=A;if(G)m.grupo=G;if(C)m.categoria=C;
+  const v=V>0?V:($$('mmUseG').checked&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):0);if(v>0&&Number(metaAt(m,since))!==v)setMetaFrom(m,since,v);
+  const u=findUser({usuario:m.usuario,nombre:m.nombre});if(u){if(A)u.area=A;if(G)u.grupo=G;}n++;});
+ $$('mmForm').style.display='none';renderMetas();window.renderUsuarios();window.__toast&&window.__toast('Edición masiva aplicada a '+n+' persona'+(n===1?'':'s')+(V>0||(G&&window.METAGRUPOS[G]!=null)?' (la meta rige desde el '+since.slice(8,10)+'/'+since.slice(5,7)+')':'')+'.');if(window.saveCloud)await window.saveCloud();};
+$$('mtSelDelBtn').onclick=async()=>{const n=MSEL.size;if(!n)return;if(!confirm('¿Eliminar la meta de '+n+' persona'+(n===1?'':'s')+' (todo su historial)? Esta acción no se puede deshacer.'))return;if(!window.requestUploadAccess())return;
+ const set=new Set(MSEL);window.METAS=window.METAS.filter(m=>!set.has(mk(m)));MSEL.clear();renderMetas();window.renderUsuarios();window.__toast&&window.__toast(n+' meta'+(n===1?'':'s')+' eliminada'+(n===1?'':'s')+'.');if(window.saveCloud)await window.saveCloud();};
 // ---- Asistencia semanal en línea (siempre muestra la semana actual) ----
 const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
 function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
@@ -6499,6 +6546,7 @@ tr.tot td{background:var(--bg);font-weight:700}
 .empty{color:var(--mu);padding:14px;text-align:center}
 .txh{display:inline-block;margin:18px 0 8px;padding:6px 14px;border-radius:8px;background:var(--g);color:var(--card);font-size:17px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .txblock{margin-bottom:14px}
+.fchip{display:inline-block;margin:3px 4px 3px 0;padding:4px 10px;border-radius:999px;background:var(--redb);font-size:13px}.fchip i{color:var(--mu);font-style:normal;font-size:12px}
 .ch{break-inside:avoid}
 thead{display:table-header-group}
 .top3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.top3 div{border:1px solid var(--ln);border-radius:12px;padding:10px;text-align:center}.top3 b{display:block;font-size:22px}.top3 small{color:var(--mu)}
@@ -6507,9 +6555,11 @@ thead{display:table-header-group}
 </script>
 <script type="text/plain" id="rep-body"><div class="wrap">
 <div class="hd"><div class="logo"><b>Bata</b><span>Adecco</span></div><div><h1 id="rp-title"></h1><p id="rp-sub"></p></div></div>
-<div class="nav"><a href="#sec-asist">1 · Asistencia</a><a href="#sec-aten">2 · % de atención</a><a href="#sec-prod">3 · Picking vs Packing</a><a href="#sec-marca">4 · Marcas y categorías</a><a href="#sec-colec">5 · Colección</a><a href="#sec-area">6 · Área de picking</a><a href="#sec-pick">7 · Reporte Picking</a><a href="#sec-pack">8 · Reporte Packing</a></div>
+<div class="nav"><a href="#sec-dia">Resumen del día</a><a href="#sec-asist">1 · Asistencia</a><a href="#sec-aten">2 · % de atención</a><a href="#sec-prod">3 · Picking vs Packing</a><a href="#sec-marca">4 · Marcas y categorías</a><a href="#sec-colec">5 · Colección</a><a href="#sec-area">6 · Área de picking</a><a href="#sec-pick">7 · Reporte Picking</a><a href="#sec-pack">8 · Reporte Packing</a></div>
 
-<section id="sec-asist"><div class="sec"><h2>1 · Asistencia semanal · Picking</h2></div><div id="as-body">
+<section id="sec-dia"><div class="sec"><h2>Resumen del día</h2></div><div class="chips" id="dy-f"></div><div id="dy-body"></div></section>
+
+<section id="sec-asist"><div class="sec"><h2>1 · Asistencia semanal · Picking &amp; Packing</h2></div><div id="as-body">
 <div id="as-w"></div><div class="kpis" id="as-k"></div>
 <div class="card"><h3>Lectura ejecutiva</h3><ul class="lect" id="as-l"></ul></div>
 <div class="grid"><div class="card"><h3>% de asistencia por día</h3><div id="as-c"></div></div><div class="card"><h3>Personas con 3 o más faltas</h3><div id="as-r"></div></div></div>
@@ -6535,7 +6585,7 @@ thead{display:table-header-group}
 <div class="card" style="margin-top:12px"><h3>Comparativo por día</h3><div class="tw"><table id="pr-t"></table></div></div>
 </div></section>
 
-<section id="sec-marca"><div class="sec"><h2>4 · Producción por marcas y categorías</h2></div><div id="mk-body"><div class="chips" id="mk-f"></div><div class="chips" id="mk-cat"></div><div id="mk-blocks"></div></div></section>
+<section id="sec-marca"><div class="sec"><h2>4 · Producción por marcas y categorías · Picking</h2></div><div id="mk-body"><div class="chips" id="mk-f"></div><div class="chips" id="mk-cat"></div><div id="mk-blocks"></div></div></section>
 
 <section id="sec-colec"><div class="sec"><h2>5 · Producción por colección</h2></div><div id="co-body"><div class="chips" id="co-f"></div><div class="chips" id="co-cat"></div><div id="co-blocks"></div></div></section>
 
@@ -6608,7 +6658,7 @@ function secAsis(){const A=R.asis;if(!A||!A.rows.length){none('as-body','Sin asi
  L.push(f3.length?fm(f3.length)+' persona'+(f3.length>1?'s':'')+' con 3 o más faltas en la semana.':'Nadie con 3 o más faltas en la semana.');
  $('as-l').innerHTML=LI(L);
  $('as-w').innerHTML=(H.personal&&rows.length<H.personal)?'<div class="warn">Se leyeron '+rows.length+' de '+H.personal+' personas del PDF. Los totales de arriba son los del encabezado del PDF.</div>':'';
- bars('as-c',pd.map(x=>x.l),[{n:'% asistencia',v:pd.map(x=>Math.round(x.p*1000)/10),c:'var(--red)'}],{lab:v=>String(v).replace('.',',')+'%'});
+ bars('as-c',pd.map(x=>x.l),[{n:'% asistencia',v:pd.map(x=>Math.round(x.p*1000)/10),c:'var(--red)'}],{sel:DYS.i!=null?A.days[DYS.i]:null,lab:v=>String(v).replace('.',',')+'%'});
  hbars('as-r',f3.slice(0,12).map(x=>({l:x.n,v:x.c,t:x.c+' faltas',c:'var(--red)'})),{one:1,lm:260,cut:36});if(!f3.length)none('as-r','Sin personas con 3 o más faltas.');
  const draw=()=>{const q=AS.q.toUpperCase(),L2=rows.filter(r=>(!q||(r.name+' '+r.dni).toUpperCase().includes(q))&&(AS.f==='all'||(AS.f==='f'&&r.d.slice(0,nd).includes('F'))||(AS.f==='o'&&r.obs)));
   $('as-t').innerHTML='<tr><th class="l">N°</th><th class="l">Nombre</th><th>DNI</th>'+A.days.slice(0,nd).map(x=>'<th>'+x+'</th>').join('')+'<th class="l">Observaciones</th></tr>'+L2.map(r=>'<tr><td class="l">'+r.n+'</td><td class="l"><b>'+esc(r.name)+'</b></td><td>'+esc(r.dni)+'</td>'+r.d.slice(0,nd).map(v=>'<td>'+stCell(v)+'</td>').join('')+'<td class="obs">'+esc(r.obs)+'</td></tr>').join('')+'<tr class="tot"><td></td><td class="l">% asistencia del día</td><td></td>'+pd.map(x=>'<td>'+Math.round(x.p*100)+'%</td>').join('')+'<td></td></tr>';
@@ -6646,7 +6696,7 @@ function secProd(){const P=R.prod||{},a=P.PICKING,b=P.PACKING;if(!a&&!b){none('p
  const days=(a||b).days,ta=a?a.total:0,tb=b?b.total:0;
  $('pr-k').innerHTML=KP([['Picking · unidades',fm(ta)],['Packing · unidades',fm(tb)],['Operarios Picking',fm(a?a.users:0)],['Operarios Packing',fm(b?b.users:0)],['Prom. por operario (Picking / Packing)',fm(a&&a.users?ta/a.users:0)+' / '+fm(b&&b.users?tb/b.users:0)]]);
  const L=[];[['Picking',a],['Packing',b]].forEach(([n,x])=>{if(x&&x.total){L.push(n+': '+fm(x.total)+' unidades (sin insumos). Mejor día: '+x.best.l+' con '+fm(x.best.v)+'. Día más bajo: '+x.low.l+' con '+fm(x.low.v)+'.');if(x.top[0])L.push('Top 1 '+n+': '+x.top[0].u+' con '+fm(x.top[0].v)+' unidades.');}});$('pr-l').innerHTML=LI(L);
- bars('pr-c',days,[{n:'Picking',v:a?a.dayTot:[],c:'var(--g)'},{n:'Packing',v:b?b.dayTot:[],c:'var(--red)'}]);
+ bars('pr-c',days,[{n:'Picking',v:a?a.dayTot:[],c:'var(--g)'},{n:'Packing',v:b?b.dayTot:[],c:'var(--red)'}],{sel:DYS.i!=null?days[DYS.i]:null});
  donut('pr-d',[{l:'Picking',v:ta,c:'var(--g)'},{l:'Packing',v:tb,c:'var(--red)'}],'unidades');
  ['PICKING','PACKING'].forEach(tx=>{const x=P[tx];$('pr-t3-'+tx).innerHTML=x&&x.top.length?'<div class="top3">'+x.top.map((u,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(u.v)+'</b>'+esc(u.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>';});
  $('pr-t').innerHTML='<tr><th>Día</th><th>Picking</th><th>Packing</th><th>Diferencia</th></tr>'+days.map((d,i)=>{const p=a?a.dayTot[i]:0,k=b?b.dayTot[i]:0;return '<tr><td>'+d+'</td><td>'+fm(p)+'</td><td>'+fm(k)+'</td><td>'+fm(p-k)+'</td></tr>';}).join('')+'<tr class="tot"><td>Total</td><td>'+fm(ta)+'</td><td>'+fm(tb)+'</td><td>'+fm(ta-tb)+'</td></tr>';}
@@ -6674,9 +6724,9 @@ function txBlock(host,tx,kind){const rows=attrRows(tx),key=kind==='m'?'m':'co',L
  $(id+'-t').innerHTML='<tr><th class="l">'+nm+'</th><th>Calzado</th><th>Accesorio</th><th>Total</th><th>% del total</th></tr>'+L.map(x=>'<tr><td class="l"><b>'+esc(x.k)+'</b></td><td>'+fm(x.CALZADO)+'</td><td>'+fm(x.ACCESORIO)+'</td><td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td></tr>').join('')+'<tr class="tot"><td class="l">Total</td><td>'+fm(L.reduce((a,x)=>a+x.CALZADO,0))+'</td><td>'+fm(L.reduce((a,x)=>a+x.ACCESORIO,0))+'</td><td>'+fm(tot)+'</td><td>100%</td></tr>';}
 function secAttr(){if(!R.attr||!R.attr.rows.length){['mk','co'].forEach(p=>{none(p+'-body',R.attr&&R.attr.msg||'Sin detalle por SKU para esta semana: carga el MAESTRO SKU y el detalle de producción.');$(p+'-body').style.display='block';});return;}
  const draw=()=>{const tx=[{k:'PICKING',l:'Picking'},{k:'PACKING',l:'Packing'}];
-  ['mk','co'].forEach(p=>{chips(p+'-f','Mostrar',tx,AT2.show,k=>{if(AT2.show.has(k)){if(AT2.show.size>1)AT2.show.delete(k);}else AT2.show.add(k);draw();},true);
+  ['mk','co'].forEach(p=>{if(p==='co')chips(p+'-f','Mostrar',tx,AT2.show,k=>{if(AT2.show.has(k)){if(AT2.show.size>1)AT2.show.delete(k);}else AT2.show.add(k);draw();},true);else $(p+'-f').innerHTML='';
    chips(p+'-cat','Categoría',[{k:'CALZADO',l:'Calzado'},{k:'ACCESORIO',l:'Accesorio'}],AT2.cat,k=>{if(AT2.cat.has(k)){if(AT2.cat.size>1)AT2.cat.delete(k);}else AT2.cat.add(k);draw();},true);
-   $(p+'-blocks').innerHTML='';['PICKING','PACKING'].forEach(t=>{if(AT2.show.has(t))txBlock($(p+'-blocks'),t,p==='mk'?'m':'c');});});};
+   $(p+'-blocks').innerHTML='';['PICKING','PACKING'].forEach(t=>{if(p==='mk'?t==='PICKING':AT2.show.has(t))txBlock($(p+'-blocks'),t,p==='mk'?'m':'c');});});};
  draw();}
 // ================= 6 · ÁREA DE PICKING =================
 const AR={day:''};
@@ -6689,7 +6739,7 @@ function secArea(){const A=R.area;if(!A||!A.rows.length){none('ar-body','Sin det
   donut('ar-d',L.slice(0,7).map(x=>({l:x.a,v:x.v})),'unidades');
   bars('ar-s',days,L.slice(0,6).map((x,k)=>({n:x.a,v:days.map(d=>x.by[d]||0)})),{stack:1});
   $('ar-t').innerHTML='<tr><th class="l">Área</th>'+days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th><th>%</th></tr>'+L.map(x=>'<tr><td class="l"><b>'+esc(x.a)+'</b></td>'+days.map(d=>'<td>'+fm(x.by[d]||0)+'</td>').join('')+'<td><b>'+fm(x.v)+'</b></td><td>'+pc(tot?x.v/tot:0)+'</td></tr>').join('');};
- draw();document.addEventListener('click',e=>{const b=e.target.closest('#ar-s [data-pick]');if(b){AR.day=AR.day===b.dataset.pick?'':b.dataset.pick;draw();}});}
+ window.__areaDraw=draw;draw();document.addEventListener('click',e=>{const b=e.target.closest('#ar-s [data-pick]');if(b){AR.day=AR.day===b.dataset.pick?'':b.dataset.pick;draw();}});}
 // ================= 7 y 8 · REPORTES PICKING / PACKING =================
 function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X){none(id+'-body','Sin producción de '+tx.toLowerCase()+' para esta semana.');$(id+'-body').style.display='block';return;}
  $(id+'-k').innerHTML=KP([['Total (sin insumos)',fm(X.generalTotal)],['Operarios',fm(X.users)],['Mejor día',X.best?X.best.label+' · '+fm(X.best.v):'-','',1],['Día más bajo',X.low?X.low.label+' · '+fm(X.low.v):'-','',1]].concat(X.gen&&X.gen.pct!=null?[['Cumplimiento de meta',pc(X.gen.pct),cl(X.gen.pct,R.umbral.verde,R.umbral.ambar)]]:[]));
@@ -6699,12 +6749,28 @@ function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X
  const st={i:0},draw=()=>{chips(id+'-tabs','Reporte',X.tables.map((t,i)=>({k:String(i),l:t.sheet})),String(st.i),k=>{st.i=+k;draw();});const t=X.tables[st.i],hm=t.general;
   $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?'<td>'+(u.hrs?u.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?'<td>'+t.users.reduce((a,u)=>a+(u.hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
   $(id+'-tt').textContent=t.title;};draw();}
+// ================= RESUMEN DEL DÍA (interactivo) =================
+const DYS={i:null};
+function diasSemana(){const m=String(R.range||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(!m)return [];const b=Date.UTC(+m[3],+m[2]-1,+m[1]),n=['lun','mar','mié','jue','vie','sáb'];return n.map((x,i)=>{const d=new Date(b+i*864e5);return {l:x+' '+String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0'),iso:d.toISOString().slice(0,10),i};});}
+function refreshDay(){secDia();try{secAsis();}catch(e){}try{secProd();}catch(e){}const D=diasSemana(),a=R.area,rp=R.reps&&R.reps.PICKING;
+ if(a&&window.__areaDraw){AR.day=(DYS.i==null||!rp||!D[DYS.i])?'':((a.days||[])[rp.datesISO.indexOf(D[DYS.i].iso)]||'');window.__areaDraw();}}
+function secDia(){const D=diasSemana();if(!D.length){none('dy-body','Sin fechas para el resumen del día.');return;}
+ chips('dy-f','Día',[{k:'',l:'Toda la semana'}].concat(D.map(d=>({k:String(d.i),l:d.l}))),DYS.i==null?'':String(DYS.i),k=>{DYS.i=k===''?null:+k;refreshDay();});
+ if(DYS.i==null){$('dy-body').innerHTML='<div class="empty">Elige un día para ver sus datos más importantes: asistencia y quiénes faltaron, producción de Picking y Packing con su top 3, cumplimiento de meta y área líder.</div>';return;}
+ const d=D[DYS.i],A=R.asis;let h='<div class="grid">';
+ if(A&&A.rows.length){let as=0,ta=0,fa=0,de=0,sr=0;const fl=[];A.rows.forEach(r=>{const v=(r.d||[])[DYS.i]||'';if(v==='A'||v==='T'){as++;if(v==='T')ta++;}else if(v==='F'){fa++;fl.push(r);}else if(v)de++;else sr++;});const p=as+fa?as/(as+fa):null;
+  h+='<div class="card"><h3>Asistencia · '+esc(d.l)+'</h3><div class="kpis">'+KP([['Asistieron',fm(as)],['Faltaron',fm(fa),fa?'rd':'ok'],['% asistencia',p==null?'-':pc(p),p==null?'':cl(p,.95,.9)],['Descanso / otros',fm(de)]])+'</div>'+(ta?'<div class="foot"><span>Tardanzas: '+ta+'</span></div>':'')+'<h3 style="margin-top:10px">Faltaron ('+fl.length+')</h3>'+(fl.length?fl.map(r=>'<span class="fchip">'+esc(r.name)+(r.obs?' <i>'+esc(String(r.obs).slice(0,48))+'</i>':'')+'</span>').join(''):'<div class="empty">Nadie faltó este día.</div>')+'</div>';}
+ ['PICKING','PACKING'].forEach(tx=>{const X=R.reps&&R.reps[tx],idx=X?X.datesISO.indexOf(d.iso):-1;if(!X||idx<0){h+='<div class="card"><h3>'+TXN[tx]+' · '+esc(d.l)+'</h3><div class="empty">Sin producción este día.</div></div>';return;}
+  const L=X.tables[0].users.map(u=>({u:u.u,v:(u.by||[])[idx]||0,m:(u.metaBy||[])[idx]||0})).filter(x=>x.v>0);let tot=0,met=0;L.forEach(x=>{tot+=x.v;met+=x.m;});L.sort((a,b)=>b.v-a.v);const p=met?tot/met:null;
+  h+='<div class="card"><h3>'+TXN[tx]+' · '+esc(d.l)+'</h3><div class="kpis">'+KP([['Unidades (sin insumos)',fm(tot)],['Operarios',fm(L.length)],['Meta del día',met?fm(met):'-'],['Cumplimiento',p==null?'-':pc(p),p==null?'':cl(p,R.umbral.verde,R.umbral.ambar)]])+'</div><h3 style="margin-top:10px">Top 3 del día</h3>'+(L.length?'<div class="top3">'+L.slice(0,3).map((x,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(x.v)+'</b>'+esc(x.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>')+'</div>';});
+ const a=R.area,rp=R.reps&&R.reps.PICKING;if(a&&rp){const lb=(a.days||[])[rp.datesISO.indexOf(d.iso)];if(lb){const m=new Map();a.rows.forEach(r=>{if(r.d===lb)m.set(r.a,(m.get(r.a)||0)+r.n);});const L=[...m].map(([k,v])=>({l:k,v})).sort((x,y)=>y.v-x.v).slice(0,6);h+='<div class="card"><h3>Áreas de picking · '+esc(d.l)+'</h3><div id="dy-ar"></div></div>';$('dy-body').innerHTML=h+'</div>';hbars('dy-ar',L,{one:1,lm:150});return;}}
+ $('dy-body').innerHTML=h+'</div>';}
 // ================= arranque =================
 $('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range;
 const fixHead=t=>{if(!t.tHead&&t.rows[0]&&t.rows[0].querySelector('th')){const h=t.createTHead();h.appendChild(t.rows[0]);}};
 document.querySelectorAll('table').forEach(t=>new MutationObserver(()=>fixHead(t)).observe(t,{childList:true}));
 const _obs=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.querySelectorAll)n.querySelectorAll('table').forEach(t=>{fixHead(t);new MutationObserver(()=>fixHead(t)).observe(t,{childList:true});});})));_obs.observe(document.body,{childList:true,subtree:true});
-[secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING')].forEach(f=>{try{f();}catch(e){console.error(e);}});
+[secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING'),secDia].forEach(f=>{try{f();}catch(e){console.error(e);}});
 document.querySelectorAll('table').forEach(fixHead);
 $('rp-foot').textContent='Fuente: Dashboard Logística Picking & Packing WMS (producción), MAESTRO SKU, asistencia y % de atención cargados · Generado el '+R.gen;
 </script>
@@ -6749,7 +6815,7 @@ $('rp-foot').textContent='Fuente: Dashboard Logística Picking & Packing WMS (pr
         const cx=(882+124*k+17)*s;let v=classify(p,cx,cy,s);
         if(v==='D'){const tw=sameLine.find(w=>Math.abs((w.x0+w.x1)/2-cx)<40*s);v=tw&&/^D\s*M$|^DM$|^OM$/i.test(tw.t)?'DM':'D';}
         d.push(v);}
-      out.rows.push({n:numW?parseInt(numW.t):out.rows.length+1,name,dni:dn.t,d,obs});
+      out.rows.push({n:numW?parseInt(numW.t):out.rows.length+1,name:name.replace(/^\s*\d+\s*[.)\-]?\s+/,''),dni:dn.t,d,obs});
     });
   });
   return out;
@@ -6790,7 +6856,7 @@ function parseTextAsist(pages){
    if(!cols)return;const n=L[0];if(!n||n.x>90||!/^\d+$/.test(n.s.trim()))return;
    const first=cols[0].cx-20,name=L.filter(i=>i!==n&&i.x+i.w/2<first).map(i=>i.s.trim()).join(' ').replace(/\s+/g,' ').trim(),d=cols.map(()=>'');
    L.forEach(i=>{const c=i.x+i.w/2,t=i.s.trim().toUpperCase(),k=cols.findIndex(cc=>Math.abs(cc.cx-c)<14);if(k>=0&&c>=first&&/^(A|T|F|D|DM|V|L|P)$/.test(t))d[k]=t;});
-   out.rows.push({n:+n.s,name,dni:'',d,obs:ox!=null?L.filter(i=>i.x>=ox).map(i=>i.s.trim()).join(' ').trim():''});});});
+   out.rows.push({n:+n.s,name:name.replace(/^\s*\d+\s*[.)\-]?\s+/,''),dni:'',d,obs:ox!=null?L.filter(i=>i.x>=ox).map(i=>i.s.trim()).join(' ').trim():''});});});
  let m=txt.match(/Semana\s*(?:N\S*\s*)?(\d{1,2})/i);if(m)out.week=+m[1];
  m=txt.match(/(\d{1,2}\/\d{1,2}\/(\d{4}))\s*al\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);if(m){out.range=m[1]+' al '+m[3];out.year=+m[2];}
  out.days=cols?cols.map(c=>c.label):[];return out;}
