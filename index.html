@@ -1927,18 +1927,22 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <datalist id="asisOpts"><option value="A"><option value="T"><option value="F"><option value="D"><option value="DM"><option value="V"><option value="L"><option value="P"></datalist>
       </section>
       <section class="opsum" id="metaPanel" style="display:none;margin-top:12px"><div class="h">META individual por usuario</div>
-        <div class="mod-note">Cada celda es la meta por hora de picking de ese día, según la última carga. Si cambias una celda, el nuevo monto rige desde ese día en adelante y no modifica los días anteriores. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
+        <div class="mod-note">Cada día tiene su meta por hora y su categoría, según la última carga. Si cambias la categoría (o la meta) de un día, el nuevo monto y la categoría rigen desde ese día en adelante y no modifican los días anteriores. Pulsa Guardar para dejarlo grabado; los reportes y semáforos usan siempre lo último. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
         <div class="mod-actions" style="align-items:center"><b style="font-size:15px">Semana</b><button class="btn" id="mtPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="mtYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="mtWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="mtNext" type="button">▶</button><button class="btn" id="mtNow" type="button">Semana actual</button><span id="mtRange" style="font-size:13px;color:#5b6b7c"></span></div>
         <div class="mod-actions" style="align-items:center"><label style="display:flex;gap:6px;align-items:center"><b>Vigente desde</b> <input id="mtSince" type="date" class="pdetsel"></label><span style="font-size:12px;color:#5b6b7c">Fecha desde la que rige lo que cargues con Excel o agregues con el botón; los cambios hechos en la tabla rigen desde la fecha de cada celda.</span></div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><input id="mtSearch" class="pdetsel" placeholder="Buscar…" style="min-width:200px"></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtCatBtn" type="button">🏷 Criterios de categoría</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><button class="btn" id="mtSaveAll" type="button">💾 Guardar</button><span id="mtDirty" style="font-size:13px;font-weight:700;color:#b26a00"></span><input id="mtSearch" class="pdetsel" placeholder="Buscar por usuario, nombre, área, grupo o categoría…" style="min-width:320px"></div>
         <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" list="dlArea" placeholder="Área (elige o escribe)" autocomplete="off"><input id="mtGrp" list="dlGrupo" placeholder="Grupo (elige o escribe)" autocomplete="off"><input id="mtCat" list="dlCat" placeholder="Categoría (elige o escribe)" autocomplete="off"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
         <datalist id="dlArea"></datalist><datalist id="dlGrupo"></datalist><datalist id="dlCat"></datalist>
         <div id="mtGrpPanel" style="display:none;border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;margin:8px 0"><div class="h" style="font-size:15px">Meta por grupo (und/hora)</div>
           <div class="mod-note">Al actualizar el monto de un grupo, cambia la meta de todas las personas de ese grupo desde la fecha «Vigente desde» en adelante, sin tocar los días anteriores. También puedes agregar un grupo nuevo con su meta.</div>
           <div class="rform" style="grid-template-columns:1fr 1fr auto auto"><input id="grNom" list="dlGrupo" placeholder="Grupo nuevo (elige o escribe)" autocomplete="off"><input id="grMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><button class="btn" id="grAdd" type="button">➕ Agregar grupo y meta</button><button class="btn" id="grClose" type="button">Cerrar</button></div>
           <div style="overflow-x:auto;margin-top:8px"><table class="heatmap" id="grTable"></table></div></div>
+        <div id="mtCatPanel" style="display:none;border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;margin:8px 0"><div class="h" style="font-size:15px">Criterios de categoría (meta por hora)</div>
+          <div class="mod-note">Cada categoría tiene su meta por hora. En la tabla, al elegir una categoría para un día, la meta de ese día y la de los días siguientes pasa al monto de la categoría; los días anteriores no cambian. Quita las categorías que no uses para dejar solo las que necesites.</div>
+          <div class="rform" style="grid-template-columns:1fr 1fr auto auto"><input id="ccNom" list="dlCat" placeholder="Categoría (elige o escribe)" autocomplete="off"><input id="ccMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><button class="btn" id="ccAdd" type="button">➕ Agregar criterio</button><button class="btn" id="ccClose" type="button">Cerrar</button></div>
+          <div style="overflow-x:auto;margin-top:8px"><table class="heatmap" id="ccTable"></table></div></div>
         <div class="mod-actions" id="mtSelBar" style="display:none;background:#fbe9c3;border-radius:12px;padding:8px 10px;align-items:center"><b id="mtSelCount">0 seleccionados</b><button class="btn" id="mtSelAllBtn" type="button">Seleccionar todo</button><button class="btn" id="mtSelNoneBtn" type="button">Quitar selección</button><button class="btn" id="mtSelEditBtn" type="button">✏️ Editar seleccionados</button><button class="btn" id="mtSelDelBtn" type="button" style="color:#b3141e">🗑 Eliminar seleccionados</button><button class="btn" id="mtSelExitBtn" type="button">Salir de selección masiva</button></div>
-        <div class="rform" id="mmForm" style="display:none;grid-template-columns:repeat(4,1fr) auto"><input id="mmArea" list="dlArea" placeholder="Área (vacío = sin cambio)" autocomplete="off"><input id="mmGrp" list="dlGrupo" placeholder="Grupo (vacío = sin cambio)" autocomplete="off"><input id="mmCat" list="dlCat" placeholder="Categoría (vacío = sin cambio)" autocomplete="off"><input id="mmMeta" type="number" min="1" step="1" placeholder="Meta und/hora (vacío = sin cambio)"><span style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;display:flex;gap:4px;align-items:center"><input id="mmUseG" type="checkbox" checked> usar la meta del grupo</label><button class="btn" id="mmApply" type="button">Aplicar</button><button class="btn" id="mmCancel" type="button">Cancelar</button></span></div>
+        <div class="rform" id="mmForm" style="display:none;grid-template-columns:repeat(4,1fr) auto"><input id="mmArea" list="dlArea" placeholder="Área (vacío = sin cambio)" autocomplete="off"><input id="mmGrp" list="dlGrupo" placeholder="Grupo (vacío = sin cambio)" autocomplete="off"><input id="mmCat" list="dlCat" placeholder="Categoría (vacío = sin cambio)" autocomplete="off"><input id="mmMeta" type="number" min="1" step="1" placeholder="Meta und/hora (vacío = sin cambio)"><span style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;display:flex;gap:4px;align-items:center"><input id="mmUseG" type="checkbox" checked> usar la meta del grupo o categoría</label><button class="btn" id="mmApply" type="button">Aplicar</button><button class="btn" id="mmCancel" type="button">Cancelar</button></span></div>
         <div class="mod-status" id="mtStatus"></div>
         <div style="overflow-x:auto"><table class="heatmap" id="mtTable"></table></div>
       </section>
@@ -2575,7 +2579,7 @@ self.onmessage=async(e)=>{
       ev.raw+=rawUnits;
       ev.r++;
       ev.pp+=pp;
-      {const sk0=String(skuRaw==null?'':skuRaw).trim();if(sk0){const kk=d+'\u001f'+sk0;skuAgg.set(kk,(skuAgg.get(kk)||0)+(Number(units)||Number(pp)||0));}}
+      {const sk0=String(skuRaw==null?'':skuRaw).trim();if(sk0){const kk=d+'\u001f'+sk0+'\u001f'+cat;skuAgg.set(kk,(skuAgg.get(kk)||0)+(Number(units)||0));}}
 
       kept++;
       if(d<minDate)minDate=d;
@@ -2666,7 +2670,7 @@ self.onmessage=async(e)=>{
 
     self.postMessage({
       type:'done',
-      skuAgg:[...skuAgg].map(([k,v])=>{const i=k.indexOf('\u001f');return [k.slice(0,i),k.slice(i+1),v];}),
+      skuAgg:[...skuAgg].map(([k,v])=>{const p=k.split('\u001f');return [p[0],p[1],v,p[2]];}),
       records,
       details: details||[],
       stats:{
@@ -2901,6 +2905,10 @@ function importConfigFile(file){
   };
   reader.readAsText(file);
 }
+function heatClassUser(user,day,v){if(!v)return 'heat-empty';const op=window.OPSEL==='PACKING'?'PACKING':'PICKING',mi=(op==='PICKING'&&window.metaIndividual)?window.metaIndividual(user,day):null;
+  if(!mi)return heatClass(v);const p=v/mi;return p>=0.9?'heat-high':(p>=0.8?'heat-mid':'heat-low');}   // 90% verde · 80% amarillo · menos rojo claro (meta del usuario ese día)
+function heatClassDia(user,d,v,target){if(!v)return 'heat-empty';const op=window.OPSEL==='PACKING'?'PACKING':'PICKING',mi=(op==='PICKING'&&window.metaIndividual)?window.metaIndividual(user,d):null,old=v<target*0.8?'heat-low':(v<target?'heat-mid':'heat-high');
+  if(!mi)return old;const meta=metaUsuarioDia(user,d,op).meta;if(!meta)return old;const p=v/meta;return p>=0.9?'heat-high':(p>=0.8?'heat-mid':'heat-low');}
 function heatClass(v,meta=metaBase()){
   if(!v) return 'heat-empty';
   const low=Math.min(Number(SETTINGS.lowThr)||100,meta*0.8);
@@ -3063,7 +3071,7 @@ function processRawFile(file,contextLabel='Archivo',extraParams={}){
         worker.terminate();reject(new Error(`${file.name}: ${m.message}`));
       }else if(m.type==='done'){
         if(handled)return; handled=true;
-        worker.terminate();(window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[]});resolve(m);
+        worker.terminate();(window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[],src:'wrk'});resolve(m);
       }
     };
     worker.onerror=e=>{
@@ -3086,7 +3094,7 @@ function runInlineFallback(file,contextLabel,extraParams={}){
         }else if(m.type==='error'){
           reject(new Error(`${file.name}: ${m.message}`));
         }else if(m.type==='done'){
-          (window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[]});resolve(m);
+          (window.__skuBatch=window.__skuBatch||[]).push({agg:m.skuAgg||[],src:'wrk'});resolve(m);
         }
       }
     };
@@ -3764,7 +3772,7 @@ function renderSupervisorHeatmap(baseArr){
       let row=`<tr><td class="${nameCls}" data-user="${escapeHtml(r.user)}" title="Click para comparar la evolución de este usuario arriba">${escapeHtml(r.user)}</td>`;
       dayKeys.forEach(d=>{
         const v=Math.round(r.days[d]||0);
-        const c=!v?'heat-empty':(v<target*0.8?'heat-low':(v<target?'heat-mid':'heat-high'));
+        const c=heatClassDia(r.user,d,v,target);
         row+=`<td class="${c}" title="${labelDate(d)}">${v?fmt(v):'-'}</td>`;
       });
       const ac=r.avg>=target?'good':(r.avg>=target*0.8?'mid':'bad');
@@ -3805,7 +3813,7 @@ function renderSupervisorHeatmap(baseArr){
     let row=`<tr><td class="${nameCls}" data-user="${escapeHtml(r.user)}" title="Click para comparar la evolución de este usuario arriba">${escapeHtml(r.user)}</td>`;
     hours.forEach(h=>{
       const v=Math.round(r.hours[h]||0);
-      const cls=heatClass(v)+(v?' heatcell-click':'');
+      const cls=heatClassUser(r.user,day,v)+(v?' heatcell-click':'');
       const attrs=v?` data-user="${escapeHtml(r.user)}" data-hour="${h}" title="Click para ver el detalle de esta hora"`:'';
       row += `<td class="${cls}"${attrs}>${v?fmt(v):'-'}</td>`;
     });
@@ -5304,7 +5312,7 @@ window.saveCloud=saveCloud;
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
-  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),metasdia:window.METASDIA||{},metagrupos:window.METAGRUPOS||{},repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
+  atTasks:typeof AT_TASKS!=='undefined'?AT_TASKS:[],atRoster:typeof AT_ROSTER!=='undefined'?AT_ROSTER:[],atSched:typeof AT_SCHED!=='undefined'?AT_SCHED:{},settings:typeof SETTINGS!=='undefined'?SETTINGS:{},rutas:window.RUTAS||[],usuarios:window.USUARIOS||[],metas:window.METAS||[],asistencia:window.ASISTENCIA||{},skuprod:(window.SKUPROD_PACK?window.SKUPROD_PACK():[]),metasdia:window.METASDIA||{},metagrupos:window.METAGRUPOS||{},metacat:window.METACAT||{},repsem:window.REPSEM||{},files:window.FILES||[],maestro:window.MAESTRO||[],presc:window.PRESC||[]
 };}
 async function saveCloud(){
   if(!sb){const why=!(CLOUD_CFG.url&&CLOUD_CFG.anonKey)?'No se encontró config.js: en GitHub debe llamarse exactamente config.js y estar en la misma carpeta que el HTML.':'No cargó la librería de Supabase (revisa internet o si algo bloquea cdn.jsdelivr.net).';notice('❌ No se pudo guardar: '+why,true);return false;}
@@ -5387,6 +5395,7 @@ async function applyCloudIfAvailable(){
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
+  if(p.metacat&&typeof p.metacat==='object')window.METACAT=p.metacat;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5433,6 +5442,7 @@ async function applyCloud(){
   if(p.repsem&&typeof p.repsem==='object')window.REPSEM=p.repsem;
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
+  if(p.metacat&&typeof p.metacat==='object')window.METACAT=p.metacat;
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -6368,11 +6378,13 @@ $$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUP
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
 // ---- META individual por día (solo se ve al pulsar el botón) ----
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
-const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};
+const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
 const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
-const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0}];return m.hist;};
+const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0,c:m.categoria||undefined}];return m.hist;};
 const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
-function setMetaFrom(m,d,v){const h=histOf(m).filter(e=>e.d<d);h.push({d,m:v});m.hist=h;m.meta=v;}
+const catAt=(m,d)=>{let c=null;histOf(m).forEach(e=>{if(e.d<=d&&e.c)c=e.c;});return c||m.categoria||'';};
+// cambia la meta (y opcionalmente la categoría) de ese día en adelante; borra los cambios posteriores y no toca los días anteriores
+function setMetaFrom(m,d,v,c){const keep=c!==undefined?c:catAt(m,d),h=histOf(m).filter(e=>e.d<d);h.push({d,m:v,c:keep||undefined});m.hist=h;m.meta=v;if(keep)m.categoria=keep;}
 function findMeta(u){const k=ukey(u);if(!k)return null;let m=window.METAS.find(x=>ukey(x.usuario)===k);
  if(!m){const r=window.USUARIOS.find(x=>ukey(x.usuario)===k);if(r){const n=nk(r);m=window.METAS.find(x=>(x.dni&&r.dni&&ukey(x.dni)===ukey(r.dni))||(x.nombre&&nameKey(x.nombre)===n));}}return m||null;}
 window.metaIndividual=(u,fecha)=>{const m=findMeta(u);if(!m)return null;const v=fecha?metaAt(m,fecha):Number(m.meta);return v>0?Number(v):null;};
@@ -6385,44 +6397,69 @@ function refreshLists(){const A=new Set(),G=new Set(),C=new Set();
  window.METAS.forEach(m=>{if(ok(m.area))A.add(m.area);if(ok(m.grupo))G.add(m.grupo);if(ok(m.categoria))C.add(m.categoria);});
  window.USUARIOS.forEach(u=>{if(ok(u.area))A.add(u.area);if(ok(u.grupo))G.add(u.grupo);});Object.keys(window.METAGRUPOS).forEach(g=>G.add(g));
  const fill=(id,S)=>{$$(id).innerHTML=[...S].sort().map(v=>'<option value="'+esc(v)+'">').join('');};fill('dlArea',A);fill('dlGrupo',G);fill('dlCat',C);}
+function derivarCriterios(){if(Object.keys(window.METACAT).length||!window.METAS.length)return;const by={};
+ window.METAS.forEach(m=>{const c=String(m.categoria||'').trim();if(!c||c==='-')return;const v=Number(m.meta)||0;if(!v)return;(by[c]=by[c]||{})[v]=(by[c][v]||0)+1;});
+ Object.keys(by).forEach(c=>{let best=0,mode=0;Object.keys(by[c]).forEach(v=>{if(by[c][v]>best){best=by[c][v];mode=Number(v);}});if(mode)window.METACAT[c]=mode;});}
+function updDirty(){$$('mtDirty').textContent=metaDirty?'● Cambios sin guardar':'';}
+async function persistMetas(){if(window.saveCloud)await window.saveCloud();metaDirty=false;updDirty();window.__refreshMetas&&window.__refreshMetas();}
+window.__refreshMetas=function(){clearTimeout(window.__rmT);window.__rmT=setTimeout(()=>{try{if(typeof render==='function')render();}catch(e){}},250);};   // reportes y semáforos del dashboard con la meta nueva
+window.addEventListener('beforeunload',e=>{if(metaDirty){e.preventDefault();e.returnValue='';}});
 function renderMetas(){
  if(!$$('mtYear').value){const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;}if(!$$('mtSince').value)$$('mtSince').value=todayISO();
- refreshLists();
+ refreshLists();derivarCriterios();updDirty();
  const y=+$$('mtYear').value,w=+$$('mtWeek').value,mo=monday(y,w),days=[0,1,2,3,4,5].map(i=>new Date(mo.getTime()+i*864e5).toISOString().slice(0,10));
  $$('mtRange').textContent='del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5));
- const all=window.METAS,L=metasFiltradas(),avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0;
+ const all=window.METAS,L=metasFiltradas(),avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0,cats=Object.keys(window.METACAT);
  $$('mtStatus').textContent=all.length?'Personas con meta: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):'')+' · promedio actual '+fmn(avg)+' und/h · Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
  $$('mtSelBar').style.display=metaMass?'flex':'none';$$('mtSelCount').textContent=MSEL.size+' seleccionado'+(MSEL.size===1?'':'s');$$('mtSelEditBtn').disabled=!MSEL.size;$$('mtSelDelBtn').disabled=!MSEL.size;
- $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th><th>CATEGORÍA</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th>').join('')+'<th></th></tr>'
-  +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td><td>'+esc(m.categoria||'')+'</td>'
-   +days.map(d=>{const v=metaAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER);return '<td'+(chg?' style="background:#fbe9c3"':'')+'><input type="number" min="1" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td>';}).join('')
+ const opt=c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>';
+ $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th><th>CATEGORÍA</th>').join('')+'<th></th></tr>'
+  +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td>'
+   +days.map(d=>{const v=metaAt(m,d),c=catAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER),st=chg?' style="background:#fbe9c3"':'';
+     return '<td'+st+'><input type="number" min="1" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td><td'+st+'><select class="mt-cat" data-k="'+esc(mk(m))+'" data-d="'+d+'"><option value=""></option>'+cats.map(opt).join('')+(c&&cats.indexOf(c)<0?'<option value="'+esc(c)+'">'+esc(c)+'</option>':'')+'</select></td>';}).join('')
    +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');
- if($$('mtGrpPanel').style.display!=='none')renderGrupos();}
+ $$('mtTable').querySelectorAll('select.mt-cat').forEach(sel=>{const m=window.METAS.find(x=>mk(x)===sel.dataset.k);if(m)sel.value=catAt(m,sel.dataset.d);});
+ if($$('mtGrpPanel').style.display!=='none')renderGrupos();if($$('mtCatPanel').style.display!=='none')renderCriterios();}
 const moverM=dk=>{let y=+$$('mtYear').value,w=+$$('mtWeek').value+dk;if(w<1){y--;w=isoWeeks(y);}else if(w>isoWeeks(y)){w=1;y++;}$$('mtYear').value=y;$$('mtWeek').value=w;renderMetas();};
 $$('mtPrev').onclick=()=>moverM(-1);$$('mtNext').onclick=()=>moverM(1);$$('mtNow').onclick=()=>{const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;renderMetas();};
 ['mtYear','mtWeek'].forEach(i=>$$(i).addEventListener('change',renderMetas));$$('mtSearch').addEventListener('input',renderMetas);
-$$('mtTable').addEventListener('change',async e=>{const i=e.target.closest('.mt-in');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;const v=Number(i.value),d=i.dataset.d;
- if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');setTimeout(renderMetas,0);return;}
- if(Number(metaAt(m,d))===v)return;if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
- setMetaFrom(m,d,v);setTimeout(renderMetas,0);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+v+' und/h desde el '+d.slice(8,10)+'/'+d.slice(5,7)+' en adelante. Los días anteriores no cambian.');if(window.saveCloud)await window.saveCloud();});
+$$('mtTable').addEventListener('change',e=>{const i=e.target.closest('.mt-in,.mt-cat');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;const d=i.dataset.d,dm=d.slice(8,10)+'/'+d.slice(5,7);
+ if(i.classList.contains('mt-cat')){const c=i.value;if(!c)return;const v=Number(window.METACAT[c])||0;
+  if(!(v>0)){window.__toast&&window.__toast('Esa categoría no tiene meta definida. Defínela en «Criterios de categoría».');setTimeout(renderMetas,0);return;}
+  if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
+  setMetaFrom(m,d,v,c);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+c+' · '+v+' und/h desde el '+dm+' en adelante. Los días anteriores no cambian.');}
+ else{const v=Number(i.value);if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');setTimeout(renderMetas,0);return;}
+  if(Number(metaAt(m,d))===v)return;if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
+  setMetaFrom(m,d,v);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+v+' und/h desde el '+dm+' en adelante. Los días anteriores no cambian.');}
+ metaDirty=true;updDirty();setTimeout(renderMetas,0);window.__refreshMetas();});
+$$('mtSaveAll').onclick=async()=>{if(!window.requestUploadAccess())return;await persistMetas();window.__toast&&window.__toast('Metas guardadas. Los reportes y semáforos ya usan estos montos.');};
+// ---- Criterios de categoría ----
+function renderCriterios(){const C=Object.keys(window.METACAT).sort();
+ $$('ccTable').innerHTML='<tr><th class="name">CATEGORÍA</th><th>META und/h</th><th>META por día (7.5 h)</th><th>PERSONAS HOY</th><th></th></tr>'+(C.length?C.map(c=>'<tr><td class="name"><b>'+esc(c)+'</b></td><td><input type="number" min="1" step="1" class="mt-in" data-cc="'+esc(c)+'" value="'+window.METACAT[c]+'"></td><td class="num">'+fmn(window.METACAT[c]*HORAS)+'</td><td>'+window.METAS.filter(m=>catAt(m,todayISO())===c).length+'</td><td style="white-space:nowrap"><button class="btn pw-btn" data-ccu="'+esc(c)+'" type="button">Actualizar</button> <button class="btn pw-btn" data-ccd="'+esc(c)+'" type="button">Quitar</button></td></tr>').join(''):'<tr><td colspan="5">Sin criterios. Agrega una categoría con su meta.</td></tr>');}
+$$('mtCatBtn').onclick=()=>{derivarCriterios();const p=$$('mtCatPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';if(on)renderCriterios();};
+$$('ccClose').onclick=()=>{$$('mtCatPanel').style.display='none';};
+$$('ccAdd').onclick=async()=>{const c=$$('ccNom').value.trim(),v=Number($$('ccMeta').value)||0;if(!c||v<=0){window.__toast&&window.__toast('Escribe la categoría y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[c]=v;$$('ccNom').value='';$$('ccMeta').value='';renderCriterios();renderMetas();await persistMetas();};
+$$('ccTable').addEventListener('click',async e=>{const u=e.target.closest('[data-ccu]'),d=e.target.closest('[data-ccd]');
+ if(u){const inp=$$('ccTable').querySelector('input[data-cc="'+u.dataset.ccu.replace(/"/g,'\\"')+'"]'),v=Number(inp&&inp.value)||0;if(v<=0){window.__toast&&window.__toast('Escribe una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[u.dataset.ccu]=v;renderCriterios();renderMetas();await persistMetas();window.__toast&&window.__toast('Criterio '+u.dataset.ccu+': '+v+' und/h (se usa al elegir esa categoría).');}
+ if(d){if(!confirm('¿Quitar el criterio «'+d.dataset.ccd+'» de la lista? Las metas ya asignadas no cambian.')||!window.requestUploadAccess())return;delete window.METACAT[d.dataset.ccd];renderCriterios();renderMetas();await persistMetas();}});
 $$('mtAddBtn').onclick=()=>{mEdit=null;['mtUsr','mtNom','mtArea','mtGrp','mtCat','mtMeta'].forEach(i=>$$(i).value='');$$('mtForm').style.display='grid';$$('mtUsr').focus();};
 $$('mtCancel').onclick=()=>{$$('mtForm').style.display='none';mEdit=null;};
 $$('mtSave').onclick=async()=>{const o={usuario:$$('mtUsr').value.trim(),nombre:$$('mtNom').value.trim(),area:$$('mtArea').value.trim(),grupo:$$('mtGrp').value.trim(),categoria:$$('mtCat').value.trim()},v=Number($$('mtMeta').value)||0,since=$$('mtSince').value||todayISO();
  if(!(o.usuario||o.nombre)||v<=0){window.__toast&&window.__toast('Escribe el usuario (o nombre) y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;
  const i=mEdit?window.METAS.findIndex(x=>mk(x)===mEdit):window.METAS.findIndex(x=>mk(x)===mk(o));
- if(i>=0){const m=window.METAS[i];Object.assign(m,o);if(Number(m.meta)!==v)setMetaFrom(m,since,v);}else window.METAS.push(Object.assign({},o,{meta:v,hist:[{d:FOREVER,m:v}]}));
- $$('mtForm').style.display='none';mEdit=null;renderMetas();if(window.saveCloud)await window.saveCloud();};
+ if(i>=0){const m=window.METAS[i],cOld=catAt(m,since);Object.assign(m,o);if(Number(m.meta)!==v||(o.categoria&&o.categoria!==cOld))setMetaFrom(m,since,v,o.categoria||undefined);}else window.METAS.push(Object.assign({},o,{meta:v,hist:[{d:FOREVER,m:v,c:o.categoria||undefined}]}));
+ $$('mtForm').style.display='none';mEdit=null;renderMetas();await persistMetas();};
 $$('mtTable').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.me){const m=window.METAS.find(x=>mk(x)===b.dataset.me);if(!m)return;mEdit=b.dataset.me;$$('mtUsr').value=m.usuario||'';$$('mtNom').value=m.nombre||'';$$('mtArea').value=m.area||'';$$('mtGrp').value=m.grupo||'';$$('mtCat').value=m.categoria||'';$$('mtMeta').value=m.meta;$$('mtForm').style.display='grid';$$('mtForm').scrollIntoView({behavior:'smooth',block:'center'});}
- if(b.dataset.md){if(!confirm('¿Eliminar la meta de esta persona (todo su historial)?')||!window.requestUploadAccess())return;window.METAS=window.METAS.filter(x=>mk(x)!==b.dataset.md);renderMetas();if(window.saveCloud)await window.saveCloud();}});
+ if(b.dataset.md){if(!confirm('¿Eliminar la meta de esta persona (todo su historial)?')||!window.requestUploadAccess())return;window.METAS=window.METAS.filter(x=>mk(x)!==b.dataset.md);renderMetas();await persistMetas();}});
 $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  try{const r=parseMetaExcel(await leer(f));if(!r)throw new Error('No encontré las columnas USUARIO y META (por hora). Ejemplo: Usuario, Nombre, Área, Grupo, Categoría, Meta x hora Picking.');if(!window.requestUploadAccess())return;
   const since=$$('mtSince').value||todayISO(),map=new Map(window.METAS.map(x=>[mk(x),x])),um={nu:0,ac:0,om:0};let nu=0,ch=0,sin=0,igual=0;
   r.rows.forEach(x=>{upsert(x,um);if(!(x.meta>0)){sin++;return;}const k=mk(x);let m=map.get(k);
-   if(!m){m={usuario:x.usuario,dni:x.dni,nombre:x.nombre,area:x.area,grupo:x.grupo,categoria:x.categoria,meta:x.meta,hist:[{d:FOREVER,m:x.meta}]};map.set(k,m);nu++;return;}
+   if(!m){m={usuario:x.usuario,dni:x.dni,nombre:x.nombre,area:x.area,grupo:x.grupo,categoria:x.categoria,meta:x.meta,hist:[{d:FOREVER,m:x.meta,c:x.categoria||undefined}]};map.set(k,m);nu++;return;}
    ['usuario','dni','nombre','area','grupo','categoria'].forEach(c=>{if(x[c])m[c]=x[c];});
-   if(Number(metaAt(m,since))!==x.meta||Number(m.meta)!==x.meta){setMetaFrom(m,since,x.meta);ch++;}else igual++;});
-  window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();if(window.saveCloud)await window.saveCloud();
+   if(Number(metaAt(m,since))!==x.meta||Number(m.meta)!==x.meta){setMetaFrom(m,since,x.meta,x.categoria||undefined);ch++;}else igual++;});
+  window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();await persistMetas();
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
 $$('mtDown').onclick=()=>{const rows=[['USUARIO','NOMBRE','AREA','GRUPO','CATEGORIA','META_X_HORA_PICKING']].concat(window.METAS.map(m=>[m.usuario||'',m.nombre||'',m.area||'',m.grupo||'',m.categoria||'',m.meta]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'META');XLSX.writeFile(wb,'META_INDIVIDUAL.xlsx');};
 // ---- Meta por grupo ----
@@ -6433,7 +6470,7 @@ function renderGrupos(){const G=gruposInfo();
  $$('grTable').innerHTML='<tr><th class="name">GRUPO</th><th>PERSONAS</th><th>META und/h</th><th>META por día (7.5 h)</th><th></th></tr>'+(G.length?G.map(x=>'<tr><td class="name"><b>'+esc(x.g)+'</b></td><td>'+x.n+'</td><td><input type="number" min="1" step="1" class="mt-in" data-gr="'+esc(x.g)+'" value="'+(x.meta==null?'':x.meta)+'"></td><td class="num">'+(x.meta?fmn(x.meta*HORAS):'')+'</td><td><button class="btn pw-btn" data-gu="'+esc(x.g)+'" type="button">Actualizar a todo el grupo</button></td></tr>').join(''):'<tr><td colspan="5">Aún no hay grupos. Agrega uno o carga el Excel de metas.</td></tr>');}
 async function aplicarGrupo(g,v){const since=$$('mtSince').value||todayISO();if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;
  window.METAGRUPOS[g]=v;let n=0;window.METAS.forEach(m=>{if(String(m.grupo||'').trim()===g&&Number(metaAt(m,since))!==v){setMetaFrom(m,since,v);n++;}});
- renderMetas();renderGrupos();window.__toast&&window.__toast('Grupo '+g+': '+v+' und/h desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+n+' persona'+(n===1?'':'s')+' actualizada'+(n===1?'':'s')+'. Los días anteriores no cambian.');if(window.saveCloud)await window.saveCloud();}
+ renderMetas();renderGrupos();window.__toast&&window.__toast('Grupo '+g+': '+v+' und/h desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+n+' persona'+(n===1?'':'s')+' actualizada'+(n===1?'':'s')+'. Los días anteriores no cambian.');await persistMetas();}
 $$('mtGrpBtn').onclick=()=>{const p=$$('mtGrpPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';if(on)renderGrupos();};
 $$('grClose').onclick=()=>{$$('mtGrpPanel').style.display='none';};
 $$('grAdd').onclick=()=>aplicarGrupo($$('grNom').value.trim(),Number($$('grMeta').value)||0).then(()=>{if(window.METAGRUPOS[$$('grNom').value.trim()]!=null){$$('grNom').value='';$$('grMeta').value='';}});
@@ -6450,11 +6487,12 @@ $$('mmCancel').onclick=()=>{$$('mmForm').style.display='none';};
 $$('mmApply').onclick=async()=>{const A=$$('mmArea').value.trim(),G=$$('mmGrp').value.trim(),C=$$('mmCat').value.trim(),V=Number($$('mmMeta').value)||0,since=$$('mtSince').value||todayISO();
  if(!MSEL.size){window.__toast&&window.__toast('Selecciona al menos una persona.');return;}if(!(A||G||C||V>0)){window.__toast&&window.__toast('Indica al menos un cambio (área, grupo, categoría o meta).');return;}if(!window.requestUploadAccess())return;
  let n=0;[...MSEL].forEach(k=>{const m=window.METAS.find(x=>mk(x)===k);if(!m)return;if(A)m.area=A;if(G)m.grupo=G;if(C)m.categoria=C;
-  const v=V>0?V:($$('mmUseG').checked&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):0);if(v>0&&Number(metaAt(m,since))!==v)setMetaFrom(m,since,v);
+  const useC=$$('mmUseG').checked,v=V>0?V:(useC&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):(useC&&C&&Number(window.METACAT[C])>0?Number(window.METACAT[C]):0)),cur=Number(metaAt(m,since))||Number(m.meta)||0,nv=v>0?v:cur;
+  if((v>0&&nv!==cur)||(C&&catAt(m,since)!==C))setMetaFrom(m,since,nv,C||undefined);
   const u=findUser({usuario:m.usuario,nombre:m.nombre});if(u){if(A)u.area=A;if(G)u.grupo=G;}n++;});
- $$('mmForm').style.display='none';renderMetas();window.renderUsuarios();window.__toast&&window.__toast('Edición masiva aplicada a '+n+' persona'+(n===1?'':'s')+(V>0||(G&&window.METAGRUPOS[G]!=null)?' (la meta rige desde el '+since.slice(8,10)+'/'+since.slice(5,7)+')':'')+'.');if(window.saveCloud)await window.saveCloud();};
+ $$('mmForm').style.display='none';renderMetas();window.renderUsuarios();window.__toast&&window.__toast('Edición masiva aplicada a '+n+' persona'+(n===1?'':'s')+(V>0||(G&&window.METAGRUPOS[G]!=null)?' (la meta rige desde el '+since.slice(8,10)+'/'+since.slice(5,7)+')':'')+'.');await persistMetas();};
 $$('mtSelDelBtn').onclick=async()=>{const n=MSEL.size;if(!n)return;if(!confirm('¿Eliminar la meta de '+n+' persona'+(n===1?'':'s')+' (todo su historial)? Esta acción no se puede deshacer.'))return;if(!window.requestUploadAccess())return;
- const set=new Set(MSEL);window.METAS=window.METAS.filter(m=>!set.has(mk(m)));MSEL.clear();renderMetas();window.renderUsuarios();window.__toast&&window.__toast(n+' meta'+(n===1?'':'s')+' eliminada'+(n===1?'':'s')+'.');if(window.saveCloud)await window.saveCloud();};
+ const set=new Set(MSEL);window.METAS=window.METAS.filter(m=>!set.has(mk(m)));MSEL.clear();renderMetas();window.renderUsuarios();window.__toast&&window.__toast(n+' meta'+(n===1?'':'s')+' eliminada'+(n===1?'':'s')+'.');await persistMetas();};
 // ---- Asistencia semanal en línea (siempre muestra la semana actual) ----
 const DN=['Lun','Mar','Mié','Jue','Vie','Sáb'],fd=d=>String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');
 function isoNow(){const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=t.getUTCFullYear();return {y,w:Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7)};}
@@ -6714,10 +6752,13 @@ function hstack(el,items,series,tot){if(!items.length){none(el,'Sin datos.');ret
   g+='<text class="t1" x="'+(W-4)+'" y="'+(y+21)+'" font-size="15" font-weight="700" text-anchor="end">'+fm(x.v)+' <tspan class="t2" font-size="13" font-weight="400">· '+pc(tot?x.v/tot:0)+'</tspan></text>';});
  $(el).innerHTML=sv(W,H,g);}
 const SER=[{key:'CALZADO',n:'Calzado',c:'var(--g)'},{key:'ACCESORIO',n:'Accesorio',c:'var(--red)'}];
+function cuadre(tx){const P=R.prod&&R.prod[tx],B=R.attr&&R.attr.byTx&&R.attr.byTx[tx];if(!P||!B)return '';const dif=P.total-B.tot;
+ if(AT2.cat.size<2)return '';const ok=Math.abs(dif)<=Math.max(1,P.total*0.0005);
+ return '<div class="'+(ok?'foot':'warn')+'" style="grid-column:1/-1;margin:2px 0 4px"><span>Cuadre con la producción '+TXN[tx]+': producción '+fm(P.total)+' · detalle por SKU '+fm(B.tot)+(ok?' · cuadra ✔':' · diferencia '+fm(dif)+' (vuelve a cargar los archivos de '+TXN[tx]+' si el detalle por SKU es anterior)')+(B.sinMaestro?' · '+fm(B.sinMaestro)+' unidades de SKU sin datos en el MAESTRO aparecen como «SIN MAESTRO»':'')+'</span></div>';}
 function txBlock(host,tx,kind){const rows=attrRows(tx),key=kind==='m'?'m':'co',L=agg(rows,key),tot=L.reduce((a,x)=>a+x.v,0),id=(kind==='m'?'mk':'co')+'-'+tx,nm=kind==='m'?'Marca':'Colección',pl=kind==='m'?'Marcas':'Colecciones';
  const h='<div class="txblock"><h3 class="txh">'+TXN[tx]+'</h3><div class="kpis" id="'+id+'-k"></div><div class="card ch"><h3>'+pl+' por categoría (top 12)</h3><div id="'+id+'-c"></div></div><div class="grid"><div class="card"><h3>Calzado vs accesorio</h3><div id="'+id+'-d"></div></div>'+(kind==='m'?'<div class="card"><h3>Por género RIMS</h3><div id="'+id+'-g"></div></div>':'')+'</div><div class="card"><h3>Detalle por '+nm.toLowerCase()+'</h3><table id="'+id+'-t"></table></div></div>';
  host.insertAdjacentHTML('beforeend',h);
- $(id+'-k').innerHTML=KP([['Unidades '+TXN[tx]+' (sin insumos)',fm(tot)],[pl,fm(L.length)],[nm+' líder',L[0]?L[0].k:'-','',1],['Participación líder',L[0]&&tot?pc(L[0].v/tot):'-']]);
+ $(id+'-k').innerHTML=KP([['Unidades '+TXN[tx]+' (sin insumos)',fm(tot)],[pl,fm(L.length)],[nm+' líder',L[0]?L[0].k:'-','',1],['Participación líder',L[0]&&tot?pc(L[0].v/tot):'-']])+cuadre(tx);
  hstack(id+'-c',L.slice(0,12),SER,tot);
  donut(id+'-d',[{l:'Calzado',v:L.reduce((a,x)=>a+x.CALZADO,0),c:'var(--g)'},{l:'Accesorio',v:L.reduce((a,x)=>a+x.ACCESORIO,0),c:'var(--red)'}],'unidades');
  if(kind==='m'){const G=agg(rows,'g').slice(0,8);hbars(id+'-g',G.map(x=>({l:x.k,v:x.v,t:fm(x.v)+' · '+pc(tot?x.v/tot:0)})),{one:1,lm:170,cut:24,rm:160});}
@@ -6832,10 +6873,11 @@ window.metaDiaOverride=(tx,u,d)=>{const v=window.METASDIA[tx+'|'+String(u).toLow
 // ---------- almacén de producción por SKU ----------
 const isoD=d=>{d=String(d||'');const m=d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):d.slice(0,10);};
 window.SKUPROD_CLEAR=(op,k)=>{Object.keys(window.SKUPROD).forEach(x=>{if(x.indexOf(op+'|'+k+'|')===0)delete window.SKUPROD[x];});};
-window.SKUPROD_FROM=details=>{const m=new Map();(details||[]).forEach(r=>{const sku=String(r.sku==null?'':r.sku).trim();if(!sku)return;const k=isoD(r.d)+'\u001f'+sku;m.set(k,(m.get(k)||0)+(Number(r.cantidad)||0));});return {agg:[...m].map(([k,v])=>{const i=k.indexOf('\u001f');return [k.slice(0,i),k.slice(i+1),v];})};};
-window.SKUPROD_COMMIT=(op,k)=>{const b=window.__skuBatch||[];window.__skuBatch=[];const S=window.SKUPROD;
+window.SKUPROD_FROM=details=>{const m=new Map();(details||[]).forEach(r=>{const sku=String(r.sku==null?'':r.sku).trim();if(!sku)return;const k=isoD(r.d)+'\u001f'+sku;m.set(k,(m.get(k)||0)+(Number(r.cantidad)||0));});return {src:'det',agg:[...m].map(([k,v])=>{const i=k.indexOf('\u001f');return [k.slice(0,i),k.slice(i+1),v];})};};
+window.SKUPROD_COMMIT=(op,k)=>{const all=window.__skuBatch||[];window.__skuBatch=[];const S=window.SKUPROD;
+ const hasW=all.some(x=>x.src==='wrk'&&(x.agg||[]).length),b=hasW?all.filter(x=>x.src==='wrk'):all;   // el lector del archivo manda; el detalle de Packing solo si no hay otro
  if(k==='d'){const ds=new Set();b.forEach(x=>(x.agg||[]).forEach(a=>ds.add(a[0])));Object.keys(S).forEach(x=>{const p=x.split('|');if(p[0]===op&&p[1]==='d'&&ds.has(p[2]))delete S[x];});}
- b.forEach(x=>(x.agg||[]).forEach(a=>{const key=op+'|'+k+'|'+a[0]+'|'+a[1];S[key]=(S[key]||0)+a[2];}));};
+ b.forEach(x=>(x.agg||[]).forEach(a=>{const key=op+'|'+k+'|'+a[0]+'|'+a[1]+(a[3]?'\u001f'+a[3]:'');S[key]=(S[key]||0)+a[2];}));};
 window.SKUPROD_PACK=()=>Object.keys(window.SKUPROD).map(k=>{const p=k.split('|');return [p[0]==='PACKING'?1:0,p[1],p[2],p.slice(3).join('|'),window.SKUPROD[k]];});
 window.SKUPROD_LOAD=a=>{const S={};a.forEach(r=>{S[(r[0]?'PACKING':'PICKING')+'|'+r[1]+'|'+r[2]+'|'+r[3]]=r[4];});window.SKUPROD=S;};
 // ---------- fechas ----------
@@ -6925,11 +6967,14 @@ function maestroIdx(){const m=new Map();(window.MAESTRO||[]).forEach(r=>{m.set(S
 function attrData(dates){const S=window.SKUPROD||{},keys=Object.keys(S);if(!keys.length)return {rows:[],msg:'Sin detalle por SKU: vuelve a cargar los archivos de producción (Picking y Packing) para guardar el SKU de cada línea.'};
  const M=maestroIdx();if(!M.size)return {rows:[],msg:'Falta cargar el MAESTRO SKU para obtener marca, categoría y colección.'};
  const use={};keys.forEach(k=>{const p=k.split('|'),op=p[0],kind=p[1],d=p[2];if(dates.indexOf(d)<0)return;const t=op+'|'+d;(use[t]=use[t]||{})[kind]=1;});
- const agg=new Map();let miss=0,tot=0;
- keys.forEach(k=>{const p=k.split('|'),op=p[0],kind=p[1],d=p[2],sku=p.slice(3).join('|');if(dates.indexOf(d)<0)return;const u=use[op+'|'+d];if(kind==='h'&&u.d)return;
-  const r=M.get(sku)||M.get(sku.slice(0,7));const n=S[k];if(!r){miss+=n;return;}const c=String(r.cat||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const cat=c.indexOf('ACC')===0?'ACCESORIO':'CALZADO';tot+=n;
-  const kk=[r.marca,cat,r.gender,r.colec].join('\u001f');let o=agg.get(kk);if(!o){o={m:r.marca||'SIN MARCA',c:cat,g:r.gender||'SIN DATO',co:r.colec||'SIN COLECCIÓN',P:0,K:0};agg.set(kk,o);}if(op==='PACKING')o.K+=n;else o.P+=n;});
- return {rows:[...agg.values()],miss,tot,msg:agg.size?'':'No hay producción por SKU en las fechas de esta semana.'};}
+ const agg=new Map(),byTx={PICKING:{tot:0,sinMaestro:0},PACKING:{tot:0,sinMaestro:0}};let miss=0,tot=0;
+ keys.forEach(k=>{const p=k.split('|'),op=p[0],kind=p[1],d=p[2],f=p.slice(3).join('|').split('\u001f'),sku=f[0],wcat=f[1];if(dates.indexOf(d)<0)return;const u=use[op+'|'+d];if(kind==='h'&&u.d)return;
+  const r=M.get(sku)||M.get(sku.slice(0,7)),n=S[k];let cat;
+  if(wcat){if(wcat==='CALZ')cat='CALZADO';else if(wcat==='ACC')cat='ACCESORIO';else return;}          // igual que la producción: sin insumos
+  else{if(!r){miss+=n;return;}const c=String(r.cat||'').toUpperCase();if(EXC.indexOf(c)>=0)return;cat=c.indexOf('ACC')===0?'ACCESORIO':'CALZADO';}
+  tot+=n;const bt=byTx[op==='PACKING'?'PACKING':'PICKING'];bt.tot+=n;if(!r)bt.sinMaestro+=n;
+  const kk=[r?r.marca:'SIN MAESTRO',cat,r?r.gender:'SIN MAESTRO',r?r.colec:'SIN MAESTRO'].join('\u001f');let o=agg.get(kk);if(!o){o={m:(r&&r.marca)||(r?'SIN MARCA':'SIN MAESTRO'),c:cat,g:(r&&r.gender)||(r?'SIN DATO':'SIN MAESTRO'),co:(r&&r.colec)||(r?'SIN COLECCIÓN':'SIN MAESTRO'),P:0,K:0};agg.set(kk,o);}if(op==='PACKING')o.K+=n;else o.P+=n;});
+ return {rows:[...agg.values()],miss,tot,byTx,msg:agg.size?'':'No hay producción por SKU en las fechas de esta semana.'};}
 function asisDesdeModulo(k,dates){const rec=(window.ASISTENCIA||{})[k];if(!rec||!Object.keys(rec).length)return null;
  const nmf=r=>String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim().replace(/^\s*\d+\s*[.)\-]?\s+/,''),nkf=s=>nrm(String(s).replace(/^\s*\d+\s*[.)\-]?\s+/,'')).replace(/\s+/g,' '),byK=new Map((window.USUARIOS||[]).map(r=>[nkf(nmf(r)),r])),lb=['Lu','Ma','Mi','Ju','Vi','Sá'];
  const rows=Object.keys(rec).map(key=>{const u=byK.get(key),o=rec[key];return {name:u?nmf(u):key,dni:u&&u.dni||'',d:[0,1,2,3,4,5].map(i=>o['d'+i]||''),obs:o.obs||''};}).sort((a,b)=>a.name.localeCompare(b.name)).map((r,i)=>Object.assign({n:i+1},r));
