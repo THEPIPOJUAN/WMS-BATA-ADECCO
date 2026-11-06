@@ -2315,7 +2315,21 @@ function areaFromUbicacion(rawLoc){
   const i=v.indexOf('-');
   return i>0 ? v.slice(0,i) : v;
 }
-// Regla de etiqueta: las áreas AND, SEL y MZN01 se agrupan y muestran como "1er PISO".
+// Áreas de Producción por área de picking: se respeta el área de la zona de picado; solo CDBUFFER usa la ubicación
+// (CDBUFFER-C → BUFFER C ( PRE PACK) · los demás CDBUFFER → BUFFER A-B). Áreas: AND, SEL, MZN01..MZN04, PARED.
+function obtenerAreaPicking(registro){
+  const ubicacion=String((registro&&(registro.ubicacion||registro.loc))||'').toUpperCase().trim();
+  const areaOriginal=String((registro&&(registro.area||registro.zona))||'').toUpperCase().trim();
+  if(ubicacion.includes('CDBUFFER')||areaOriginal.includes('CDBUFFER')){
+    return (ubicacion.includes('CDBUFFER-C')||areaOriginal.includes('CDBUFFER-C'))?'BUFFER C ( PRE PACK)':'BUFFER A-B';
+  }
+  const AREAS=['AND','SEL','MZN01','MZN02','MZN03','MZN04','PARED'];
+  if(AREAS.indexOf(areaOriginal)>=0)return areaOriginal;                 // manda el área de la zona
+  for(const a of AREAS){if(ubicacion.startsWith(a))return a;}           // si no vino área, se deduce de la ubicación
+  return areaOriginal||'GENERAL';
+}
+window.obtenerAreaPicking=obtenerAreaPicking;
+// (ya no se agrupan AND, SEL y MZN01 como "1er PISO": cada área se muestra por separado)
 const AREA_LABEL_MAP={'AND':'1er PISO','SEL':'1er PISO','MZN01':'1er PISO'};
 function mapAreaLabel(rawArea){
   const v=norm(rawArea).toUpperCase();
@@ -2417,6 +2431,7 @@ self.onmessage=async(e)=>{
       user:idx('Usuario'),
       turn:idx('Turno'),
       area:idx('Area','Área'),
+      ubic:idx('Ubicacion','Ubicación'),
       tipo:idx('Tipo_Pedido','Tipo Pedido','SOLI - PRE PACK'),
       order:idx('Orden_ID','Orden ID'),
       units:idx('Und_Cantidad Conv','Und Cantidad Conv','Cantidad Conv'),
@@ -2473,6 +2488,7 @@ self.onmessage=async(e)=>{
           user: raw[AI.usSel],
           turn: store ? (store.turno==='NOCHE'?'Noche':'Día') : 'Día',
           area: areaFromUbicacion(raw[AI.ubicActiva]),
+          ubic: raw[AI.ubicActiva],
           tipo: store ? store.zona : 'OTROS',
           units: prePack ? 0 : unitsRaw,
           rawunits: unitsRaw,
@@ -2485,7 +2501,7 @@ self.onmessage=async(e)=>{
       }
       return {
         cat: raw[I.cat], fecha: raw[I.fecha], user: raw[I.user], turn: raw[I.turn],
-        area: raw[I.area], tipo: raw[I.tipo], units: raw[I.units],
+        area: raw[I.area], ubic: I.ubic>=0?raw[I.ubic]:'', tipo: raw[I.tipo], units: raw[I.units],
         rawunits: I.rawunits>=0?raw[I.rawunits]:raw[I.units],
         pp: raw[I.pp], hour: raw[I.hour], selection: raw[I.selection]
       };
@@ -2542,7 +2558,7 @@ self.onmessage=async(e)=>{
       const pp=num(rf.pp);
       const c=(pp>0&&(cat==='CALZ'||cat==='ACC'))?'PP':(cat==='CALZ'?'CALZADO':cat==='ACC'?'ACCESORIO':cat);
       const t=norm(rf.turn)||'(Sin turno)';
-      const ar=mapAreaLabel(rf.area)||'(Sin área)';
+      const ar=(norm(rf.area)||norm(rf.ubic))?obtenerAreaPicking({ubicacion:rf.ubic||'',area:rf.area}):'(Sin área)';
       const tp=norm(rf.tipo)||'(Sin tipo)';
 
       if(details){
@@ -6380,9 +6396,9 @@ $$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUP
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
 const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
 const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
-const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0,c:m.categoria||undefined}];return m.hist;};
+const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0,c:m.categoria||undefined}];const h0=m.hist[0];if(h0&&!h0.c&&m.categoria)h0.c=m.categoria;return m.hist;};   // congela la categoría base: los días anteriores ya no dependen de m.categoria
 const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
-const catAt=(m,d)=>{let c=null;histOf(m).forEach(e=>{if(e.d<=d&&e.c)c=e.c;});return c||m.categoria||'';};
+const catAt=(m,d)=>{let c=null;histOf(m).forEach(e=>{if(e.d<=d&&e.c)c=e.c;});return c||'';};
 // cambia la meta (y opcionalmente la categoría) de ese día en adelante; borra los cambios posteriores y no toca los días anteriores
 function setMetaFrom(m,d,v,c){const keep=c!==undefined?c:catAt(m,d),h=histOf(m).filter(e=>e.d<d);h.push({d,m:v,c:keep||undefined});m.hist=h;m.meta=v;if(keep)m.categoria=keep;}
 function findMeta(u){const k=ukey(u);if(!k)return null;let m=window.METAS.find(x=>ukey(x.usuario)===k);
@@ -6457,7 +6473,7 @@ $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.ta
   const since=$$('mtSince').value||todayISO(),map=new Map(window.METAS.map(x=>[mk(x),x])),um={nu:0,ac:0,om:0};let nu=0,ch=0,sin=0,igual=0;
   r.rows.forEach(x=>{upsert(x,um);if(!(x.meta>0)){sin++;return;}const k=mk(x);let m=map.get(k);
    if(!m){m={usuario:x.usuario,dni:x.dni,nombre:x.nombre,area:x.area,grupo:x.grupo,categoria:x.categoria,meta:x.meta,hist:[{d:FOREVER,m:x.meta,c:x.categoria||undefined}]};map.set(k,m);nu++;return;}
-   ['usuario','dni','nombre','area','grupo','categoria'].forEach(c=>{if(x[c])m[c]=x[c];});
+   histOf(m);['usuario','dni','nombre','area','grupo','categoria'].forEach(c=>{if(x[c])m[c]=x[c];});
    if(Number(metaAt(m,since))!==x.meta||Number(m.meta)!==x.meta){setMetaFrom(m,since,x.meta,x.categoria||undefined);ch++;}else igual++;});
   window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();await persistMetas();
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
@@ -6486,7 +6502,7 @@ $$('mtSelEditBtn').onclick=()=>{if(!MSEL.size)return;['mmArea','mmGrp','mmCat','
 $$('mmCancel').onclick=()=>{$$('mmForm').style.display='none';};
 $$('mmApply').onclick=async()=>{const A=$$('mmArea').value.trim(),G=$$('mmGrp').value.trim(),C=$$('mmCat').value.trim(),V=Number($$('mmMeta').value)||0,since=$$('mtSince').value||todayISO();
  if(!MSEL.size){window.__toast&&window.__toast('Selecciona al menos una persona.');return;}if(!(A||G||C||V>0)){window.__toast&&window.__toast('Indica al menos un cambio (área, grupo, categoría o meta).');return;}if(!window.requestUploadAccess())return;
- let n=0;[...MSEL].forEach(k=>{const m=window.METAS.find(x=>mk(x)===k);if(!m)return;if(A)m.area=A;if(G)m.grupo=G;if(C)m.categoria=C;
+ let n=0;[...MSEL].forEach(k=>{const m=window.METAS.find(x=>mk(x)===k);if(!m)return;histOf(m);if(A)m.area=A;if(G)m.grupo=G;
   const useC=$$('mmUseG').checked,v=V>0?V:(useC&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):(useC&&C&&Number(window.METACAT[C])>0?Number(window.METACAT[C]):0)),cur=Number(metaAt(m,since))||Number(m.meta)||0,nv=v>0?v:cur;
   if((v>0&&nv!==cur)||(C&&catAt(m,since)!==C))setMetaFrom(m,since,nv,C||undefined);
   const u=findUser({usuario:m.usuario,nombre:m.nombre});if(u){if(A)u.area=A;if(G)u.grupo=G;}n++;});
@@ -6638,14 +6654,14 @@ thead{display:table-header-group}
 <div class="kpis" id="pk-k"></div>
 <div class="grid"><div class="card"><h3>Producción diaria por categoría</h3><div id="pk-c1"></div></div><div class="card"><h3>Producción diaria SOLI PACK / PRE PACK</h3><div id="pk-c2"></div></div></div>
 <div class="card" style="margin-top:12px"><h3>Resumen de producción (sin insumos)</h3><div class="tw"><table id="pk-s"></table></div></div>
-<div class="card"><h3 id="pk-tt"></h3><div class="chips" id="pk-tabs"></div><div class="sc"><table id="pk-t"></table></div></div>
+<div class="card"><h3 id="pk-tt"></h3><div class="chips" id="pk-flt"></div><div class="chips"><input class="inp" id="pk-q" placeholder="Buscar por nombre o usuario…"></div><div class="sc"><table id="pk-t"></table></div></div>
 </div></section>
 
 <section id="sec-pack"><div class="sec"><h2>8 · Reporte de Packing</h2></div><div id="pa-body">
 <div class="kpis" id="pa-k"></div>
 <div class="grid"><div class="card"><h3>Producción diaria por categoría</h3><div id="pa-c1"></div></div><div class="card"><h3>Producción diaria SOLI PACK / PRE PACK</h3><div id="pa-c2"></div></div></div>
 <div class="card" style="margin-top:12px"><h3>Resumen de producción (sin insumos)</h3><div class="tw"><table id="pa-s"></table></div></div>
-<div class="card"><h3 id="pa-tt"></h3><div class="chips" id="pa-tabs"></div><div class="sc"><table id="pa-t"></table></div></div>
+<div class="card"><h3 id="pa-tt"></h3><div class="chips" id="pa-flt"></div><div class="chips"><input class="inp" id="pa-q" placeholder="Buscar por nombre o usuario…"></div><div class="sc"><table id="pa-t"></table></div></div>
 </div></section>
 <div class="foot" style="margin-top:14px"><span id="rp-foot"></span><span class="noprint">Toca una barra o un filtro · Ctrl+P para guardar en PDF</span></div>
 </div>
@@ -6783,13 +6799,30 @@ function secArea(){const A=R.area;if(!A||!A.rows.length){none('ar-body','Sin det
  window.__areaDraw=draw;draw();document.addEventListener('click',e=>{const b=e.target.closest('#ar-s [data-pick]');if(b){AR.day=AR.day===b.dataset.pick?'':b.dataset.pick;draw();}});}
 // ================= 7 y 8 · REPORTES PICKING / PACKING =================
 function secRep(tx){const X=R.reps&&R.reps[tx],id=tx==='PICKING'?'pk':'pa';if(!X){none(id+'-body','Sin producción de '+tx.toLowerCase()+' para esta semana.');$(id+'-body').style.display='block';return;}
- $(id+'-k').innerHTML=KP([['Total (sin insumos)',fm(X.generalTotal)],['Operarios',fm(X.users)],['Mejor día',X.best?X.best.label+' · '+fm(X.best.v):'-','',1],['Día más bajo',X.low?X.low.label+' · '+fm(X.low.v):'-','',1]].concat(X.gen&&X.gen.pct!=null?[['Cumplimiento de meta',pc(X.gen.pct),cl(X.gen.pct,R.umbral.verde,R.umbral.ambar)]]:[]));
  bars(id+'-c1',X.chartCat.labels,X.chartCat.series.map(s=>({n:s.name,v:s.values})),{stack:1});
  bars(id+'-c2',X.chartBlq.labels,X.chartBlq.series.map((s,k)=>({n:s.name,v:s.values,c:k?'var(--amb)':'var(--g)'})),{stack:1});
  $(id+'-s').innerHTML='<tr><th class="l">Categoría</th>'+X.bloques.map(b=>'<th>'+b+'</th>').join('')+'<th>Cant. cajas</th><th>Total</th></tr>'+X.summary.map(r=>'<tr><td class="l"><b>'+esc(r.cat)+'</b></td>'+X.bloques.map(b=>'<td>'+fm(r.by[b])+'</td>').join('')+'<td>'+fm(r.cajas)+'</td><td><b>'+fm(r.total)+'</b></td></tr>').join('');
- const st={i:0},draw=()=>{chips(id+'-tabs','Reporte',X.tables.map((t,i)=>({k:String(i),l:t.sheet})),String(st.i),k=>{st.i=+k;draw();});const t=X.tables[st.i],hm=t.general;
-  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(hm?'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'+t.users.map(u=>'<tr><td class="l"><b>'+esc(u.u)+'</b></td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(hm?'<td>'+(u.hrs?u.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(u.meta)+'</td><td class="'+(u.pct==null?'':'s-'+cl(u.pct,R.umbral.verde,R.umbral.ambar))+'"><b>'+(u.pct==null?'-':pc(u.pct))+'</b></td>':'')+'</tr>').join('')+'<tr class="tot"><td class="l">Total general</td>'+t.byDay.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(t.total)+'</td>'+(hm?'<td>'+t.users.reduce((a,u)=>a+(u.hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(t.meta)+'</td><td>'+(t.pct==null?'-':pc(t.pct))+'</td>':'')+'</tr>';
-  $(id+'-tt').textContent=t.title;};draw();}
+const FLT={},FKEYS=['CALZ','ACC','SOLI PACK','PRE PACK','PRE PACK CAJAS','INSUMO'],FDEF=['CALZ','ACC','SOLI PACK','PRE PACK'],lw=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ const F=FLT[tx]=FLT[tx]||{on:new Set(FDEF),q:''},gm=new Map(X.tables[0].users.map(u=>[u.u,u])),det=X.det||[];
+ $(id+'-q').value=F.q;$(id+'-q').oninput=e=>{F.q=e.target.value;draw();};
+ function draw(){const on=F.on,q=lw(F.q),cajas=on.has('PRE PACK CAJAS'),ins=on.has('INSUMO'),cs=['CALZ','ACC'].filter(k=>on.has(k)),bs=['SOLI PACK','PRE PACK'].filter(k=>on.has(k));
+  chips(id+'-flt','Filtros',FKEYS.map(k=>({k:k,l:k})),on,k=>{
+   if(k==='PRE PACK CAJAS'||k==='INSUMO'){const solo=on.size===1&&on.has(k);on.clear();(solo?FDEF:[k]).forEach(x=>on.add(x));}   // exclusivos: no se combinan
+   else{if(on.has('PRE PACK CAJAS')||on.has('INSUMO'))on.clear();if(on.has(k))on.delete(k);else on.add(k);}
+   draw();},true);
+  const sel=r=>cajas?r.b==='PRE PACK':ins?r.c==='INSUMO':((r.c==='CALZ'||r.c==='ACC')&&(!cs.length||cs.indexOf(r.c)>=0)&&(!bs.length||bs.indexOf(r.b)>=0)),val=r=>cajas?r.k:r.n;
+  const um=new Map();det.forEach(r=>{if(!sel(r))return;const v=val(r);if(!v)return;const nmx=(X.names||{})[String(r.u).toLowerCase()]||'';if(q&&lw(r.u+' '+nmx).indexOf(q)<0)return;
+   let o=um.get(r.u);if(!o){o={u:r.u,nm:nmx,by:X.days.map(()=>0),total:0};um.set(r.u,o);}o.by[r.i]+=v;o.total+=v;});
+  const U=[...um.values()].sort((a,b)=>b.total-a.total||String(a.u).localeCompare(String(b.u))),dayT=X.days.map((_,i)=>U.reduce((a,u)=>a+u.by[i],0)),tot=dayT.reduce((a,v)=>a+v,0);
+  const isDef=!cajas&&!ins&&on.size===4&&FDEF.every(k=>on.has(k)),mt=isDef?U.reduce((a,u)=>a+((gm.get(u.u)||{}).meta||0),0):0,pt=mt?tot/mt:null;
+  let bi=-1,li=-1;dayT.forEach((v,i)=>{if(v<=0)return;if(bi<0||v>dayT[bi])bi=i;if(li<0||v<dayT[li])li=i;});
+  $(id+'-k').innerHTML=KP([[cajas?'Total cajas Pre Pack':ins?'Total insumos':'Total selección',fm(tot)],['Operarios',fm(U.length)],['Mejor día',bi>=0?X.days[bi]+' · '+fm(dayT[bi]):'-','',1],['Día más bajo',li>=0?X.days[li]+' · '+fm(dayT[li]):'-','',1]].concat(pt!=null?[['Cumplimiento de meta',pc(pt),cl(pt,R.umbral.verde,R.umbral.ambar)]]:[]));
+  $(id+'-tt').textContent='REPORTE GENERAL · '+(cajas?'PRE PACK / CAJAS':ins?'INSUMO (unidades)':(cs.concat(bs).join(' + ')||'CALZ + ACC')+' · pares / unidades (Pre Pack convertido a pares)')+(F.q?' · búsqueda: '+F.q:'');
+  if(!U.length){$(id+'-t').innerHTML='<tr><td class="l">Sin registros con los filtros seleccionados.</td></tr>';return;}
+  $(id+'-t').innerHTML='<tr><th class="l">Usuario</th><th class="l">Nombre</th>'+X.days.map(d=>'<th>'+d+'</th>').join('')+'<th>Total</th>'+(isDef?'<th>Horas</th><th>Meta</th><th>% meta</th>':'')+'</tr>'
+   +U.map(u=>{const g=gm.get(u.u)||{},p=g.meta?u.total/g.meta:null;return '<tr><td class="l"><b>'+esc(u.u)+'</b></td><td class="l">'+esc(u.nm)+'</td>'+u.by.map(v=>'<td>'+(v?fm(v):'')+'</td>').join('')+'<td><b>'+fm(u.total)+'</b></td>'+(isDef?'<td>'+(g.hrs?g.hrs.toFixed(1).replace('.',','):'')+'</td><td>'+fm(g.meta)+'</td><td class="'+(p==null?'':'s-'+cl(p,R.umbral.verde,R.umbral.ambar))+'"><b>'+(p==null?'-':pc(p))+'</b></td>':'')+'</tr>';}).join('')
+   +'<tr class="tot"><td class="l">Total general</td><td></td>'+dayT.map(v=>'<td>'+fm(v)+'</td>').join('')+'<td>'+fm(tot)+'</td>'+(isDef?'<td>'+U.reduce((a,u)=>a+((gm.get(u.u)||{}).hrs||0),0).toFixed(1).replace('.',',')+'</td><td>'+fm(mt)+'</td><td>'+(pt==null?'-':pc(pt))+'</td>':'')+'</tr>';}
+ draw();}
 // ================= RESUMEN DEL DÍA (interactivo) =================
 const DYS={i:null};
 function diasSemana(){const m=String(R.range||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(!m)return [];const b=Date.UTC(+m[3],+m[2]-1,+m[1]),n=['lun','mar','mié','jue','vie','sáb'];return n.map((x,i)=>{const d=new Date(b+i*864e5);return {l:x+' '+String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0'),iso:d.toISOString().slice(0,10),i};});}
@@ -6962,7 +6995,10 @@ const EXC=['INSUMO','MATERIALES'];
 function repTx(y,w,tx){const X=window.WMSX;let rep;try{rep=X._buildReport(X._normRows(),{year:y,week:w,transaccion:tx});}catch(e){return null;}
  if(!rep||!rep.nRows)return null;const days=rep.days,ids=rep.bloques.map(b=>b.id);
  const tbl=t=>({title:t.title,sheet:t.sheet,general:!!t.general,users:t.pv.users.map(u=>({u:u.usuario,by:days.map(d=>u.by[d]||0),total:u.total,hrs:u.horas||0,metaBy:days.map(d=>(u.metaBy&&u.metaBy[d])||0),meta:u.meta||0,pct:u.pct==null?null:u.pct})),byDay:days.map(d=>t.pv.byDay[d]||0),metaDay:days.map(d=>(t.pv.metaDay&&t.pv.metaDay[d])||0),total:t.pv.total,meta:t.pv.meta||0,pct:t.pv.pct==null?null:t.pv.pct});
- return {generalTotal:rep.generalTotal,users:rep.users,best:rep.best,low:rep.low,gen:{pct:rep.gen.pct==null?null:rep.gen.pct},bloques:ids,days:rep.chartCat.labels,chartCat:rep.chartCat,chartBlq:rep.chartBlq,summary:rep.summary,dayTot:rep.dayTot,datesISO:days,tables:rep.tables.map(tbl)};}
+ const nmo={};(window.USUARIOS||[]).forEach(r=>{const k=String(r.usuario||'').trim().toLowerCase();if(k)nmo[k]=String(r.nombre||((r.apellidos||'')+' '+(r.nombres||'')).trim()||'').trim();});
+ (window.METAS||[]).forEach(m=>{const k=String(m.usuario||'').trim().toLowerCase();if(k&&!nmo[k]&&m.nombre)nmo[k]=String(m.nombre).trim();});
+ const ag=new Map();X._normRows().forEach(r=>{if(r.transaccion!==tx)return;const i=days.indexOf(r.fecha);if(i<0)return;const kk=r.usuario+'\u001f'+i+'\u001f'+r.categoria+'\u001f'+r.bloque;let o=ag.get(kk);if(!o){o={u:r.usuario,i:i,c:r.categoria,b:r.bloque,n:0,k:0};ag.set(kk,o);}o.n+=r.unidades;o.k+=r.cajas;});   // unidades = pares (Pre Pack ya convertido); cajas solo Pre Pack
+ return {generalTotal:rep.generalTotal,users:rep.users,best:rep.best,low:rep.low,gen:{pct:rep.gen.pct==null?null:rep.gen.pct},bloques:ids,days:rep.chartCat.labels,chartCat:rep.chartCat,chartBlq:rep.chartBlq,summary:rep.summary,dayTot:rep.dayTot,datesISO:days,tables:rep.tables.map(tbl),det:[...ag.values()],names:nmo};}
 function maestroIdx(){const m=new Map();(window.MAESTRO||[]).forEach(r=>{m.set(String(r.sku).trim(),r);});return m;}
 function attrData(dates){const S=window.SKUPROD||{},keys=Object.keys(S);if(!keys.length)return {rows:[],msg:'Sin detalle por SKU: vuelve a cargar los archivos de producción (Picking y Packing) para guardar el SKU de cada línea.'};
  const M=maestroIdx();if(!M.size)return {rows:[],msg:'Falta cargar el MAESTRO SKU para obtener marca, categoría y colección.'};
@@ -6985,7 +7021,7 @@ function collect(){
  ['PICKING','PACKING'].forEach(tx=>{const r=reps[tx];if(!r){prod[tx]=null;return;}const g=r.tables[0],top=g.users.slice(0,3).map(u=>({u:u.u,v:u.total}));let b=0,l=0;r.dayTot.forEach((v,i)=>{if(v>r.dayTot[b])b=i;if(v<r.dayTot[l])l=i;});
   prod[tx]={days:r.days,dayTot:r.dayTot,total:r.generalTotal,users:r.users,top,best:{l:r.days[b],v:r.dayTot[b]},low:{l:r.days[l],v:r.dayTot[l]}};});
  const rp=reps.PICKING,lab={};if(rp)rp.datesISO.forEach((d,i)=>lab[d]=rp.days[i]);
- const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',kk=a+'|'+lab[f];am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
+ const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a0=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',a=(window.obtenerAreaPicking?window.obtenerAreaPicking({ubicacion:r.ub||r.ubicacion||'',area:a0}):a0),kk=a+'|'+lab[f];am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
  const area={days:rp?rp.days:[],rows:[...am].map(([kk,n])=>{const i=kk.lastIndexOf('|');return {a:kk.slice(0,i),d:kk.slice(i+1),n};}).filter(x=>x.n>0)};
  return {week:w,year:y,range:dmy(dates[0])+'/'+y+' al '+dmy(dates[6])+'/'+y,gen:new Date().toLocaleString('es-PE'),umbral:(X._cfg&&X._cfg.umbral)||{verde:1,ambar:.8},asis:st.asis||asisDesdeModulo(k,dates),aten:st.aten||null,prod,attr:attrData(dates),area,reps};}
 const tpl=id=>document.getElementById(id).textContent;
