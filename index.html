@@ -1426,7 +1426,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
 
       <div class="loadcard">
         <div class="lh">🌊 Análisis de Corrida de Olas</div>
-        <div class="ld">Carga el Excel con hojas PEND, STOCK y RUTA Y PRIORIDAD. El stock se asigna primero a lo más antiguo (semana/día), luego Lima y después Provincia.</div>
+        <div class="ld">Carga el Excel con hojas PEND, STOCK y RUTA Y PRIORIDAD. El stock se asigna primero a rutas activas (SI), dentro de ellas primero HUB y luego Regular; las rutas inactivas (NO) van al final. La hoja RUTA Y PRIORIDAD debe traer RUTA ACTIVA? y ALMAC.</div>
         <div class="loadbuttons">
           <label class="filebtn">Cargar PEND-STOCK-RUTA<input id="olaInput" type="file" accept=".xlsx"></label>
           <button class="btn" id="olaDownloadBtn" type="button" disabled>⬇ Descargar corrida (Excel)</button>
@@ -1864,7 +1864,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
 
     <div id="view-olas" class="viewsection">
       <section class="opsum"><div class="h">Corrida de Olas</div>
-        <div class="mod-note">El stock se asigna primero a lo más antiguo (semana/día), luego Lima y después Provincia. El archivo debe tener las hojas PEND, STOCK y RUTA Y PRIORIDAD.</div>
+        <div class="mod-note">El stock se asigna primero a rutas activas (RUTA ACTIVA? = SI), dentro de ellas primero HUB y luego Regular, y después por orden de ruta; las rutas inactivas (NO) quedan al final. El archivo debe tener las hojas PEND, STOCK y RUTA Y PRIORIDAD (con las columnas RUTA ACTIVA? y ALMAC).</div>
         <div class="mod-actions"><label class="btn">📂 Cargar PEND-STOCK-RUTA<input id="olaInput2" type="file" accept=".xlsx" hidden></label><button class="btn" id="olaDownloadBtn2" type="button">⬇ Descargar corrida (Excel)</button></div>
         <div class="mod-status" id="olaStatus2">Sin archivo de corrida cargado.</div>
         <div class="heatbox" style="max-height:520px"><table class="heatmap" id="olaTable"></table></div>
@@ -1930,7 +1930,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-note">Cada día tiene su meta por hora y su categoría, según la última carga. Si cambias la categoría (o la meta) de un día, el nuevo monto y la categoría rigen desde ese día en adelante y no modifican los días anteriores. Pulsa Guardar para dejarlo grabado; los reportes y semáforos usan siempre lo último. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
         <div class="mod-actions" style="align-items:center"><b style="font-size:15px">Semana</b><button class="btn" id="mtPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="mtYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="mtWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="mtNext" type="button">▶</button><button class="btn" id="mtNow" type="button">Semana actual</button><span id="mtRange" style="font-size:13px;color:#5b6b7c"></span></div>
         <div class="mod-actions" style="align-items:center"><label style="display:flex;gap:6px;align-items:center"><b>Vigente desde</b> <input id="mtSince" type="date" class="pdetsel"></label><span style="font-size:12px;color:#5b6b7c">Fecha desde la que rige lo que cargues con Excel o agregues con el botón; los cambios hechos en la tabla rigen desde la fecha de cada celda.</span></div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtCatBtn" type="button">🏷 Criterios de categoría</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><button class="btn" id="mtSaveAll" type="button">💾 Guardar</button><span id="mtDirty" style="font-size:13px;font-weight:700;color:#b26a00"></span><input id="mtSearch" class="pdetsel" placeholder="Buscar por usuario, nombre, área, grupo o categoría…" style="min-width:320px"></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtCatBtn" type="button">🏷 Criterios de categoría</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtEditBtn" type="button">✏️ Editar</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><button class="btn" id="mtSaveAll" type="button">💾 Guardar</button><span id="mtDirty" style="font-size:13px;font-weight:700;color:#b26a00"></span><input id="mtSearch" class="pdetsel" placeholder="Buscar por usuario, nombre, área, grupo o categoría…" style="min-width:320px"></div>
         <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" list="dlArea" placeholder="Área (elige o escribe)" autocomplete="off"><input id="mtGrp" list="dlGrupo" placeholder="Grupo (elige o escribe)" autocomplete="off"><input id="mtCat" list="dlCat" placeholder="Categoría (elige o escribe)" autocomplete="off"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
         <datalist id="dlArea"></datalist><datalist id="dlGrupo"></datalist><datalist id="dlCat"></datalist>
         <div id="mtGrpPanel" style="display:none;border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;margin:8px 0"><div class="h" style="font-size:15px">Meta por grupo (und/hora)</div>
@@ -5730,34 +5730,47 @@ function run(wb){
  const P=XLSX.utils.sheet_to_json(sheet(wb,'PEND'),{header:1,raw:true,defval:null}).slice(1);
  const S=XLSX.utils.sheet_to_json(sheet(wb,'STOCK'),{header:1,raw:true,defval:null}).slice(1);
  const R=XLSX.utils.sheet_to_json(sheet(wb,'RUTA Y PRIORIDAD'),{raw:true,defval:null});
- // stock
+ // stock (NIVEL (PISO) y NIVEL + BUFFER)
  const tot=new Map(),niv=new Map(),nbf=new Map();
  S.forEach(r=>{const a=norm(r[0]),sku=String(r[1]==null?'':r[1]).trim(),u=norm(r[3]);if(!sku)return;
   const n=piso(a,u);if(n==='OMITIR')return;const nb=(a==='CDBUFFER'&&u.includes('CDBUFFER-C'))?'BUFFER-C':(a==='CDBUFFER'&&(u.includes('CDBUFFER-A')||u.includes('CDBUFFER-B')))?'BUFFER-A-B':n;
   const d=(num(r[4])-num(r[5]))*mult(sku);tot.set(sku,(tot.get(sku)||0)+d);
   if(!niv.has(sku))niv.set(sku,new Map());niv.get(sku).set(n,(niv.get(sku).get(n)||0)+d);
   if(!nbf.has(sku))nbf.set(sku,new Map());nbf.get(sku).set(nb,(nbf.get(sku).get(nb)||0)+d);});
- // ruta (clave por nombre normalizado)
+ // ruta: RUTA ACTIVA? (SI/NO) y HUB? (columna ALMAC: HUB → HUB, otro → Regular)
+ const hd=R.length?Object.keys(R[0]):[],kAct=hd.find(k=>norm(k).replace(/[ ?]/g,'')==='RUTAACTIVA'),kAlm=hd.find(k=>norm(k)==='ALMAC'),avisos=[];
+ if(!kAct)avisos.push("no se encontró la columna 'RUTA ACTIVA?': se asume todo SI");
+ if(!kAlm)avisos.push("no se encontró la columna 'ALMAC': todo queda como Regular");
  const rm=new Map();
- R.forEach(r=>{const o={};Object.keys(r).forEach(k=>o[norm(k)]=r[k]);const ord=Number(o['ORDEN']);if(!isNaN(ord)&&!rm.has(ord))rm.set(ord,o);});
+ R.forEach(r=>{const o={};Object.keys(r).forEach(k=>o[norm(k)]=r[k]);const ord=Number(o['ORDEN']);if(isNaN(ord)||rm.has(ord))return;
+  o.__act=kAct?norm(r[kAct]):'SI';o.__hub=(kAlm&&norm(r[kAlm])==='HUB')?'HUB':'Regular';rm.set(ord,o);});
+ let cruce=0,pendN=0;
  const rows=P.filter(r=>r[0]!=null||r[2]!=null).map(r=>{
-  const sku=String(r[2]==null?'':r[2]).trim(),no=Number(r[0]),ru=rm.get(no)||{};
-  const sol=num(r[3]),asg=num(r[4]),pend=sol-asg,sem=String(ru['SEMANA']==null?'':ru['SEMANA']).trim(),dia=String(ru['DIA CORREO']==null?'':ru['DIA CORREO']).trim();
-  const sn=parseInt((sem.match(/\d+/)||[])[0],10),dn=norm(dia),lpv=ru['LIMA / PROV']||(window.rutaZona?window.rutaZona(r[5]):'')||'',lp=norm(lpv);
-  return {no,sku,sol,asg,pend,pc:pend*mult(sku),est:r[1],tda:r[5],desc:r[6],lp:lpv,ruta:ru['RUTA']||(window.rutaNombre?window.rutaNombre(r[5]):''),sd:(sem+' '+dia).trim(),at:atn(sem,dia),etq:String(ru['ETIQUETA']==null?'':ru['ETIQUETA']).trim(),nom:ru['NOMBR'],
-   k:[isNaN(sn)?99999:sn,dn in DAY?DAY[dn]:99,lp.startsWith('LIMA')?0:lp?1:2,isNaN(Number(ru['ORDEN']))?99999:Number(ru['ORDEN']),no,sku],disp:tot.get(sku)||0,
+  const sku=String(r[2]==null?'':r[2]).trim(),no=Number(r[0]),ru=rm.get(no)||{};if(rm.has(no))cruce++;
+  const sol=num(r[3]),asg=num(r[4]),pend=sol-asg;if(pend>0)pendN++;
+  const sem=String(ru['SEMANA']==null?'':ru['SEMANA']).trim(),dia=String(ru['DIA CORREO']==null?'':ru['DIA CORREO']).trim(),lpv=ru['LIMA / PROV']||(window.rutaZona?window.rutaZona(r[5]):'')||'';
+  const on=Number(ru['ORDEN']);
+  return {no,sku,sol,asg,pend,pc:pend*mult(sku),est:r[1],tda:r[5],desc:r[6],lp:lpv,ruta:ru['RUTA']||(window.rutaNombre?window.rutaNombre(r[5]):''),sd:(sem+' '+dia).trim(),etq:String(ru['ETIQUETA']==null?'':ru['ETIQUETA']).trim(),nom:ru['NOMBR'],
+   act:ru.__act||'',hub:ru.__hub||'Regular',pa:ru.__act==='NO'?1:0,ph:ru.__hub==='HUB'?0:1,on:isNaN(on)?99999:on,disp:tot.get(sku)||0,
    a:niv.has(sku)?best(niv.get(sku)):'',ab:nbf.has(sku)?best(nbf.get(sku)):''};});
- // PRIORIDAD: semana/día más antiguo → Lima → Provincia
- rows.sort((x,y)=>{for(let i=0;i<6;i++){if(x.k[i]<y.k[i])return -1;if(x.k[i]>y.k[i])return 1;}return 0;});
- const rest=new Map(tot);let si=0,no_=0;
- rows.forEach((r,i)=>{r.pr=i+1;const e=norm(r.etq);
-  if(e==='INSUMOS'||e==='UNIFORMES'){r.A=e;r.AB=e;r.ok=true;si++;return;}
-  const d=rest.get(r.sku)||0;
-  if(r.pc<=0||d<=0||d<r.pc){if(r.pc>0&&d>0)rest.set(r.sku,0);r.A='SIN STOCK';r.AB='SIN STOCK';r.ok=false;no_++;return;}
-  rest.set(r.sku,d-r.pc);r.A=r.a||'SIN STOCK';r.AB=r.ab||'SIN STOCK';r.ok=true;si++;});
- const H=['PRIORIDAD','LIMA/PROV','RUTA','SEMANA-DIA','DÍA DE ATENCIÓN','ETIQUETA','TDA DESTINO','NOMBRE TIENDA','N° ORDEN','SKU','DESCRIPCIÓN','ESTADO ORDEN','CANT. SOL','CANT. ASIG','CANT. PEND','PEND. CONVERTIDO','NIVEL (PISO)','NIVEL + BUFFER','DISP. CONVERTIDO'];
- const out=rows.map(r=>[r.pr,r.lp,r.ruta,r.sd,r.at,r.etq,r.tda,r.nom,r.no,r.sku,r.desc,r.est,r.sol,r.asg,r.pend,r.pc,r.A,r.AB,r.disp]);
- return {H,out,si,no:no_,first:rows[0]&&rows[0].sd,total:rows.length};
+ // validación: las órdenes de PEND deben cruzar con RUTA Y PRIORIDAD y debe haber pendientes
+ if(!rows.length||pendN===0)throw new Error('No hay pendientes en la hoja PEND.');
+ if(cruce===0)throw new Error('Ninguna orden de PEND cruza con la columna Orden de RUTA Y PRIORIDAD (0%). Revisa el archivo.');
+ // orden de consumo de stock: ruta activa SI antes que NO → HUB antes que Regular → ORDEN de ruta → N° orden → SKU
+ const cmp=(a,b)=>a<b?-1:a>b?1:0;
+ rows.sort((x,y)=>(x.pa-y.pa)||(x.ph-y.ph)||(x.on-y.on)||((x.no||0)-(y.no||0))||cmp(x.sku,y.sku));
+ const rest=new Map(tot),acc={'ACTIVO PARA PICKING':0,'TDAS PARADAS':0,'SIN STOCK ACTIVO':0};let si=0,no_=0;
+ rows.forEach(r=>{const e=norm(r.etq);
+  if(e==='INSUMOS'||e==='UNIFORMES'){r.A=e;r.AB=e;r.ok=true;}
+  else{const d=rest.get(r.sku)||0;
+   if(r.pc<=0||d<=0||d<r.pc){if(r.pc>0&&d>0)rest.set(r.sku,0);r.A='SIN STOCK';r.AB='SIN STOCK';r.ok=false;}
+   else{rest.set(r.sku,d-r.pc);r.A=r.a||'SIN STOCK';r.AB=r.ab||'SIN STOCK';r.ok=true;}}
+  r.ac=!r.ok?'SIN STOCK ACTIVO':(r.act==='NO'?'TDAS PARADAS':'ACTIVO PARA PICKING');acc[r.ac]++;if(r.ok)si++;else no_++;});
+ // salida: ordenada por NIVEL (PISO), RUTA, N° orden, SKU
+ const srt=rows.slice().sort((x,y)=>cmp(x.A,y.A)||((x.ruta===''?1:0)-(y.ruta===''?1:0))||cmp(String(x.ruta),String(y.ruta))||((x.no||0)-(y.no||0))||cmp(x.sku,y.sku));
+ const H=['LIMA/PROV','RUTA','SEMANA-DIA','ETIQUETA','RUTA ACTIVA?','HUB?','TDA DESTINO','NOMBRE TIENDA','N° ORDEN','SKU','DESCRIPCIÓN','ESTADO ORDEN','CANT. SOL','CANT. ASIG','CANT. PEND','PEND. CONVERTIDO','NIVEL (PISO)','NIVEL + BUFFER','DISP. CONVERTIDO','ACCION'];
+ const out=srt.map(r=>[r.lp,r.ruta,r.sd,r.etq,r.act,r.hub,r.tda,r.nom,r.no,r.sku,r.desc,r.est,r.sol,r.asg,r.pend,r.pc,r.A,r.AB,r.disp,r.ac]);
+ return {H,out,si,no:no_,acc,avisos,cruce:Math.round(cruce/rows.length*100),total:rows.length};
 }
 const inp=document.getElementById('olaInput'),st=document.getElementById('olaStatus'),btn=document.getElementById('olaDownloadBtn');
 async function procOla(e){
@@ -5766,14 +5779,14 @@ async function procOla(e){
   if(!window.XLSX)throw new Error('Motor Excel no disponible.');
   await new Promise(r=>setTimeout(r,30));
   OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));
-  st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · prioridad inicia en '+(OUT.first||'-');
+  st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · ACTIVO PARA PICKING: <b>'+OUT.acc['ACTIVO PARA PICKING'].toLocaleString('es-PE')+'</b> · TDAS PARADAS: <b>'+OUT.acc['TDAS PARADAS'].toLocaleString('es-PE')+'</b> · SIN STOCK ACTIVO: <b>'+OUT.acc['SIN STOCK ACTIVO'].toLocaleString('es-PE')+'</b>'+(OUT.avisos.length?' · ⚠️ '+OUT.avisos.join(' · '):'');
   btn.disabled=false;const s2=document.getElementById('olaStatus2');if(s2)s2.innerHTML=st.innerHTML;window.renderOla&&window.renderOla(OUT);
  }catch(err){OUT=null;st.textContent='Error: '+err.message;const s2=document.getElementById('olaStatus2');if(s2)s2.textContent=st.textContent;}
  e.target.value='';
 }
 inp.addEventListener('change',procOla);const inp2=document.getElementById('olaInput2');if(inp2)inp2.addEventListener('change',procOla);
 btn.addEventListener('click',()=>{if(!OUT)return;
- const ws=XLSX.utils.aoa_to_sheet([OUT.H].concat(OUT.out));ws['!cols']=OUT.H.map((h,i)=>({wch:[10,10,10,16,16,12,12,24,12,18,30,12,10,10,10,14,14,16,14][i]}));
+ const ws=XLSX.utils.aoa_to_sheet([OUT.H].concat(OUT.out));ws['!cols']=OUT.H.map((h,i)=>({wch:[10,10,16,12,12,10,12,24,12,18,30,12,10,10,10,14,14,16,14,22][i]}));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'DETALLE OLAS WMS');XLSX.writeFile(wb,'CORRIDA_OLA_WMS.xlsx');});
 })();
 </script>
@@ -6224,6 +6237,7 @@ document.getElementById('filtersBtn').addEventListener('click',function(){const 
 </script>
 <style>
 .mt-in{width:68px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;font-size:14px}
+.mt-tx{width:150px;border:1px solid #d9e2e8;border-radius:8px;padding:6px;font-size:13px;background:#fffdf3}
 .asis-in{width:48px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;text-transform:uppercase;font-size:14px}
 .asis-back{position:fixed;inset:0;background:rgba(20,24,30,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
 .asis-back.show{display:flex}
@@ -6394,7 +6408,7 @@ $$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUP
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
 // ---- META individual por día (solo se ve al pulsar el botón) ----
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
-const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
+const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;let metaEditCols=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
 const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
 const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0,c:m.categoria||undefined}];const h0=m.hist[0];if(h0&&!h0.c&&m.categoria)h0.c=m.categoria;return m.hist;};   // congela la categoría base: los días anteriores ya no dependen de m.categoria
 const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
@@ -6413,26 +6427,36 @@ function refreshLists(){const A=new Set(),G=new Set(),C=new Set();
  window.METAS.forEach(m=>{if(ok(m.area))A.add(m.area);if(ok(m.grupo))G.add(m.grupo);if(ok(m.categoria))C.add(m.categoria);});
  window.USUARIOS.forEach(u=>{if(ok(u.area))A.add(u.area);if(ok(u.grupo))G.add(u.grupo);});Object.keys(window.METAGRUPOS).forEach(g=>G.add(g));
  const fill=(id,S)=>{$$(id).innerHTML=[...S].sort().map(v=>'<option value="'+esc(v)+'">').join('');};fill('dlArea',A);fill('dlGrupo',G);fill('dlCat',C);}
-function derivarCriterios(){if(Object.keys(window.METACAT).length||!window.METAS.length)return;const by={};
+function derivarCriterios(){if(Object.keys(window.METACAT).filter(k=>!esCero(k)).length||!window.METAS.length)return;const by={};
  window.METAS.forEach(m=>{const c=String(m.categoria||'').trim();if(!c||c==='-')return;const v=Number(m.meta)||0;if(!v)return;(by[c]=by[c]||{})[v]=(by[c][v]||0)+1;});
  Object.keys(by).forEach(c=>{let best=0,mode=0;Object.keys(by[c]).forEach(v=>{if(by[c][v]>best){best=by[c][v];mode=Number(v);}});if(mode)window.METACAT[c]=mode;});}
+
+// Toda persona de USUARIOS debe estar en META: si falta, se agrega sola (meta 0 hasta que se le asigne categoría o meta)
+function syncMetasUsuarios(){let n=0;window.USUARIOS.forEach(r=>{const u=String(r.usuario||'').trim(),nom=nm(r);if(!u&&!nom)return;
+  const has=(u&&findMeta(u))||(r.dni&&window.METAS.find(x=>x.dni&&ukey(x.dni)===ukey(r.dni)))||(nom&&matchByName(nom,window.METAS));if(has)return;
+  const ok=v=>v&&String(v).trim()!=='-'?String(v).trim():'';
+  window.METAS.push({usuario:u,dni:r.dni,nombre:nom,area:ok(r.area),grupo:ok(r.grupo),categoria:'',meta:0,hist:[{d:FOREVER,m:0,c:undefined}]});n++;});
+ if(n){metaDirty=true;window.__toast&&window.__toast(n+' persona'+(n===1?'':'s')+' de USUARIOS agregada'+(n===1?'':'s')+' a META (meta 0). Pulsa Guardar.');}return n;}
+// categorías OTRO y WEB: siempre existen y con meta 0
+function ensureCatsCero(){['OTRO','WEB'].forEach(c=>{if(!Object.keys(window.METACAT).some(k=>String(k).toUpperCase()===c))window.METACAT[c]=0;});}
+const esCero=c=>['OTRO','WEB'].indexOf(String(c||'').trim().toUpperCase())>=0;
 function updDirty(){$$('mtDirty').textContent=metaDirty?'● Cambios sin guardar':'';}
 async function persistMetas(){if(window.saveCloud)await window.saveCloud();metaDirty=false;updDirty();window.__refreshMetas&&window.__refreshMetas();}
 window.__refreshMetas=function(){clearTimeout(window.__rmT);window.__rmT=setTimeout(()=>{try{if(typeof render==='function')render();}catch(e){}},250);};   // reportes y semáforos del dashboard con la meta nueva
 window.addEventListener('beforeunload',e=>{if(metaDirty){e.preventDefault();e.returnValue='';}});
 function renderMetas(){
  if(!$$('mtYear').value){const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;}if(!$$('mtSince').value)$$('mtSince').value=todayISO();
- refreshLists();derivarCriterios();updDirty();
+ syncMetasUsuarios();refreshLists();derivarCriterios();ensureCatsCero();updDirty();
  const y=+$$('mtYear').value,w=+$$('mtWeek').value,mo=monday(y,w),days=[0,1,2,3,4,5].map(i=>new Date(mo.getTime()+i*864e5).toISOString().slice(0,10));
  $$('mtRange').textContent='del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5));
- const all=window.METAS,L=metasFiltradas(),avg=all.length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.length:0,cats=Object.keys(window.METACAT);
+ const all=window.METAS,L=metasFiltradas(),avg=all.filter(m=>Number(m.meta)>0).length?all.reduce((s,m)=>s+(Number(m.meta)||0),0)/all.filter(m=>Number(m.meta)>0).length:0,cats=Object.keys(window.METACAT);
  $$('mtStatus').textContent=all.length?'Personas con meta: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):'')+' · promedio actual '+fmn(avg)+' und/h · Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
  $$('mtSelBar').style.display=metaMass?'flex':'none';$$('mtSelCount').textContent=MSEL.size+' seleccionado'+(MSEL.size===1?'':'s');$$('mtSelEditBtn').disabled=!MSEL.size;$$('mtSelDelBtn').disabled=!MSEL.size;
  const opt=c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>';
  $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th><th>CATEGORÍA</th>').join('')+'<th></th></tr>'
-  +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td>'
+  +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+(metaEditCols?['usuario','nombre','area','grupo'].map(f=>'<td'+(f==='usuario'||f==='nombre'?' class="name"':'')+'><input class="mt-tx" data-k="'+esc(mk(m))+'" data-f="'+f+'"'+(f==='area'?' list="dlArea"':f==='grupo'?' list="dlGrupo"':'')+' value="'+esc(m[f]||'')+'"></td>').join(''):'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td>')
    +days.map(d=>{const v=metaAt(m,d),c=catAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER),st=chg?' style="background:#fbe9c3"':'';
-     return '<td'+st+'><input type="number" min="1" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td><td'+st+'><select class="mt-cat" data-k="'+esc(mk(m))+'" data-d="'+d+'"><option value=""></option>'+cats.map(opt).join('')+(c&&cats.indexOf(c)<0?'<option value="'+esc(c)+'">'+esc(c)+'</option>':'')+'</select></td>';}).join('')
+     return '<td'+st+'><input type="number" min="0" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td><td'+st+'><select class="mt-cat" data-k="'+esc(mk(m))+'" data-d="'+d+'"><option value=""></option>'+cats.map(opt).join('')+(c&&cats.indexOf(c)<0?'<option value="'+esc(c)+'">'+esc(c)+'</option>':'')+'</select></td>';}).join('')
    +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');
  $$('mtTable').querySelectorAll('select.mt-cat').forEach(sel=>{const m=window.METAS.find(x=>mk(x)===sel.dataset.k);if(m)sel.value=catAt(m,sel.dataset.d);});
  if($$('mtGrpPanel').style.display!=='none')renderGrupos();if($$('mtCatPanel').style.display!=='none')renderCriterios();}
@@ -6441,22 +6465,22 @@ $$('mtPrev').onclick=()=>moverM(-1);$$('mtNext').onclick=()=>moverM(1);$$('mtNow
 ['mtYear','mtWeek'].forEach(i=>$$(i).addEventListener('change',renderMetas));$$('mtSearch').addEventListener('input',renderMetas);
 $$('mtTable').addEventListener('change',e=>{const i=e.target.closest('.mt-in,.mt-cat');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;const d=i.dataset.d,dm=d.slice(8,10)+'/'+d.slice(5,7);
  if(i.classList.contains('mt-cat')){const c=i.value;if(!c)return;const v=Number(window.METACAT[c])||0;
-  if(!(v>0)){window.__toast&&window.__toast('Esa categoría no tiene meta definida. Defínela en «Criterios de categoría».');setTimeout(renderMetas,0);return;}
+  if(!(v>0)&&!esCero(c)){window.__toast&&window.__toast('Esa categoría no tiene meta definida. Defínela en «Criterios de categoría».');setTimeout(renderMetas,0);return;}
   if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
   setMetaFrom(m,d,v,c);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+c+' · '+v+' und/h desde el '+dm+' en adelante. Los días anteriores no cambian.');}
- else{const v=Number(i.value);if(!(v>0)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');setTimeout(renderMetas,0);return;}
+ else{const v=Number(i.value),z0=i.value!==''&&v===0&&esCero(catAt(m,d));if(!(v>0)&&!z0){window.__toast&&window.__toast('Escribe una meta mayor a 0 (solo OTRO y WEB pueden tener 0).');setTimeout(renderMetas,0);return;}
   if(Number(metaAt(m,d))===v)return;if(!window.requestUploadAccess()){setTimeout(renderMetas,0);return;}
   setMetaFrom(m,d,v);window.__toast&&window.__toast((m.nombre||m.usuario)+': '+v+' und/h desde el '+dm+' en adelante. Los días anteriores no cambian.');}
  metaDirty=true;updDirty();setTimeout(renderMetas,0);window.__refreshMetas();});
 $$('mtSaveAll').onclick=async()=>{if(!window.requestUploadAccess())return;await persistMetas();window.__toast&&window.__toast('Metas guardadas. Los reportes y semáforos ya usan estos montos.');};
 // ---- Criterios de categoría ----
 function renderCriterios(){const C=Object.keys(window.METACAT).sort();
- $$('ccTable').innerHTML='<tr><th class="name">CATEGORÍA</th><th>META und/h</th><th>META por día (7.5 h)</th><th>PERSONAS HOY</th><th></th></tr>'+(C.length?C.map(c=>'<tr><td class="name"><b>'+esc(c)+'</b></td><td><input type="number" min="1" step="1" class="mt-in" data-cc="'+esc(c)+'" value="'+window.METACAT[c]+'"></td><td class="num">'+fmn(window.METACAT[c]*HORAS)+'</td><td>'+window.METAS.filter(m=>catAt(m,todayISO())===c).length+'</td><td style="white-space:nowrap"><button class="btn pw-btn" data-ccu="'+esc(c)+'" type="button">Actualizar</button> <button class="btn pw-btn" data-ccd="'+esc(c)+'" type="button">Quitar</button></td></tr>').join(''):'<tr><td colspan="5">Sin criterios. Agrega una categoría con su meta.</td></tr>');}
+ $$('ccTable').innerHTML='<tr><th class="name">CATEGORÍA</th><th>META und/h</th><th>META por día (7.5 h)</th><th>PERSONAS HOY</th><th></th></tr>'+(C.length?C.map(c=>'<tr><td class="name"><b>'+esc(c)+'</b></td><td><input type="number" min="0" step="1" class="mt-in" data-cc="'+esc(c)+'" value="'+window.METACAT[c]+'"></td><td class="num">'+fmn(window.METACAT[c]*HORAS)+'</td><td>'+window.METAS.filter(m=>catAt(m,todayISO())===c).length+'</td><td style="white-space:nowrap"><button class="btn pw-btn" data-ccu="'+esc(c)+'" type="button">Actualizar</button> <button class="btn pw-btn" data-ccd="'+esc(c)+'" type="button">Quitar</button></td></tr>').join(''):'<tr><td colspan="5">Sin criterios. Agrega una categoría con su meta.</td></tr>');}
 $$('mtCatBtn').onclick=()=>{derivarCriterios();const p=$$('mtCatPanel'),on=p.style.display==='none';p.style.display=on?'block':'none';if(on)renderCriterios();};
 $$('ccClose').onclick=()=>{$$('mtCatPanel').style.display='none';};
-$$('ccAdd').onclick=async()=>{const c=$$('ccNom').value.trim(),v=Number($$('ccMeta').value)||0;if(!c||v<=0){window.__toast&&window.__toast('Escribe la categoría y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[c]=v;$$('ccNom').value='';$$('ccMeta').value='';renderCriterios();renderMetas();await persistMetas();};
+$$('ccAdd').onclick=async()=>{const c=$$('ccNom').value.trim(),v=Number($$('ccMeta').value)||0;if(!c||(v<=0&&!esCero(c))){window.__toast&&window.__toast('Escribe la categoría y una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[c]=v;$$('ccNom').value='';$$('ccMeta').value='';renderCriterios();renderMetas();await persistMetas();};
 $$('ccTable').addEventListener('click',async e=>{const u=e.target.closest('[data-ccu]'),d=e.target.closest('[data-ccd]');
- if(u){const inp=$$('ccTable').querySelector('input[data-cc="'+u.dataset.ccu.replace(/"/g,'\\"')+'"]'),v=Number(inp&&inp.value)||0;if(v<=0){window.__toast&&window.__toast('Escribe una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[u.dataset.ccu]=v;renderCriterios();renderMetas();await persistMetas();window.__toast&&window.__toast('Criterio '+u.dataset.ccu+': '+v+' und/h (se usa al elegir esa categoría).');}
+ if(u){const inp=$$('ccTable').querySelector('input[data-cc="'+u.dataset.ccu.replace(/"/g,'\\"')+'"]'),v=Number(inp&&inp.value)||0;if(v<=0&&!esCero(u.dataset.ccu)){window.__toast&&window.__toast('Escribe una meta mayor a 0.');return;}if(!window.requestUploadAccess())return;window.METACAT[u.dataset.ccu]=v;renderCriterios();renderMetas();await persistMetas();window.__toast&&window.__toast('Criterio '+u.dataset.ccu+': '+v+' und/h (se usa al elegir esa categoría).');}
  if(d){if(!confirm('¿Quitar el criterio «'+d.dataset.ccd+'» de la lista? Las metas ya asignadas no cambian.')||!window.requestUploadAccess())return;delete window.METACAT[d.dataset.ccd];renderCriterios();renderMetas();await persistMetas();}});
 $$('mtAddBtn').onclick=()=>{mEdit=null;['mtUsr','mtNom','mtArea','mtGrp','mtCat','mtMeta'].forEach(i=>$$(i).value='');$$('mtForm').style.display='grid';$$('mtUsr').focus();};
 $$('mtCancel').onclick=()=>{$$('mtForm').style.display='none';mEdit=null;};
@@ -6478,8 +6502,19 @@ $$('mtInput').addEventListener('change',async e=>{const f=e.target.files[0];e.ta
   window.METAS=[...map.values()];window.__toast&&window.__toast('Metas: '+nu+' nuevas · '+ch+' cambian desde el '+since.slice(8,10)+'/'+since.slice(5,7)+' · '+igual+' sin cambios'+(sin?' · '+sin+' personas sin meta (0) omitidas':'')+'.');renderMetas();window.renderUsuarios();await persistMetas();
  }catch(err){window.__toast&&window.__toast('❌ '+err.message);}});
 $$('mtDown').onclick=()=>{const rows=[['USUARIO','NOMBRE','AREA','GRUPO','CATEGORIA','META_X_HORA_PICKING']].concat(window.METAS.map(m=>[m.usuario||'',m.nombre||'',m.area||'',m.grupo||'',m.categoria||'',m.meta]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'META');XLSX.writeFile(wb,'META_INDIVIDUAL.xlsx');};
+// ---- Editar USUARIO / NOMBRE / ÁREA / GRUPO directo en la tabla de META (junto a Selección masiva) ----
+$$('mtEditBtn').onclick=()=>{metaEditCols=!metaEditCols;$$('mtEditBtn').textContent=metaEditCols?'✔ Salir de edición':'✏️ Editar';$$('mtEditBtn').style.background=metaEditCols?'#fbe9c3':'';renderMetas();};
+$$('mtTable').addEventListener('change',e=>{const i=e.target.closest('.mt-tx');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;
+ const f=i.dataset.f,val=i.value.trim().replace(/\s+/g,' ');if((m[f]||'')===val)return;
+ if(f==='nombre'&&!val){window.__toast&&window.__toast('El nombre no puede quedar vacío.');renderMetas();return;}
+ if(f==='usuario'&&val&&window.METAS.some(x=>x!==m&&ukey(x.usuario)===ukey(val))){window.__toast&&window.__toast('Ese usuario ya existe en META.');renderMetas();return;}
+ if(!window.requestUploadAccess()){renderMetas();return;}
+ const u=findUser({usuario:m.usuario,dni:m.dni,nombre:m.nombre}),ak=u?nk(u):null;
+ m[f]=val;
+ if(u){u[f]=val;if(f==='nombre'&&ak&&ak!==nameKey(val)){Object.keys(window.ASISTENCIA).forEach(w=>{const r=window.ASISTENCIA[w];if(r&&r[ak]){r[nameKey(val)]=r[ak];delete r[ak];}});}}   // el mismo cambio en USUARIOS (y su asistencia sigue a la persona)
+ metaDirty=true;updDirty();if(f==='usuario')renderMetas();window.renderUsuarios&&window.renderUsuarios();window.__refreshMetas&&window.__refreshMetas();});
 // ---- Meta por grupo ----
-function gruposInfo(){const m=new Map();window.METAS.forEach(x=>{const g=String(x.grupo||'').trim();if(!g||g==='-')return;const o=m.get(g)||{g,n:0,vals:{}};o.n++;const v=Number(x.meta)||0;o.vals[v]=(o.vals[v]||0)+1;m.set(g,o);});
+function gruposInfo(){const m=new Map();window.METAS.forEach(x=>{const g=String(x.grupo||'').trim();if(!g||g==='-')return;const o=m.get(g)||{g,n:0,vals:{}};o.n++;const v=Number(x.meta)||0;if(v>0)o.vals[v]=(o.vals[v]||0)+1;m.set(g,o);});
  Object.keys(window.METAGRUPOS).forEach(g=>{if(!m.has(g))m.set(g,{g,n:0,vals:{}});});
  return [...m.values()].map(o=>{const def=window.METAGRUPOS[o.g];let moda=null,best=0;Object.keys(o.vals).forEach(v=>{if(o.vals[v]>best){best=o.vals[v];moda=Number(v);}});return {g:o.g,n:o.n,meta:def!=null?Number(def):moda,def:def!=null};}).sort((a,b)=>a.g.localeCompare(b.g));}
 function renderGrupos(){const G=gruposInfo();
@@ -6503,8 +6538,8 @@ $$('mmCancel').onclick=()=>{$$('mmForm').style.display='none';};
 $$('mmApply').onclick=async()=>{const A=$$('mmArea').value.trim(),G=$$('mmGrp').value.trim(),C=$$('mmCat').value.trim(),V=Number($$('mmMeta').value)||0,since=$$('mtSince').value||todayISO();
  if(!MSEL.size){window.__toast&&window.__toast('Selecciona al menos una persona.');return;}if(!(A||G||C||V>0)){window.__toast&&window.__toast('Indica al menos un cambio (área, grupo, categoría o meta).');return;}if(!window.requestUploadAccess())return;
  let n=0;[...MSEL].forEach(k=>{const m=window.METAS.find(x=>mk(x)===k);if(!m)return;histOf(m);if(A)m.area=A;if(G)m.grupo=G;
-  const useC=$$('mmUseG').checked,v=V>0?V:(useC&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):(useC&&C&&Number(window.METACAT[C])>0?Number(window.METACAT[C]):0)),cur=Number(metaAt(m,since))||Number(m.meta)||0,nv=v>0?v:cur;
-  if((v>0&&nv!==cur)||(C&&catAt(m,since)!==C))setMetaFrom(m,since,nv,C||undefined);
+  const useC=$$('mmUseG').checked,v=V>0?V:(useC&&G&&window.METAGRUPOS[G]!=null?Number(window.METAGRUPOS[G]):(useC&&C&&Number(window.METACAT[C])>0?Number(window.METACAT[C]):0)),cur=Number(metaAt(m,since))||Number(m.meta)||0,zero=!(V>0)&&useC&&C&&esCero(C)&&Number(window.METACAT[C])===0&&!(G&&window.METAGRUPOS[G]!=null),nv=zero?0:(v>0?v:cur);
+  if(((v>0||zero)&&nv!==cur)||(C&&catAt(m,since)!==C))setMetaFrom(m,since,nv,C||undefined);
   const u=findUser({usuario:m.usuario,nombre:m.nombre});if(u){if(A)u.area=A;if(G)u.grupo=G;}n++;});
  $$('mmForm').style.display='none';renderMetas();window.renderUsuarios();window.__toast&&window.__toast('Edición masiva aplicada a '+n+' persona'+(n===1?'':'s')+(V>0||(G&&window.METAGRUPOS[G]!=null)?' (la meta rige desde el '+since.slice(8,10)+'/'+since.slice(5,7)+')':'')+'.');await persistMetas();};
 $$('mtSelDelBtn').onclick=async()=>{const n=MSEL.size;if(!n)return;if(!confirm('¿Eliminar la meta de '+n+' persona'+(n===1?'':'s')+' (todo su historial)? Esta acción no se puede deshacer.'))return;if(!window.requestUploadAccess())return;
