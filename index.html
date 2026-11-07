@@ -1931,7 +1931,8 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-note">Cada día tiene su meta por hora y su categoría, según la última carga. Si cambias la categoría (o la meta) de un día, el nuevo monto y la categoría rigen desde ese día en adelante y no modifican los días anteriores. Pulsa Guardar para dejarlo grabado; los reportes y semáforos usan siempre lo último. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
         <div class="mod-actions" style="align-items:center"><b style="font-size:15px">Semana</b><button class="btn" id="mtPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="mtYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="mtWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="mtNext" type="button">▶</button><button class="btn" id="mtNow" type="button">Semana actual</button><span id="mtRange" style="font-size:13px;color:#5b6b7c"></span></div>
         <div class="mod-actions" style="align-items:center"><label style="display:flex;gap:6px;align-items:center"><b>Vigente desde</b> <input id="mtSince" type="date" class="pdetsel"></label><span style="font-size:12px;color:#5b6b7c">Fecha desde la que rige lo que cargues con Excel o agregues con el botón; los cambios hechos en la tabla rigen desde la fecha de cada celda.</span></div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtCatBtn" type="button">🏷 Criterios de categoría</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtEditBtn" type="button">✏️ Editar</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><button class="btn" id="mtSaveAll" type="button">💾 Guardar</button><span id="mtDirty" style="font-size:13px;font-weight:700;color:#b26a00"></span><input id="mtSearch" class="pdetsel" placeholder="Buscar por usuario, nombre, área, grupo o categoría…" style="min-width:320px"></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel de metas<input id="mtInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" id="mtAddBtn" type="button">➕ Agregar meta</button><button class="btn" id="mtGrpBtn" type="button">👥 Meta por grupo</button><button class="btn" id="mtCatBtn" type="button">🏷 Criterios de categoría</button><button class="btn" id="mtMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="mtEditBtn" type="button">✏️ Editar</button><button class="btn" id="mtFiltBtn" type="button">🔎 Filtrar</button><button class="btn" id="mtDown" type="button">⬇ Descargar Excel</button><button class="btn" id="mtSaveAll" type="button">💾 Guardar</button><span id="mtDirty" style="font-size:13px;font-weight:700;color:#b26a00"></span><input id="mtSearch" class="pdetsel" placeholder="Buscar por usuario, nombre, área, grupo o categoría…" style="min-width:320px"></div>
+        <div id="mtFiltBar" style="display:none;margin:8px 0;padding:10px 12px;border:1px solid #e1e7ed;border-radius:12px;background:#fffdf3;align-items:center;gap:10px;flex-wrap:wrap"><b>Filtrar</b><label>Fecha <select id="mtFDia" class="pdetsel"></select></label><label>Categoría <select id="mtFCat" class="pdetsel"></select></label><button class="btn" id="mtFClr" type="button">Limpiar</button><span id="mtFCount" style="font-size:13px;font-weight:700"></span></div>
         <div class="rform" id="mtForm" style="display:none;grid-template-columns:repeat(6,1fr) auto"><input id="mtUsr" placeholder="Usuario WMS"><input id="mtNom" placeholder="Nombre"><input id="mtArea" list="dlArea" placeholder="Área (elige o escribe)" autocomplete="off"><input id="mtGrp" list="dlGrupo" placeholder="Grupo (elige o escribe)" autocomplete="off"><input id="mtCat" list="dlCat" placeholder="Categoría (elige o escribe)" autocomplete="off"><input id="mtMeta" type="number" min="1" step="1" placeholder="Meta und/hora"><span style="display:flex;gap:6px"><button class="btn" id="mtSave" type="button">Guardar</button><button class="btn" id="mtCancel" type="button">Cancelar</button></span></div>
         <datalist id="dlArea"></datalist><datalist id="dlGrupo"></datalist><datalist id="dlCat"></datalist>
         <div id="mtGrpPanel" style="display:none;border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;margin:8px 0"><div class="h" style="font-size:15px">Meta por grupo (und/hora)</div>
@@ -6316,17 +6317,17 @@ const catN=c=>{const x=nrm(c);return x==='ANTIGUO'?'ANTIGUOS':(x==='OTROS'?'OTRO
 function diaSel(){const iso=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'),hoy=new Date(),mon=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)),
   dias=['Lun','Mar','Mié','Jue','Vie','Sáb'].map((n,i)=>{const x=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i);return {n,d:iso(x),l:n+' '+String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0')};}),
   hI=iso(hoy),td=dias.some(x=>x.d===US.catDia)?US.catDia:(dias.some(x=>x.d===hI)?hI:dias[0].d),di=dias.findIndex(x=>x.d===td),wn=isoNow();
- return {dias,td,di,hoy:hI,lab:dias[di].l,rec:window.ASISTENCIA[wn.y+'-W'+String(wn.w).padStart(2,'0')]||{}};}
-function resumenCats(L){const D=diaSel(),dias=D.dias,td=D.td,di=D.di,rec=D.rec,hrs=7.5,cnt={},asis={},prod={},det={PICKING:[],PACKING:[],WEB:[],OTROS:[]};let sin=0,allA=0,diff=0;
+ return {dias,td,di,hoy:hI,lab:dias[di].l,hrs:(td===dias[5].d?3.75:7.5),rec:window.ASISTENCIA[wn.y+'-W'+String(wn.w).padStart(2,'0')]||{}};}
+function resumenCats(L){const D=diaSel(),dias=D.dias,td=D.td,di=D.di,rec=D.rec,hrs=D.hrs,hs=String(D.hrs).replace('.',','),cnt={},asis={},prod={},det={PICKING:[],PACKING:[],WEB:[],OTROS:[]};let sin=0,allA=0,diff=0;
  const cm=c=>{const k=Object.keys(window.METACAT||{}).find(x=>catN(x)===c);return k==null?0:Number(window.METACAT[k])||0;};   // meta por hora DE LA CATEGORÍA
  L.forEach(x=>{const m=metaDe(x.r),c=catN(m&&window.__catAt?window.__catAt(m,td):(m&&m.categoria)||''),y=rec[nk(x.r)],pres=!!(y&&y['d'+di]==='A');   // solo A cuenta; lo demás es falta
   if(pres)allA++;if(!c){sin++;return;}cnt[c]=(cnt[c]||0)+1;
   if(pres){const gp=CAT_PICK.indexOf(c)>=0?'PICKING':CAT_PACK.indexOf(c)>=0?'PACKING':c==='WEB'?'WEB':c==='OTRO'?'OTROS':'';if(gp)det[gp].push({u:x.usuario||x.r.usuario||'',n:nm(x.r)||x.r.nombre||'',c:c,m:cm(c)*hrs});asis[c]=(asis[c]||0)+1;prod[c]=(prod[c]||0)+cm(c)*hrs;const iv=m&&window.__metaAt?Number(window.__metaAt(m,td))||0:0;if(cm(c)>0&&Math.abs(iv-cm(c))>.001)diff++;}});
  const pct=(a,t)=>t?Math.round(a/t*100):0,ring=(p,col)=>'<svg width="58" height="58" viewBox="0 0 58 58"><circle cx="29" cy="29" r="24" fill="none" stroke="#e8edf2" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+(150.8*p/100).toFixed(1)+' 150.8" transform="rotate(-90 29 29)"/><text x="29" y="33" text-anchor="middle" font-size="13" font-weight="800" fill="#2d3139">'+p+'%</text></svg>';
- const grupo=(t,cats,col,conMeta)=>{let np=0,na=0,pr=0,fl=0;cats.forEach(c=>{np+=cnt[c]||0;na+=asis[c]||0;pr+=prod[c]||0;fl+=(cnt[c]||0)*cm(c)*hrs;});
+ const grupo=(t,cats,col,conMeta,lbl)=>{let np=0,na=0,pr=0,fl=0;cats.forEach(c=>{np+=cnt[c]||0;na+=asis[c]||0;pr+=prod[c]||0;fl+=(cnt[c]||0)*cm(c)*hrs;});
   const lin=conMeta?cats.map(c=>{const n=cnt[c]||0,a=asis[c]||0,v=prod[c]||0,w=pr?Math.round(v/pr*100):0,mm=cm(c);
-   return '<div class="ex-row"><div class="ex-rh"><span><b>'+esc(c)+'</b><em>'+(!n?'sin personas':(mm>0?fmn(a)+' asistentes × '+fmn(mm)+'/h × 7,5 h':fmn(a)+' asistentes · meta 0'))+(n>a?' · <b style="color:#e31b2a">'+fmn(n-a)+' falta'+(n-a>1?'s':'')+'</b>':'')+'</em></span><strong>'+fmn(v)+'</strong></div><div class="ex-bar"><i style="width:'+w+'%;background:'+col+'"></i></div></div>';}).join(''):'';
-  return '<div class="ex-card" style="--c:'+col+'"><div class="ex-ch"><div><div class="ex-t">'+t+'</div>'+(conMeta?'<div class="ex-n">'+fmn(pr)+'<small> und proyectadas</small></div><div class="ex-s"><b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b> · Meta completa si asistieran todos: '+fmn(fl)+'</div>':'<div class="ex-n">'+fmn(na)+'<small> asistentes · sin meta</small></div><div class="ex-s">de '+fmn(np)+' registradas · <b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b></div>')+'</div>'+ring(pct(na,np),col)+'</div>'+lin+'</div>';};
+   return '<div class="ex-row"><div class="ex-rh"><span><b>'+esc(c)+'</b><em>'+(!n?'sin personas':(mm>0?fmn(a)+' asistentes × '+fmn(mm)+'/h × '+hs+' h':fmn(a)+' asistentes · meta 0'))+(n>a?' · <b style="color:#e31b2a">'+fmn(n-a)+' falta'+(n-a>1?'s':'')+'</b>':'')+'</em></span><strong>'+fmn(v)+'</strong></div><div class="ex-bar"><i style="width:'+w+'%;background:'+col+'"></i></div></div>';}).join(''):'';
+  return '<div class="ex-card" style="--c:'+col+'"><div class="ex-ch"><div><div class="ex-t">'+t+(lbl?' · <b style="color:var(--c)">'+fmn(np)+' '+lbl+'</b>':'')+'</div>'+(conMeta?'<div class="ex-n">'+fmn(pr)+'<small> und proyectadas</small></div><div class="ex-s"><b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b> · Meta completa si asistieran todos: '+fmn(fl)+'</div>':'<div class="ex-n">'+fmn(na)+'<small> asistentes · sin meta</small></div><div class="ex-s">de '+fmn(np)+' registradas · <b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b></div>')+'</div>'+ring(pct(na,np),col)+'</div>'+lin+'</div>';};
  const tpk=CAT_PICK.reduce((a,c)=>a+(prod[c]||0),0),tpa=CAT_PACK.reduce((a,c)=>a+(prod[c]||0),0),tp=tpk+tpa,tot=L.length;
  const css='<style>.ex-hero{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:linear-gradient(120deg,#2d3139,#3d4552 60%,#e31b2a);color:#fff;border-radius:16px;padding:16px 20px}.ex-hero .l{font-size:12px;letter-spacing:1.2px;opacity:.8}.ex-hero .b{font-size:38px;font-weight:800;line-height:1.1}.ex-hero .b small{font-size:14px;font-weight:600;opacity:.8}.ex-hero .u{font-size:12px;opacity:.85;margin-top:2px}.ex-hk{display:flex;gap:10px;flex-wrap:wrap}.ex-hk div{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 14px;min-width:96px}.ex-hk b{display:block;font-size:22px}.ex-hk span{font-size:11px;opacity:.85}'
   +'.ex-days{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ex-days .t{font-size:12px;font-weight:800;letter-spacing:1px;color:#5b6b7c;margin-right:4px}.ex-day{border:1px solid #d6dee6;background:#fff;border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:13px}.ex-day.on{background:#2d3139;color:#fff;border-color:#2d3139}.ex-day i{font-style:normal;font-size:10px;margin-left:5px;background:#e31b2a;color:#fff;border-radius:6px;padding:1px 5px}'
@@ -6336,11 +6337,11 @@ function resumenCats(L){const D=diaSel(),dias=D.dias,td=D.td,di=D.di,rec=D.rec,h
  const bloque=(t,col,arr,cm_)=>{arr.sort((a,b)=>ord(a.c)-ord(b.c)||String(a.n).localeCompare(String(b.n)));return '<div class="ex-card" style="--c:'+col+'"><div class="ex-t">'+t+' · '+fmn(arr.length)+' asistente'+(arr.length===1?'':'s')+'</div><div style="max-height:380px;overflow:auto;margin-top:8px"><table class="ex-tb"><tr><th>Usuario</th><th>Nombre</th>'+(cm_?'<th>Categoría</th><th class="r">Meta del día</th>':'')+'</tr>'
    +(arr.length?arr.map(r=>'<tr><td><b>'+esc(r.u)+'</b></td><td>'+esc(r.n)+'</td>'+(cm_?'<td>'+esc(r.c)+'</td><td class="r">'+fmn(r.m)+'</td>':'')+'</tr>').join(''):'<tr><td colspan="4" style="color:#7a8896">Sin asistentes</td></tr>')+'</table></div></div>';};
  const detH=US.catDet?'<div style="grid-column:1/-1;font-size:13px;font-weight:800;letter-spacing:1px;color:#5b6b7c;margin-top:4px">DETALLE DE ASISTENTES · '+esc(D.lab.toUpperCase())+'</div>'+bloque('PICKING','#e31b2a',det.PICKING,true)+bloque('PACKING','#2d3139',det.PACKING,true)+bloque('WEB','#2e6da4',det.WEB,false)+bloque('OTROS','#8a97a3',det.OTROS,false):'';
- $$('usrCats').innerHTML=css+'<div class="ex-hero"><div><div class="l">PROYECCIÓN DE PRODUCCIÓN · '+esc(D.lab.toUpperCase())+(td===D.hoy?' · HOY':'')+'</div><div class="b">'+fmn(tp)+'<small> und</small></div><div class="u">Picking '+fmn(tpk)+' + Packing '+fmn(tpa)+' · meta de la categoría × 7,5 h, solo de quienes asisten</div></div>'
+ $$('usrCats').innerHTML=css+'<div class="ex-hero"><div><div class="l">PROYECCIÓN DE PRODUCCIÓN · '+esc(D.lab.toUpperCase())+(td===D.hoy?' · HOY':'')+'</div><div class="b">'+fmn(tp)+'<small> und</small></div><div class="u">Picking '+fmn(tpk)+' + Packing '+fmn(tpa)+' · meta de la categoría × '+hs+' h, solo de quienes asisten</div></div>'
   +'<div class="ex-hk"><div><b>'+fmn(allA)+'</b><span>asisten de '+fmn(tot)+'</span></div><div><b>'+pct(allA,tot)+'%</b><span>asistencia del día</span></div><div><b>'+fmn(tot-allA)+'</b><span>faltas</span></div></div></div>'
   +'<div class="ex-days"><span class="t">DÍA</span>'+dias.map(x=>'<button type="button" class="ex-day'+(x.d===td?' on':'')+'" data-cdia="'+x.d+'">'+x.l+(x.d===D.hoy?'<i>HOY</i>':'')+'</button>').join('')+'<button type="button" class="ex-day ex-det-btn'+(US.catDet?' on':'')+'" data-cdet="1">'+(US.catDet?'OCULTAR DETALLE ▴':'VER DETALLE ▾')+'</button></div>'
-  +grupo('PICKING',CAT_PICK,'#e31b2a',true)+grupo('PACKING',CAT_PACK,'#2d3139',true)+grupo('WEB',['WEB'],'#2e6da4',false)+grupo('OTROS',['OTRO'],'#8a97a3',false)
-  +detH+'<div style="grid-column:1/-1;font-size:12px;color:#5b6b7c">Cada persona que asiste aporta la meta por hora de su categoría × 7,5 h; las faltas no suman.'+(sin?' Sin categoría (no suman): <b>'+fmn(sin)+'</b>.':'')+(diff?' <b>'+fmn(diff)+'</b> persona'+(diff>1?'s':'')+' que asiste tiene una meta individual distinta a la de su categoría: aquí se usa la de la categoría.':'')+'</div>';}
+  +grupo('PICKING',CAT_PICK,'#e31b2a',true,'pickers')+grupo('PACKING',CAT_PACK,'#2d3139',true,'packers')+grupo('WEB',['WEB'],'#2e6da4',false)+grupo('OTROS',['OTRO'],'#8a97a3',false)
+  +detH+'<div style="grid-column:1/-1;font-size:12px;color:#5b6b7c">Cada persona que asiste aporta la meta por hora de su categoría × '+hs+' h; las faltas no suman.'+(sin?' Sin categoría (no suman): <b>'+fmn(sin)+'</b>.':'')+(diff?' <b>'+fmn(diff)+'</b> persona'+(diff>1?'s':'')+' que asiste tiene una meta individual distinta a la de su categoría: aquí se usa la de la categoría.':'')+'</div>';}
 window.__resumenUsuarios=()=>resumen();
 function resumen(){
  const P=personas(),areas=[...new Set(P.map(x=>x.area))].sort(),sel=US.area,L=P.filter(x=>!sel||x.area===sel);
@@ -6449,21 +6450,21 @@ function usrExpData(){const P=personas(),L=P.filter(x=>!US.area||x.area===US.are
   return {u:x.usuario||x.r.usuario||'',n:nm(x.r)||'',area:x.area||'',grupo:x.grupo||'',c,g:gOf(c),pres:y['d'+D.di]==='A',mh:mh(c),
    wk:[0,1,2,3,4,5].map(k=>y['d'+k]||''),mt:D.dias.map(z=>{const cc=ca(z.d);return cc?cc+' ('+(m&&window.__metaAt?Number(window.__metaAt(m,z.d))||0:0)+')':'';})};});
  people.sort((a,b)=>String(a.area).localeCompare(String(b.area))||a.n.localeCompare(b.n));
- return {D,wk:wn.y+'-W'+String(wn.w).padStart(2,'0'),GR,mh,people,tot:L.length,area:US.area||'Todas',hrs:7.5};}
+ return {D,wk:wn.y+'-W'+String(wn.w).padStart(2,'0'),GR,mh,people,tot:L.length,area:US.area||'Todas',hrs:D.hrs};}
 const ordCat=c=>{let i=CAT_PICK.indexOf(c);if(i<0)i=CAT_PACK.indexOf(c);return i<0?0:i;};
 function usrBuildExcel(EJ,d){const wb=new EJ.Workbook();wb.creator='Logística Picking & Packing WMS';wb.calcProperties={fullCalcOnLoad:true};
  const fill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}),L1={style:'thin',color:{argb:'FFD0D7DE'}},bd={top:L1,left:L1,bottom:L1,right:L1},F=(o)=>Object.assign({name:'Arial',size:10},o||{});
  const hdr=(row,col)=>{row.eachCell(c=>{c.fill=fill(col);c.font=F({bold:true,color:{argb:'FFFFFFFF'}});c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=bd;});row.height=30;};
  const title=(ws,txt,n,sub)=>{ws.mergeCells(1,1,1,n);const c=ws.getCell(1,1);c.value=txt;c.fill=fill('2D3139');c.font=F({bold:true,size:15,color:{argb:'FFFFFFFF'}});c.alignment={vertical:'middle'};ws.getRow(1).height=30;if(sub){ws.mergeCells(2,1,2,n);ws.getCell(2,1).value=sub;ws.getCell(2,1).font=F({italic:true,color:{argb:'FF5B6B7C'}});}};
- const D=d.D,lab=D.lab+(D.td===D.hoy?' · HOY':''),hrs=d.hrs,ppl=d.people;
+ const D=d.D,lab=D.lab+(D.td===D.hoy?' · HOY':''),hrs=d.hrs,hs=String(d.hrs).replace('.',','),ppl=d.people;
  // 1) Dashboard de proyección
- const ws=wb.addWorksheet('Proyección',{views:[{showGridLines:false}]});title(ws,'PROYECCIÓN DE PRODUCCIÓN · '+lab.toUpperCase(),8,'Meta por hora de la categoría × 7,5 h, solo de quienes asisten · Área: '+d.area);
+ const ws=wb.addWorksheet('Proyección',{views:[{showGridLines:false}]});title(ws,'PROYECCIÓN DE PRODUCCIÓN · '+lab.toUpperCase(),8,'Meta por hora de la categoría × '+hs+' h, solo de quienes asisten · Área: '+d.area);
  ['GRUPO','CATEGORÍA','PERSONAS','ASISTEN','FALTAS','META/H CATEGORÍA','META COMPLETA (todos)','PROYECCIÓN (asisten)'].forEach((h,i)=>ws.getCell(7,i+1).value=h);hdr(ws.getRow(7),'3D4552');
  const COL={PICKING:'E31B2A',PACKING:'2D3139',WEB:'2E6DA4',OTROS:'8A97A3'};let r=8;const sub={};
  d.GR.forEach(([g,cats])=>{const conM=g==='PICKING'||g==='PACKING',r0=r;
   cats.forEach(c=>{const pp=ppl.filter(p=>p.c===c),n=pp.length,a=pp.filter(p=>p.pres).length,m=d.mh(c);
    ws.getCell(r,1).value=g;ws.getCell(r,2).value=c;ws.getCell(r,3).value=n;ws.getCell(r,4).value=a;ws.getCell(r,5).value={formula:'C'+r+'-D'+r,result:n-a};
-   if(conM){ws.getCell(r,6).value=m;ws.getCell(r,7).value={formula:'C'+r+'*F'+r+'*7.5',result:n*m*hrs};ws.getCell(r,8).value={formula:'D'+r+'*F'+r+'*7.5',result:a*m*hrs};}
+   if(conM){ws.getCell(r,6).value=m;ws.getCell(r,7).value={formula:'C'+r+'*F'+r+'*'+hrs+'',result:n*m*hrs};ws.getCell(r,8).value={formula:'D'+r+'*F'+r+'*'+hrs+'',result:a*m*hrs};}
    for(let k=1;k<=8;k++){const c_=ws.getCell(r,k);c_.border=bd;c_.font=F({bold:k===2});if(k>=3)c_.numFmt='#,##0';if(k>=3)c_.alignment={horizontal:'right'};}r++;});
   const pg=ppl.filter(p=>p.g===g),ng=pg.length,ag=pg.filter(p=>p.pres).length,pr=pg.filter(p=>p.pres).reduce((s,p)=>s+p.mh*hrs,0),fl=pg.reduce((s,p)=>s+p.mh*hrs,0);
   ws.getCell(r,1).value='SUBTOTAL '+g;ws.mergeCells(r,1,r,2);
@@ -6484,7 +6485,7 @@ function usrBuildExcel(EJ,d){const wb=new EJ.Workbook();wb.creator='Logística P
   (conM?['USUARIO','NOMBRE','CATEGORÍA','ASISTENCIA','META/H','META DEL DÍA']:['USUARIO','NOMBRE','CATEGORÍA','ASISTENCIA']).forEach((h,i)=>w2.getCell(3,i+1).value=h);hdr(w2.getRow(3),COL[g]);
   const pg=ppl.filter(p=>p.g===g).sort((a,b)=>ordCat(a.c)-ordCat(b.c)||a.n.localeCompare(b.n));let rr=4,tot=0;
   pg.forEach(p=>{w2.getCell(rr,1).value=p.u;w2.getCell(rr,2).value=p.n;w2.getCell(rr,3).value=p.c;w2.getCell(rr,4).value=p.pres?'Asistió':'Falta';
-   if(conM){w2.getCell(rr,5).value=p.mh;w2.getCell(rr,6).value={formula:'IF(D'+rr+'="Asistió",E'+rr+'*7.5,0)',result:p.pres?p.mh*hrs:0};w2.getCell(rr,6).numFmt='#,##0';tot+=p.pres?p.mh*hrs:0;}
+   if(conM){w2.getCell(rr,5).value=p.mh;w2.getCell(rr,6).value={formula:'IF(D'+rr+'="Asistió",E'+rr+'*'+hrs+',0)',result:p.pres?p.mh*hrs:0};w2.getCell(rr,6).numFmt='#,##0';tot+=p.pres?p.mh*hrs:0;}
    for(let k=1;k<=n;k++){const c_=w2.getCell(rr,k);c_.border=bd;c_.font=F();}w2.getCell(rr,4).font=F({bold:true,color:{argb:p.pres?'FF1E7B34':'FFE31B2A'}});rr++;});
   w2.getCell(rr,1).value='TOTAL · '+pg.filter(p=>p.pres).length+' asisten de '+pg.length;w2.mergeCells(rr,1,rr,conM?5:4);if(conM){w2.getCell(rr,6).value={formula:'SUM(F4:F'+(rr-1)+')',result:tot};w2.getCell(rr,6).numFmt='#,##0';}
   for(let k=1;k<=n;k++){const c_=w2.getCell(rr,k);c_.fill=fill('EEF2F6');c_.font=F({bold:true});c_.border=bd;}
@@ -6496,25 +6497,25 @@ function usrBuildExcel(EJ,d){const wb=new EJ.Workbook();wb.creator='Logística P
   wa.getCell(rr,10).value={formula:'COUNTIF(D'+rr+':I'+rr+',"F")',result:p.wk.filter(v=>v==='F').length};for(let k=1;k<=10;k++){wa.getCell(rr,k).border=bd;if(!wa.getCell(rr,k).font||k<4||k===10)wa.getCell(rr,k).font=F();}});
  [5,34,14,10,10,10,10,10,10,9].forEach((w,i)=>wa.getColumn(i+1).width=w);wa.views=[{state:'frozen',ySplit:3,xSplit:3}];
  // 4) META
- const wm=wb.addWorksheet('META');title(wm,'META · CATEGORÍA Y META POR HORA DE CADA DÍA DE LA SEMANA',11,'Entre paréntesis: meta por hora de ese día. Meta del día = meta por hora de la categoría × 7,5 h.');
+ const wm=wb.addWorksheet('META');title(wm,'META · CATEGORÍA Y META POR HORA DE CADA DÍA DE LA SEMANA',11,'Entre paréntesis: meta por hora de ese día. Meta del día = meta por hora de la categoría × '+hs+' h.');
  ['USUARIO','NOMBRE','ÁREA','GRUPO'].concat(D.dias.map(x=>x.l)).concat(['META DEL DÍA ('+D.lab+')']).forEach((h,i)=>wm.getCell(3,i+1).value=h);hdr(wm.getRow(3),'3D4552');
  ppl.forEach((p,i)=>{const rr=4+i;[p.u,p.n,p.area,p.grupo].concat(p.mt).forEach((v,k)=>{const c_=wm.getCell(rr,k+1);c_.value=v;c_.border=bd;c_.font=F();});const c_=wm.getCell(rr,11);c_.value=p.mh*hrs;c_.numFmt='#,##0';c_.border=bd;c_.font=F({bold:true});});
  [14,34,16,14,18,18,18,18,18,18,16].forEach((w,i)=>wm.getColumn(i+1).width=w);wm.views=[{state:'frozen',ySplit:3,xSplit:2}];
- const wc=wb.addWorksheet('Criterios META');title(wc,'CRITERIOS DE CATEGORÍA',3);['CATEGORÍA','META POR HORA','META DEL DÍA (× 7,5 h)'].forEach((h,i)=>wc.getCell(3,i+1).value=h);hdr(wc.getRow(3),'3D4552');
- Object.keys(window.METACAT||{}).forEach((c,i)=>{const rr=4+i,v=Number(window.METACAT[c])||0;wc.getCell(rr,1).value=c;wc.getCell(rr,2).value=v;wc.getCell(rr,3).value={formula:'B'+rr+'*7.5',result:v*7.5};for(let k=1;k<=3;k++){wc.getCell(rr,k).border=bd;wc.getCell(rr,k).font=F();}});[22,16,24].forEach((w,i)=>wc.getColumn(i+1).width=w);
+ const wc=wb.addWorksheet('Criterios META');title(wc,'CRITERIOS DE CATEGORÍA',3);['CATEGORÍA','META POR HORA','META DEL DÍA (× '+hs+' h)'].forEach((h,i)=>wc.getCell(3,i+1).value=h);hdr(wc.getRow(3),'3D4552');
+ Object.keys(window.METACAT||{}).forEach((c,i)=>{const rr=4+i,v=Number(window.METACAT[c])||0;wc.getCell(rr,1).value=c;wc.getCell(rr,2).value=v;wc.getCell(rr,3).value={formula:'B'+rr+'*'+hrs+'',result:v*hrs};for(let k=1;k<=3;k++){wc.getCell(rr,k).border=bd;wc.getCell(rr,k).font=F();}});[22,16,24].forEach((w,i)=>wc.getColumn(i+1).width=w);
  return wb;}
 async function usrExportExcel(){
  try{if(!window.ExcelJS)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';s.onload=ok;s.onerror=()=>no(new Error('sin conexión'));document.head.appendChild(s);});}
  catch(e){window.__toast&&window.__toast('No pude cargar la librería de Excel: '+e.message);return;}
  const d=usrExpData(),wb=usrBuildExcel(window.ExcelJS,d),buf=await wb.xlsx.writeBuffer(),a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='PROYECCION_PRODUCCION_'+d.D.td+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
-function usrBuildPdfHtml(d,core){const D=d.D,ppl=d.people,hrs=d.hrs,lab=D.lab+(D.td===D.hoy?' · HOY':'');
+function usrBuildPdfHtml(d,core){const D=d.D,ppl=d.people,hrs=d.hrs,hs=String(d.hrs).replace('.',','),lab=D.lab+(D.td===D.hoy?' · HOY':'');
  const tb=(heads,rows,cls)=>'<table class="pt"><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</table>';
  const lists=d.GR.map(([g,cats])=>{const conM=g==='PICKING'||g==='PACKING',pg=ppl.filter(p=>p.g===g).sort((a,b)=>ordCat(a.c)-ordCat(b.c)||a.n.localeCompare(b.n));
   return '<h3>'+g+' · '+pg.filter(p=>p.pres).length+' asisten de '+pg.length+'</h3>'+tb(conM?['Usuario','Nombre','Categoría','Asistencia','Meta/h','Meta del día']:['Usuario','Nombre','Categoría','Asistencia'],pg.map(p=>[esc(p.u),esc(p.n),esc(p.c),p.pres?'<b style="color:#1e7b34">Asistió</b>':'<b style="color:#e31b2a">Falta</b>'].concat(conM?[fmn(p.mh),p.pres?fmn(p.mh*hrs):'0']:[])));}).join('');
  const asis=tb(['N°','Nombre','Usuario'].concat(D.dias.map(x=>x.l)).concat(['Faltas']),ppl.map((p,i)=>[i+1,esc(p.n),esc(p.u)].concat(p.wk.map(v=>'<span class="st st'+(v||'x')+'">'+esc(v)+'</span>')).concat([p.wk.filter(v=>v==='F').length])));
  const meta=tb(['Usuario','Nombre','Área','Grupo'].concat(D.dias.map(x=>x.l)).concat(['Meta día '+D.lab]),ppl.map(p=>[esc(p.u),esc(p.n),esc(p.area),esc(p.grupo)].concat(p.mt.map(esc)).concat([fmn(p.mh*hrs)])));
- const crit=tb(['Categoría','Meta por hora','Meta del día (× 7,5 h)'],Object.keys(window.METACAT||{}).map(c=>[esc(c),fmn(Number(window.METACAT[c])||0),fmn((Number(window.METACAT[c])||0)*hrs)]));
+ const crit=tb(['Categoría','Meta por hora','Meta del día (× '+hs+' h)'],Object.keys(window.METACAT||{}).map(c=>[esc(c),fmn(Number(window.METACAT[c])||0),fmn((Number(window.METACAT[c])||0)*hrs)]));
  return '<!doctype html><html><head><meta charset="utf-8"><title>Proyección de producción '+esc(lab)+'</title><style>@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#2d3139;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}.ex-hero{grid-column:auto}h2{margin:14px 0 4px;font-size:16px}h3{margin:12px 0 4px;font-size:13px;color:#5b6b7c;page-break-after:avoid}.pt{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px}.pt th{background:#3d4552;color:#fff;padding:4px 6px;text-align:left}.pt td{padding:3px 6px;border-bottom:1px solid #e1e7ed}.pt tr{page-break-inside:avoid}.pb{page-break-before:always}.st{display:inline-block;min-width:18px;text-align:center;border-radius:4px;padding:1px 3px}.stA{background:#c6efce}.stF{background:#ffc7ce}.stT{background:#ffeb9c}.ex-card{break-inside:avoid}.ex-ch svg{width:46px;height:46px}.ex-n{font-size:22px}</style>'+core.css+'</head><body>'+core.hero+'<div class="cards">'+core.cards+'</div><div class="pb"></div><h2>Listas por categoría · '+esc(lab)+'</h2>'+lists+'<div class="pb"></div><h2>Asistencia de la semana '+esc(d.wk.replace('-W',' · Sem '))+'</h2>'+asis+'<div class="pb"></div><h2>META · categoría y meta por hora de cada día</h2>'+meta+'<h3>Criterios de categoría</h3>'+crit+'</body></html>';}
 function usrExportPdf(){resumen();const root=$$('usrCats'),st=root.querySelector('style'),hero=root.querySelector('.ex-hero'),cards=[...root.querySelectorAll('.ex-card')].slice(0,4);
  if(!st||!hero){window.__toast&&window.__toast('No hay datos para el PDF.');return;}
@@ -6526,7 +6527,7 @@ $$('usrDownBtn').onclick=usrExportExcel;$$('usrPdfBtn').onclick=usrExportPdf;
 
 // ---- META individual por día (solo se ve al pulsar el botón) ----
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
-const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;let metaEditCols=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
+const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;let metaEditCols=false;const metaFilt={d:'',c:''};const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
 const pad2=n=>String(n).padStart(2,'0'),todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
 const histOf=m=>{if(!Array.isArray(m.hist)||!m.hist.length)m.hist=[{d:FOREVER,m:Number(m.meta)||0,c:m.categoria||undefined}];const h0=m.hist[0];if(h0&&!h0.c&&m.categoria)h0.c=m.categoria;return m.hist;};   // congela la categoría base: los días anteriores ya no dependen de m.categoria
 const metaAt=(m,d)=>{let v=null;histOf(m).forEach(e=>{if(e.d<=d)v=e.m;});return v;};
@@ -6539,7 +6540,9 @@ window.metaIndividual=(u,fecha)=>{const m=findMeta(u);if(!m)return null;const v=
 window.metaDiariaIndividual=(u,f)=>{const v=window.metaIndividual(u,f);return v?v*HORAS:null;};
 $$('metaBtn').onclick=()=>{const on=mp.style.display==='none';mp.style.display=on?'block':'none';$$('metaBtn').textContent=on?'🎯 Ocultar META':'🎯 META';if(on)renderMetas();};
 const mk=m=>ukey(m.usuario)||ukey(m.dni)||nameKey(m.nombre||'').toLowerCase();
-function metasFiltradas(){const q=nrm($$('mtSearch').value);return window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))).filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q));}
+function metasFiltradas(){const q=nrm($$('mtSearch').value);return window.METAS.slice().sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario))).filter(m=>!q||nrm([m.usuario,m.dni,m.nombre,m.area,m.grupo,m.categoria].join(' ')).includes(q)).filter(m=>{if(!metaFilt.c)return true;
+  const y=+$$('mtYear').value,w=+$$('mtWeek').value;if(!y||!w)return true;const mo=monday(y,w),ds=metaFilt.d?[metaFilt.d]:[0,1,2,3,4,5].map(i=>new Date(mo.getTime()+i*864e5).toISOString().slice(0,10));
+  return ds.some(d=>{const c=catAt(m,d);return metaFilt.c==='__none'?!c:c===metaFilt.c;});});}
 function refreshLists(){const A=new Set(),G=new Set(),C=new Set();
  const ok=v=>v&&String(v).trim()&&String(v).trim()!=='-';
  window.METAS.forEach(m=>{if(ok(m.area))A.add(m.area);if(ok(m.grupo))G.add(m.grupo);if(ok(m.categoria))C.add(m.categoria);});
@@ -6573,14 +6576,21 @@ function renderMetas(){
  $$('mtStatus').textContent=all.length?'Personas con meta: '+fmn(all.length)+(L.length!==all.length?' · mostrando '+fmn(L.length):'')+' · promedio actual '+fmn(avg)+' und/h · Packing: estándar de '+fmn(window.__metaPackStd?window.__metaPackStd():500)+' und/h.':'Sin metas cargadas.';
  $$('mtSelBar').style.display=metaMass?'flex':'none';$$('mtSelCount').textContent=MSEL.size+' seleccionado'+(MSEL.size===1?'':'s');$$('mtSelEditBtn').disabled=!MSEL.size;$$('mtSelDelBtn').disabled=!MSEL.size;
  const opt=c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>';
- $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th>'+days.map((d,i)=>'<th>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th><th>CATEGORÍA</th>').join('')+'<th></th></tr>'
+ if(metaFilt.d&&days.indexOf(metaFilt.d)<0)metaFilt.d='';
+ $$('mtFDia').innerHTML='<option value="">Todas las fechas</option>'+days.map((d,i)=>'<option value="'+d+'">'+DN[i]+' '+d.slice(8,10)+'/'+d.slice(5,7)+'</option>').join('');$$('mtFDia').value=metaFilt.d;
+ $$('mtFCat').innerHTML='<option value="">Todas las categorías</option>'+cats.map(opt).join('')+'<option value="__none">Sin categoría</option>';$$('mtFCat').value=metaFilt.c;
+ $$('mtFCount').textContent=(metaFilt.c||metaFilt.d)?fmn(L.length)+' de '+fmn(all.length)+' personas':'';$$('mtFiltBtn').textContent='🔎 Filtrar'+((metaFilt.c||metaFilt.d)?' ●':'');
+ $$('mtTable').innerHTML='<tr>'+(metaMass?'<th><input type="checkbox" id="mtSelAll" title="Seleccionar todo"'+(L.length&&L.every(m=>MSEL.has(mk(m)))?' checked':'')+'></th>':'')+'<th class="name">USUARIO</th><th class="name">NOMBRE</th><th>ÁREA</th><th>GRUPO</th>'+days.map((d,i)=>'<th'+(metaFilt.d===d?' style="background:#ffe1a8"':'')+'>'+DN[i]+'<br>'+d.slice(8,10)+'/'+d.slice(5,7)+'</th>').join('')+'<th></th></tr>'
   +L.map(m=>'<tr>'+(metaMass?'<td><input type="checkbox" class="mt-ck" data-k="'+esc(mk(m))+'"'+(MSEL.has(mk(m))?' checked':'')+'></td>':'')+(metaEditCols?['usuario','nombre','area','grupo'].map(f=>'<td'+(f==='usuario'||f==='nombre'?' class="name"':'')+'><input class="mt-tx" data-k="'+esc(mk(m))+'" data-f="'+f+'"'+(f==='area'?' list="dlArea"':f==='grupo'?' list="dlGrupo"':'')+' value="'+esc(m[f]||'')+'"></td>').join(''):'<td class="name"><b>'+esc(m.usuario||'')+'</b></td><td class="name">'+esc(m.nombre||'')+'</td><td>'+esc(m.area||'')+'</td><td>'+esc(m.grupo||'')+'</td>')
    +days.map(d=>{const v=metaAt(m,d),c=catAt(m,d),chg=histOf(m).some(e=>e.d===d&&e.d!==FOREVER),st=chg?' style="background:#fbe9c3"':'';
-     return '<td'+st+'><input type="number" min="0" step="1" class="mt-in" data-k="'+esc(mk(m))+'" data-d="'+d+'" value="'+(v==null?'':v)+'"></td><td'+st+'><select class="mt-cat" data-k="'+esc(mk(m))+'" data-d="'+d+'"><option value=""></option>'+cats.map(opt).join('')+(c&&cats.indexOf(c)<0?'<option value="'+esc(c)+'">'+esc(c)+'</option>':'')+'</select></td>';}).join('')
+     return '<td'+st+'><select class="mt-cat" data-k="'+esc(mk(m))+'" data-d="'+d+'"><option value=""></option>'+cats.map(opt).join('')+(c&&cats.indexOf(c)<0?'<option value="'+esc(c)+'">'+esc(c)+'</option>':'')+'</select></td>';}).join('')
    +'<td style="white-space:nowrap"><button class="btn pw-btn" data-me="'+esc(mk(m))+'" type="button">Editar</button> <button class="btn pw-btn" data-md="'+esc(mk(m))+'" type="button">Eliminar</button></td></tr>').join('');
  $$('mtTable').querySelectorAll('select.mt-cat').forEach(sel=>{const m=window.METAS.find(x=>mk(x)===sel.dataset.k);if(m)sel.value=catAt(m,sel.dataset.d);});
  if($$('mtGrpPanel').style.display!=='none')renderGrupos();if($$('mtCatPanel').style.display!=='none')renderCriterios();}
 const moverM=dk=>{let y=+$$('mtYear').value,w=+$$('mtWeek').value+dk;if(w<1){y--;w=isoWeeks(y);}else if(w>isoWeeks(y)){w=1;y++;}$$('mtYear').value=y;$$('mtWeek').value=w;renderMetas();};
+$$('mtFiltBtn').onclick=()=>{const b=$$('mtFiltBar');b.style.display=b.style.display==='none'?'flex':'none';};
+$$('mtFDia').onchange=()=>{metaFilt.d=$$('mtFDia').value;renderMetas();};$$('mtFCat').onchange=()=>{metaFilt.c=$$('mtFCat').value;renderMetas();};
+$$('mtFClr').onclick=()=>{metaFilt.d='';metaFilt.c='';renderMetas();};
 $$('mtPrev').onclick=()=>moverM(-1);$$('mtNext').onclick=()=>moverM(1);$$('mtNow').onclick=()=>{const n=isoNow();$$('mtYear').value=n.y;$$('mtWeek').value=n.w;renderMetas();};
 ['mtYear','mtWeek'].forEach(i=>$$(i).addEventListener('change',renderMetas));$$('mtSearch').addEventListener('input',renderMetas);
 $$('mtTable').addEventListener('change',e=>{const i=e.target.closest('.mt-in,.mt-cat');if(!i)return;const m=window.METAS.find(x=>mk(x)===i.dataset.k);if(!m)return;const d=i.dataset.d,dm=d.slice(8,10)+'/'+d.slice(5,7);
@@ -6709,7 +6719,13 @@ $$('usrTable').addEventListener('input',e=>{const inp=e.target.closest('.asis-in
  if(v&&OKST.indexOf(v)<0){inp.parentElement.className='';if(v.length>=2){inp.style.borderColor='#d9232d';}else inp.style.borderColor='';return;}
  inp.style.borderColor='';inp.parentElement.className=v?'as-'+v:'';const k=wkey();((draft[k]=draft[k]||{})[inp.dataset.u]=draft[k][inp.dataset.u]||{})['d'+inp.dataset.k]=v;calc();});
 $$('usrTable').addEventListener('change',e=>{const inp=e.target.closest('.asis-in');if(inp&&inp.value&&OKST.indexOf(inp.value)<0){window.__toast&&window.__toast('Usa A, T, F, D, DM, V, L o P.');inp.value='';inp.style.borderColor='';inp.parentElement.className='';const k=wkey();if(draft[k]&&draft[k][inp.dataset.u])draft[k][inp.dataset.u]['d'+inp.dataset.k]='';calc();}});
-$$('asisAllA').onclick=()=>{$$('usrTable').querySelectorAll('.asis-in').forEach(s=>{if(!s.value){s.value='A';s.parentElement.className='as-A';const k=wkey();((draft[k]=draft[k]||{})[s.dataset.u]=draft[k][s.dataset.u]||{})['d'+s.dataset.k]='A';}});calc();};
+$$('asisAllA').onclick=()=>{const wk=wkey(),n=isoNow(),actual=wk===(n.y+'-W'+String(n.w).padStart(2,'0')),hoyI=actual?Math.min((new Date().getDay()+6)%7,5):0,names=['Lun','Mar','Mié','Jue','Vie','Sáb'];
+ const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(20,28,40,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
+ ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:20px 22px;max-width:92vw;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="font-size:16px;font-weight:800;margin-bottom:4px">Marcar A a todos</div><div style="font-size:13px;color:#5b6b7c;margin-bottom:12px">¿Para qué día? Solo se llenan las casillas vacías de ese día.</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+names.map((x,i)=>'<button type="button" class="btn" data-aak="'+i+'" style="'+(i===hoyI?'background:#2d3139;color:#fff':'')+'">'+x+(actual&&i===hoyI?' · hoy':'')+'</button>').join('')+'</div><div style="margin-top:14px;text-align:right"><button type="button" class="btn" data-aak="x">Cancelar</button></div></div>';
+ document.body.appendChild(ov);
+ ov.onclick=e=>{const b=e.target.closest('[data-aak]');if(!b&&e.target!==ov)return;ov.remove();if(!b||b.dataset.aak==='x')return;const k=b.dataset.aak;let c=0;
+  $$('usrTable').querySelectorAll('.asis-in').forEach(s=>{if(s.dataset.k!==k||s.value)return;s.value='A';s.parentElement.className='as-A';const w=wkey();((draft[w]=draft[w]||{})[s.dataset.u]=draft[w][s.dataset.u]||{})['d'+k]='A';c++;});
+  calc();window.__toast&&window.__toast('Se marcó A a '+c+' persona'+(c===1?'':'s')+' el '+names[k]+'. Pulsa Guardar.');};};
 $$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const k=wkey(),rec=Object.assign({},window.ASISTENCIA[k]||{}),keys=new Set();
  $$('usrTable').querySelectorAll('.asis-in').forEach(s=>{const u=s.dataset.u;keys.add(u);const o=rec[u]=Object.assign({},rec[u]||{});if(s.value&&OKST.indexOf(s.value)>=0)o['d'+s.dataset.k]=s.value;else delete o['d'+s.dataset.k];});
  keys.forEach(u=>{const o=rec[u],has=[0,1,2,3,4,5].some(i=>o['d'+i]);if(!has&&!o.obs)delete rec[u];});
@@ -7223,6 +7239,32 @@ $$('rsStatus').addEventListener('click',async e=>{if(e.target.id!=='rsUseUsr')re
 window.__leerPDFAsist=leerPDF;init();window.__repsemCollect=collect;window.__repsemBuild=buildHTML;
 })();
 
+</script>
+<script>
+/* Cruz de referencia (+): al pasar el cursor por una tabla se resalta la fila y la columna de la celda. Para excluir una tabla: class="no-xh" */
+(function(){
+ const st=document.createElement('style');
+ st.textContent='.xh-r,.xh-c{box-shadow:inset 0 0 0 9999px rgba(227,27,42,.09)!important}.xh-x{box-shadow:inset 0 0 0 9999px rgba(227,27,42,.24)!important;outline:2px solid rgba(227,27,42,.6);outline-offset:-2px}';
+ document.head.appendChild(st);
+ let cur=null,hl=[];
+ const clear=()=>{hl.forEach(c=>c.classList.remove('xh-r','xh-c','xh-x'));hl=[];};
+ document.addEventListener('mouseover',e=>{
+  const c=e.target&&e.target.closest?e.target.closest('td,th'):null;
+  if(!c){if(cur){clear();cur=null;}return;}
+  if(c===cur)return;
+  const tr=c.parentElement,t=c.closest('table');
+  if(!t||!tr||t.classList.contains('no-xh')||t.rows.length<3||tr.cells.length<3){if(cur){clear();cur=null;}return;}
+  cur=c;
+  requestAnimationFrame(()=>{
+   if(cur!==c)return;clear();
+   const idx=c.cellIndex,n=tr.cells.length;
+   [...tr.cells].forEach(x=>{x.classList.add('xh-r');hl.push(x);});
+   if(t.rows.length<=3000)for(const r of t.rows){if(r===tr||r.cells.length!==n)continue;const x=r.cells[idx];if(x){x.classList.add('xh-c');hl.push(x);}}
+   c.classList.remove('xh-r');c.classList.add('xh-x');
+  });
+ },{passive:true});
+ document.addEventListener('mouseout',e=>{if(!e.relatedTarget&&cur){clear();cur=null;}},{passive:true});
+})();
 </script>
 </body>
 </html>
