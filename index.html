@@ -5413,6 +5413,7 @@ async function applyCloudIfAvailable(){
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
   if(p.metacat&&typeof p.metacat==='object')window.METACAT=p.metacat;
+  window.renderUsuarios&&window.renderUsuarios();   // ya con asistencia, metas y categorías cargadas
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -5460,6 +5461,7 @@ async function applyCloud(){
   if(p.metasdia&&typeof p.metasdia==='object')window.METASDIA=p.metasdia;
   if(p.metagrupos&&typeof p.metagrupos==='object')window.METAGRUPOS=p.metagrupos;
   if(p.metacat&&typeof p.metacat==='object')window.METACAT=p.metacat;
+  window.renderUsuarios&&window.renderUsuarios();   // ya con asistencia, metas y categorías cargadas
   if(Array.isArray(p.presc)){window.PRESC=p.presc;window.renderPresc&&window.renderPresc();}
   setTimeout(()=>window.wmsSync&&window.wmsSync(),300);
   window.renderFiles&&window.renderFiles();
@@ -6310,31 +6312,39 @@ function personas(){const used=new Set(),P=window.USUARIOS.map(r=>{const m=metaD
 // Resumen por categoría (la categoría es la que define la meta): personas y producción estimada del día = meta por hora × 7,5 h
 const CAT_PICK=['INICIANDO','INTERMEDIO','MZN04','ANTIGUOS','PRE PACK'],CAT_PACK=['EMBALADOR','ENCAJADOR'];
 const catN=c=>{const x=nrm(c);return x==='ANTIGUO'?'ANTIGUOS':(x==='OTROS'?'OTRO':x);};
-function resumenCats(L){const iso=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'),hoy=new Date(),mon=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)),
+// Día seleccionado del resumen (por defecto HOY) y asistencia guardada de esa semana
+function diaSel(){const iso=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'),hoy=new Date(),mon=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)),
   dias=['Lun','Mar','Mié','Jue','Vie','Sáb'].map((n,i)=>{const x=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i);return {n,d:iso(x),l:n+' '+String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0')};}),
-  td=(dias.some(x=>x.d===US.catDia)?US.catDia:(dias.some(x=>x.d===iso(hoy))?iso(hoy):dias[0].d)),di=dias.findIndex(x=>x.d===td),hrs=7.5,wn=isoNow(),rec=window.ASISTENCIA[wn.y+'-W'+String(wn.w).padStart(2,'0')]||{},cnt={},asis={},full={},prod={};let sin=0;
- L.forEach(x=>{const m=metaDe(x.r),c=catN(m&&window.__catAt?window.__catAt(m,td):(m&&m.categoria)||'');if(!c){sin++;return;}cnt[c]=(cnt[c]||0)+1;const v=m&&window.__metaAt?Number(window.__metaAt(m,td))||0:0,y=rec[nk(x.r)],pres=!!(y&&y['d'+di]==='A'),mt=v*hrs;   // solo cuenta como asistente quien tiene A; los demás se consideran falta
-  full[c]=(full[c]||0)+mt;if(pres){asis[c]=(asis[c]||0)+1;prod[c]=(prod[c]||0)+mt;}});
- const box='border:1px solid #e1e7ed;border-radius:14px;padding:12px 14px;background:#fff;',pct=(a,t)=>t?Math.round(a/t*100):0;
- // cada tarjeta suma SOLO la meta (meta/hora × 7,5) de quienes tienen A en el día elegido, según la categoría que tienen ese día
- const grupo=(t,cats,color,conMeta)=>{let np=0,na=0,pr=0,fl=0;cats.forEach(c=>{np+=cnt[c]||0;na+=asis[c]||0;pr+=prod[c]||0;fl+=full[c]||0;});
-  const lin=conMeta?cats.map(c=>{const n=cnt[c]||0,a=asis[c]||0,v=prod[c]||0,w=pr?Math.round(v/pr*100):0;return '<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span><b>'+esc(c)+'</b> · '+fmn(a)+' de '+fmn(n)+' con A</span><b>'+fmn(v)+'</b></div><div style="height:6px;background:#eef2f6;border-radius:4px;margin-top:3px"><div style="height:6px;width:'+w+'%;background:'+color+';border-radius:4px"></div></div></div>';}).join(''):'';
-  return '<div style="'+box+'border-top:4px solid '+color+'"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:800;letter-spacing:.5px">'+t+'</span><span style="font-size:12px;color:#5b6b7c">'+fmn(na)+' de '+fmn(np)+' con A · '+pct(na,np)+'%</span></div>'
-   +(conMeta?'<div style="font-size:30px;font-weight:800;line-height:1.15;margin-top:4px">'+fmn(pr)+' <span style="font-size:13px;font-weight:600;color:#5b6b7c">und proyectadas</span></div><div style="font-size:12px;color:#5b6b7c">Meta completa si asistieran todos: '+fmn(fl)+'</div>'
-     :'<div style="font-size:30px;font-weight:800;line-height:1.15;margin-top:4px">'+fmn(na)+' <span style="font-size:13px;font-weight:600;color:#5b6b7c">personas con A de '+fmn(np)+' (sin meta)</span></div>')
-   +'<div style="height:6px;background:#eef2f6;border-radius:4px;margin-top:8px"><div style="height:6px;width:'+pct(na,np)+'%;background:#9aa7b4;border-radius:4px"></div></div>'+lin+'</div>';};
- const tp=CAT_PICK.concat(CAT_PACK).reduce((a,c)=>a+(prod[c]||0),0),ta=CAT_PICK.concat(CAT_PACK).reduce((a,c)=>a+(asis[c]||0),0);
- $$('usrCats').innerHTML='<div style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:13px;font-weight:700;color:#5b6b7c">PROYECCIÓN POR DÍA</span>'+dias.map(x=>'<button class="btn'+(x.d===td?' on':'')+'" data-cdia="'+x.d+'" type="button">'+x.l+'</button>').join('')+'<span style="margin-left:auto;font-size:13px">Meta grupal del día (Picking + Packing, solo con A): <b>'+fmn(tp)+'</b> und · '+fmn(ta)+' personas</span></div>'
+  hI=iso(hoy),td=dias.some(x=>x.d===US.catDia)?US.catDia:(dias.some(x=>x.d===hI)?hI:dias[0].d),di=dias.findIndex(x=>x.d===td),wn=isoNow();
+ return {dias,td,di,hoy:hI,lab:dias[di].l,rec:window.ASISTENCIA[wn.y+'-W'+String(wn.w).padStart(2,'0')]||{}};}
+function resumenCats(L){const D=diaSel(),dias=D.dias,td=D.td,di=D.di,rec=D.rec,hrs=7.5,cnt={},asis={},prod={};let sin=0,allA=0,diff=0;
+ const cm=c=>{const k=Object.keys(window.METACAT||{}).find(x=>catN(x)===c);return k==null?0:Number(window.METACAT[k])||0;};   // meta por hora DE LA CATEGORÍA
+ L.forEach(x=>{const m=metaDe(x.r),c=catN(m&&window.__catAt?window.__catAt(m,td):(m&&m.categoria)||''),y=rec[nk(x.r)],pres=!!(y&&y['d'+di]==='A');   // solo A cuenta; lo demás es falta
+  if(pres)allA++;if(!c){sin++;return;}cnt[c]=(cnt[c]||0)+1;
+  if(pres){asis[c]=(asis[c]||0)+1;prod[c]=(prod[c]||0)+cm(c)*hrs;const iv=m&&window.__metaAt?Number(window.__metaAt(m,td))||0:0;if(cm(c)>0&&Math.abs(iv-cm(c))>.001)diff++;}});
+ const pct=(a,t)=>t?Math.round(a/t*100):0,ring=(p,col)=>'<svg width="58" height="58" viewBox="0 0 58 58"><circle cx="29" cy="29" r="24" fill="none" stroke="#e8edf2" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+(150.8*p/100).toFixed(1)+' 150.8" transform="rotate(-90 29 29)"/><text x="29" y="33" text-anchor="middle" font-size="13" font-weight="800" fill="#2d3139">'+p+'%</text></svg>';
+ const grupo=(t,cats,col,conMeta)=>{let np=0,na=0,pr=0,fl=0;cats.forEach(c=>{np+=cnt[c]||0;na+=asis[c]||0;pr+=prod[c]||0;fl+=(cnt[c]||0)*cm(c)*hrs;});
+  const lin=conMeta?cats.map(c=>{const n=cnt[c]||0,a=asis[c]||0,v=prod[c]||0,w=pr?Math.round(v/pr*100):0,mm=cm(c);
+   return '<div class="ex-row"><div class="ex-rh"><span><b>'+esc(c)+'</b><em>'+(!n?'sin personas':(mm>0?fmn(a)+' asistentes × '+fmn(mm)+'/h × 7,5 h':fmn(a)+' asistentes · meta 0'))+(n>a?' · <b style="color:#e31b2a">'+fmn(n-a)+' falta'+(n-a>1?'s':'')+'</b>':'')+'</em></span><strong>'+fmn(v)+'</strong></div><div class="ex-bar"><i style="width:'+w+'%;background:'+col+'"></i></div></div>';}).join(''):'';
+  return '<div class="ex-card" style="--c:'+col+'"><div class="ex-ch"><div><div class="ex-t">'+t+'</div>'+(conMeta?'<div class="ex-n">'+fmn(pr)+'<small> und proyectadas</small></div><div class="ex-s"><b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b> · Meta completa si asistieran todos: '+fmn(fl)+'</div>':'<div class="ex-n">'+fmn(na)+'<small> asistentes · sin meta</small></div><div class="ex-s">de '+fmn(np)+' registradas · <b style="color:#e31b2a">'+fmn(np-na)+' falta'+(np-na===1?'':'s')+'</b></div>')+'</div>'+ring(pct(na,np),col)+'</div>'+lin+'</div>';};
+ const tpk=CAT_PICK.reduce((a,c)=>a+(prod[c]||0),0),tpa=CAT_PACK.reduce((a,c)=>a+(prod[c]||0),0),tp=tpk+tpa,tot=L.length;
+ const css='<style>.ex-hero{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:linear-gradient(120deg,#2d3139,#3d4552 60%,#e31b2a);color:#fff;border-radius:16px;padding:16px 20px}.ex-hero .l{font-size:12px;letter-spacing:1.2px;opacity:.8}.ex-hero .b{font-size:38px;font-weight:800;line-height:1.1}.ex-hero .b small{font-size:14px;font-weight:600;opacity:.8}.ex-hero .u{font-size:12px;opacity:.85;margin-top:2px}.ex-hk{display:flex;gap:10px;flex-wrap:wrap}.ex-hk div{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 14px;min-width:96px}.ex-hk b{display:block;font-size:22px}.ex-hk span{font-size:11px;opacity:.85}'
+  +'.ex-days{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ex-days .t{font-size:12px;font-weight:800;letter-spacing:1px;color:#5b6b7c;margin-right:4px}.ex-day{border:1px solid #d6dee6;background:#fff;border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:13px}.ex-day.on{background:#2d3139;color:#fff;border-color:#2d3139}.ex-day i{font-style:normal;font-size:10px;margin-left:5px;background:#e31b2a;color:#fff;border-radius:6px;padding:1px 5px}'
+  +'.ex-card{background:#fff;border:1px solid #e1e7ed;border-top:4px solid var(--c);border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(30,40,60,.05)}.ex-ch{display:flex;justify-content:space-between;align-items:center;gap:10px}.ex-t{font-size:13px;font-weight:800;letter-spacing:1px;color:#5b6b7c}.ex-n{font-size:30px;font-weight:800;line-height:1.15}.ex-n small{font-size:12px;font-weight:600;color:#5b6b7c}.ex-s{font-size:12px;color:#7a8896}'
+  +'.ex-row{margin-top:10px}.ex-rh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:13px}.ex-rh em{display:block;font-style:normal;font-size:11px;color:#7a8896}.ex-rh strong{font-size:16px}.ex-bar{height:7px;background:#eef2f6;border-radius:5px;margin-top:4px}.ex-bar i{display:block;height:7px;border-radius:5px;transition:width .4s}</style>';
+ $$('usrCats').innerHTML=css+'<div class="ex-hero"><div><div class="l">PROYECCIÓN DE PRODUCCIÓN · '+esc(D.lab.toUpperCase())+(td===D.hoy?' · HOY':'')+'</div><div class="b">'+fmn(tp)+'<small> und</small></div><div class="u">Picking '+fmn(tpk)+' + Packing '+fmn(tpa)+' · meta de la categoría × 7,5 h, solo de quienes asisten</div></div>'
+  +'<div class="ex-hk"><div><b>'+fmn(allA)+'</b><span>asisten de '+fmn(tot)+'</span></div><div><b>'+pct(allA,tot)+'%</b><span>asistencia del día</span></div><div><b>'+fmn(tot-allA)+'</b><span>faltas</span></div></div></div>'
+  +'<div class="ex-days"><span class="t">DÍA</span>'+dias.map(x=>'<button type="button" class="ex-day'+(x.d===td?' on':'')+'" data-cdia="'+x.d+'">'+x.l+(x.d===D.hoy?'<i>HOY</i>':'')+'</button>').join('')+'</div>'
   +grupo('PICKING',CAT_PICK,'#e31b2a',true)+grupo('PACKING',CAT_PACK,'#2d3139',true)+grupo('WEB',['WEB'],'#2e6da4',false)+grupo('OTROS',['OTRO'],'#8a97a3',false)
-  +'<div style="grid-column:1/-1;font-size:12px;color:#5b6b7c">Meta de cada persona = meta por hora × 7,5 h (con su categoría y meta de ese día en META). Solo suma quien tiene <b>A</b> en la asistencia de ese día; vacío, T, F, etc. se considera falta.'+(sin?' Personas sin categoría o con otra categoría: <b>'+fmn(sin)+'</b> (no suman).':'')+'</div>';}
+  +'<div style="grid-column:1/-1;font-size:12px;color:#5b6b7c">Cada persona que asiste aporta la meta por hora de su categoría × 7,5 h; las faltas no suman.'+(sin?' Sin categoría (no suman): <b>'+fmn(sin)+'</b>.':'')+(diff?' <b>'+fmn(diff)+'</b> persona'+(diff>1?'s':'')+' que asiste tiene una meta individual distinta a la de su categoría: aquí se usa la de la categoría.':'')+'</div>';}
 window.__resumenUsuarios=()=>resumen();
 function resumen(){
  const P=personas(),areas=[...new Set(P.map(x=>x.area))].sort(),sel=US.area,L=P.filter(x=>!sel||x.area===sel);
  $$('usrAreas').innerHTML='<span style="font-size:13px;font-weight:700;color:#5b6b7c">ÁREA</span><button class="btn'+(sel?'':' on')+'" data-area="" type="button">Todas</button>'+areas.map(a=>'<button class="btn'+(sel===a?' on':'')+'" data-area="'+esc(a)+'" type="button">'+esc(a)+'</button>').join('');
  const sinU=L.filter(x=>!x.usuario).length,wk=Object.keys(window.ASISTENCIA).sort().pop(),rec=wk?window.ASISTENCIA[wk]:null;let a=0,f=0;const pd=[0,0,0,0,0,0].map(()=>({a:0,f:0}));
  if(rec)L.forEach(x=>{const y=rec[nk(x.r)];if(!y)return;for(let k=0;k<6;k++){const v=y['d'+k];if(v==='A'||v==='T'){a++;pd[k].a++;}if(v==='F'){f++;pd[k].f++;}}});
- const pa=a+f?a/(a+f):null,byA=areas.map(x=>({l:x,v:P.filter(y=>y.area===x).length})).sort((x,y)=>y.v-x.v);
- const k=[['Usuarios',fmn(L.length)],['Áreas',fmn(sel?1:areas.length)],['Área con más personal',byA[0]?byA[0].l:'-'],['Sin usuario WMS',fmn(sinU)],['Asistencia '+(wk?wk.replace('-W',' · Sem '):''),pa==null?'sin registro':Math.round(pa*100)+'%']];
+ const DS=diaSel();let aD=0;L.forEach(x=>{const y=DS.rec[nk(x.r)];if(y&&y['d'+DS.di]==='A')aD++;});const pa=a+f?a/(a+f):null,byA=areas.map(x=>({l:x,v:P.filter(y=>y.area===x).length})).sort((x,y)=>y.v-x.v);
+ const k=[['Usuarios',fmn(L.length)],['Áreas',fmn(sel?1:areas.length)],['Área con más personal',byA[0]?byA[0].l:'-'],['Sin usuario WMS',fmn(sinU)],['Asistencia '+DS.lab+(DS.td===DS.hoy?' · hoy':''),(L.length?Math.round(aD/L.length*100):0)+'% · '+aD+'/'+L.length]];
  $$('usrKpis').innerHTML=k.map(x=>'<div style="border:1px solid #e1e7ed;border-radius:12px;padding:10px 12px;min-width:150px;flex:1"><small style="color:#5b6b7c">'+x[0]+'</small><div style="font-size:'+(x[1].length>8?'17':'24')+'px;font-weight:800;margin-top:2px">'+esc(x[1])+'</div></div>').join('');
  try{resumenCats(L);}catch(e){}hb('usrC1',byA,sel);vb('usrC2',['Lu','Ma','Mi','Ju','Vi','Sá'],pd.map(x=>x.a+x.f?Math.round(x.a/(x.a+x.f)*100):0),true);}
 
