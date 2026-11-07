@@ -1910,7 +1910,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
     <div id="view-usuarios" class="viewsection">
       <section class="opsum"><div class="h">Usuarios</div>
         <div class="mod-note">Carga el Excel o el PDF de asistencia semanal (nombre, estados por día, observaciones) o un Excel de personal (NOMBRE, USUARIO, DNI, ÁREA). Antes de guardar verás una vista previa donde puedes corregir o cancelar. También puedes agregar, editar y borrar a mano. Esta lista se usa para la asistencia.</div>
-        <div class="mod-actions"><label class="btn">📂 Cargar Excel o PDF<input id="usrInput" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf" hidden></label><button class="btn" id="usrAddBtn" type="button">➕ Agregar usuario</button><button class="btn" id="metaBtn" type="button">🎯 META</button><button class="btn" id="usrMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="usrDownBtn" type="button">⬇ Descargar Excel</button></div>
+        <div class="mod-actions"><label class="btn">📂 Cargar Excel o PDF<input id="usrInput" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf" hidden></label><button class="btn" id="usrAddBtn" type="button">➕ Agregar usuario</button><button class="btn" id="metaBtn" type="button">🎯 META</button><button class="btn" id="usrMassBtn" type="button">☑ Selección masiva</button><button class="btn" id="usrDownBtn" type="button">⬇ Descargar Excel</button><button class="btn" id="usrPdfBtn" type="button">📄 Descargar PDF</button></div>
         <div id="usrPrev" class="opsum" style="display:none;margin:10px 0"></div>
         <div class="h" style="font-size:15px;margin-top:10px">Resumen ejecutivo</div>
         <div class="mod-actions" id="usrAreas"></div>
@@ -6441,8 +6441,89 @@ function borrarUsuarios(keys){const set=new Set(keys),gone=window.USUARIOS.filte
 $$('usrTable').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.e){const r=window.USUARIOS.find(x=>kid(x)===b.dataset.e);if(!r)return;editKey=kid(r);$$('uNom').value=nm(r);$$('uUsr').value=r.usuario||'';$$('uDni').value=r.dni||'';$$('uArea').value=r.area||'';$$('uGrp').value=r.grupo||'';form.style.display='grid';form.scrollIntoView({behavior:'smooth',block:'center'});}
  if(b.dataset.d){if(!confirm('¿Borrar a esta persona?')||!window.requestUploadAccess())return;borrarUsuarios([b.dataset.d]);SEL.delete(b.dataset.d);await persist();}});
-$$('usrDownBtn').onclick=()=>{const rows=[['NOMBRE','USUARIO','DNI','AREA','GRUPO']].concat(window.USUARIOS.map(r=>[nm(r),r.usuario||'',r.dni||'',r.area||'',r.grupo||'']));
- const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'USUARIOS');XLSX.writeFile(wb,'USUARIOS.xlsx');};
+// ---- Descargas del resumen: Excel (dashboard + listas + asistencia + META) y PDF ----
+function usrExpData(){const P=personas(),L=P.filter(x=>!US.area||x.area===US.area),D=diaSel(),wn=isoNow();
+ const mh=c=>{const k=Object.keys(window.METACAT||{}).find(z=>catN(z)===c);return k==null?0:Number(window.METACAT[k])||0;};
+ const GR=[['PICKING',CAT_PICK],['PACKING',CAT_PACK],['WEB',['WEB']],['OTROS',['OTRO']]],gOf=c=>{const g=GR.find(z=>z[1].indexOf(c)>=0);return g?g[0]:'';};
+ const people=L.map(x=>{const m=metaDe(x.r),ca=d=>(m&&window.__catAt?window.__catAt(m,d):(m&&m.categoria)||''),c=catN(ca(D.td)),y=D.rec[nk(x.r)]||{};
+  return {u:x.usuario||x.r.usuario||'',n:nm(x.r)||'',area:x.area||'',grupo:x.grupo||'',c,g:gOf(c),pres:y['d'+D.di]==='A',mh:mh(c),
+   wk:[0,1,2,3,4,5].map(k=>y['d'+k]||''),mt:D.dias.map(z=>{const cc=ca(z.d);return cc?cc+' ('+(m&&window.__metaAt?Number(window.__metaAt(m,z.d))||0:0)+')':'';})};});
+ people.sort((a,b)=>String(a.area).localeCompare(String(b.area))||a.n.localeCompare(b.n));
+ return {D,wk:wn.y+'-W'+String(wn.w).padStart(2,'0'),GR,mh,people,tot:L.length,area:US.area||'Todas',hrs:7.5};}
+const ordCat=c=>{let i=CAT_PICK.indexOf(c);if(i<0)i=CAT_PACK.indexOf(c);return i<0?0:i;};
+function usrBuildExcel(EJ,d){const wb=new EJ.Workbook();wb.creator='Logística Picking & Packing WMS';wb.calcProperties={fullCalcOnLoad:true};
+ const fill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}),L1={style:'thin',color:{argb:'FFD0D7DE'}},bd={top:L1,left:L1,bottom:L1,right:L1},F=(o)=>Object.assign({name:'Arial',size:10},o||{});
+ const hdr=(row,col)=>{row.eachCell(c=>{c.fill=fill(col);c.font=F({bold:true,color:{argb:'FFFFFFFF'}});c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=bd;});row.height=30;};
+ const title=(ws,txt,n,sub)=>{ws.mergeCells(1,1,1,n);const c=ws.getCell(1,1);c.value=txt;c.fill=fill('2D3139');c.font=F({bold:true,size:15,color:{argb:'FFFFFFFF'}});c.alignment={vertical:'middle'};ws.getRow(1).height=30;if(sub){ws.mergeCells(2,1,2,n);ws.getCell(2,1).value=sub;ws.getCell(2,1).font=F({italic:true,color:{argb:'FF5B6B7C'}});}};
+ const D=d.D,lab=D.lab+(D.td===D.hoy?' · HOY':''),hrs=d.hrs,ppl=d.people;
+ // 1) Dashboard de proyección
+ const ws=wb.addWorksheet('Proyección',{views:[{showGridLines:false}]});title(ws,'PROYECCIÓN DE PRODUCCIÓN · '+lab.toUpperCase(),8,'Meta por hora de la categoría × 7,5 h, solo de quienes asisten · Área: '+d.area);
+ ['GRUPO','CATEGORÍA','PERSONAS','ASISTEN','FALTAS','META/H CATEGORÍA','META COMPLETA (todos)','PROYECCIÓN (asisten)'].forEach((h,i)=>ws.getCell(7,i+1).value=h);hdr(ws.getRow(7),'3D4552');
+ const COL={PICKING:'E31B2A',PACKING:'2D3139',WEB:'2E6DA4',OTROS:'8A97A3'};let r=8;const sub={};
+ d.GR.forEach(([g,cats])=>{const conM=g==='PICKING'||g==='PACKING',r0=r;
+  cats.forEach(c=>{const pp=ppl.filter(p=>p.c===c),n=pp.length,a=pp.filter(p=>p.pres).length,m=d.mh(c);
+   ws.getCell(r,1).value=g;ws.getCell(r,2).value=c;ws.getCell(r,3).value=n;ws.getCell(r,4).value=a;ws.getCell(r,5).value={formula:'C'+r+'-D'+r,result:n-a};
+   if(conM){ws.getCell(r,6).value=m;ws.getCell(r,7).value={formula:'C'+r+'*F'+r+'*7.5',result:n*m*hrs};ws.getCell(r,8).value={formula:'D'+r+'*F'+r+'*7.5',result:a*m*hrs};}
+   for(let k=1;k<=8;k++){const c_=ws.getCell(r,k);c_.border=bd;c_.font=F({bold:k===2});if(k>=3)c_.numFmt='#,##0';if(k>=3)c_.alignment={horizontal:'right'};}r++;});
+  const pg=ppl.filter(p=>p.g===g),ng=pg.length,ag=pg.filter(p=>p.pres).length,pr=pg.filter(p=>p.pres).reduce((s,p)=>s+p.mh*hrs,0),fl=pg.reduce((s,p)=>s+p.mh*hrs,0);
+  ws.getCell(r,1).value='SUBTOTAL '+g;ws.mergeCells(r,1,r,2);
+  [['C',3,ng],['D',4,ag],['E',5,ng-ag]].forEach(([L_,k,v])=>ws.getCell(r,k).value={formula:'SUM('+L_+r0+':'+L_+(r-1)+')',result:v});
+  if(conM){ws.getCell(r,7).value={formula:'SUM(G'+r0+':G'+(r-1)+')',result:fl};ws.getCell(r,8).value={formula:'SUM(H'+r0+':H'+(r-1)+')',result:pr};}
+  for(let k=1;k<=8;k++){const c_=ws.getCell(r,k);c_.fill=fill(COL[g]);c_.font=F({bold:true,color:{argb:'FFFFFFFF'}});c_.border=bd;if(k>=3){c_.numFmt='#,##0';c_.alignment={horizontal:'right'};}}
+  sub[g]={row:r,pr,fl,n:ng,a:ag};r+=2;});
+ const tr=r;ws.getCell(tr,1).value='TOTAL PICKING + PACKING';ws.mergeCells(tr,1,tr,2);
+ ws.getCell(tr,7).value={formula:'G'+sub.PICKING.row+'+G'+sub.PACKING.row,result:sub.PICKING.fl+sub.PACKING.fl};ws.getCell(tr,8).value={formula:'H'+sub.PICKING.row+'+H'+sub.PACKING.row,result:sub.PICKING.pr+sub.PACKING.pr};
+ ws.getCell(tr,3).value={formula:'C'+sub.PICKING.row+'+C'+sub.PACKING.row,result:sub.PICKING.n+sub.PACKING.n};ws.getCell(tr,4).value={formula:'D'+sub.PICKING.row+'+D'+sub.PACKING.row,result:sub.PICKING.a+sub.PACKING.a};ws.getCell(tr,5).value={formula:'E'+sub.PICKING.row+'+E'+sub.PACKING.row,result:sub.PICKING.n+sub.PACKING.n-sub.PICKING.a-sub.PACKING.a};
+ for(let k=1;k<=8;k++){const c_=ws.getCell(tr,k);c_.fill=fill('1F2430');c_.font=F({bold:true,size:11,color:{argb:'FFFFFFFF'}});c_.border=bd;if(k>=3){c_.numFmt='#,##0';c_.alignment={horizontal:'right'};}}
+ // KPIs
+ const allA=ppl.filter(p=>p.pres).length,kp=[['A',2,'PROYECCIÓN TOTAL (und)','H'+tr,sub.PICKING.pr+sub.PACKING.pr],['C',2,'PICKING (und)','H'+sub.PICKING.row,sub.PICKING.pr],['E',2,'PACKING (und)','H'+sub.PACKING.row,sub.PACKING.pr],['G',1,'ASISTEN DE '+d.tot,null,allA],['H',1,'FALTAS',null,d.tot-allA]];
+ kp.forEach(([c,w,t,f,v],i)=>{const k=ws.getCell(c+'4').col;if(w>1)ws.mergeCells(4,k,4,k+1);if(w>1)ws.mergeCells(5,k,5,k+1);const a=ws.getCell(4,k),b=ws.getCell(5,k);a.value=t;a.fill=fill('EEF2F6');a.font=F({bold:true,size:9,color:{argb:'FF5B6B7C'}});a.alignment={horizontal:'center'};b.value=f?{formula:f,result:v}:v;b.numFmt='#,##0';b.font=F({bold:true,size:20,color:{argb:i===4?'FFE31B2A':'FF2D3139'}});b.alignment={horizontal:'center',vertical:'middle'};});ws.getRow(5).height=34;
+ [14,18,11,11,11,16,20,20].forEach((w,i)=>ws.getColumn(i+1).width=w);
+ // 2) Listas por categoría
+ d.GR.forEach(([g,cats])=>{const conM=g==='PICKING'||g==='PACKING',w2=wb.addWorksheet(g),n=conM?6:4;title(w2,g+' · LISTA DE PERSONAS · '+lab.toUpperCase(),n);
+  (conM?['USUARIO','NOMBRE','CATEGORÍA','ASISTENCIA','META/H','META DEL DÍA']:['USUARIO','NOMBRE','CATEGORÍA','ASISTENCIA']).forEach((h,i)=>w2.getCell(3,i+1).value=h);hdr(w2.getRow(3),COL[g]);
+  const pg=ppl.filter(p=>p.g===g).sort((a,b)=>ordCat(a.c)-ordCat(b.c)||a.n.localeCompare(b.n));let rr=4,tot=0;
+  pg.forEach(p=>{w2.getCell(rr,1).value=p.u;w2.getCell(rr,2).value=p.n;w2.getCell(rr,3).value=p.c;w2.getCell(rr,4).value=p.pres?'Asistió':'Falta';
+   if(conM){w2.getCell(rr,5).value=p.mh;w2.getCell(rr,6).value={formula:'IF(D'+rr+'="Asistió",E'+rr+'*7.5,0)',result:p.pres?p.mh*hrs:0};w2.getCell(rr,6).numFmt='#,##0';tot+=p.pres?p.mh*hrs:0;}
+   for(let k=1;k<=n;k++){const c_=w2.getCell(rr,k);c_.border=bd;c_.font=F();}w2.getCell(rr,4).font=F({bold:true,color:{argb:p.pres?'FF1E7B34':'FFE31B2A'}});rr++;});
+  w2.getCell(rr,1).value='TOTAL · '+pg.filter(p=>p.pres).length+' asisten de '+pg.length;w2.mergeCells(rr,1,rr,conM?5:4);if(conM){w2.getCell(rr,6).value={formula:'SUM(F4:F'+(rr-1)+')',result:tot};w2.getCell(rr,6).numFmt='#,##0';}
+  for(let k=1;k<=n;k++){const c_=w2.getCell(rr,k);c_.fill=fill('EEF2F6');c_.font=F({bold:true});c_.border=bd;}
+  (conM?[14,34,16,13,10,14]:[14,34,16,13]).forEach((w,i)=>w2.getColumn(i+1).width=w);w2.views=[{state:'frozen',ySplit:3}];});
+ // 3) Asistencia de la semana
+ const wa=wb.addWorksheet('Asistencia semana');title(wa,'ASISTENCIA DE LA SEMANA '+d.wk.replace('-W',' · Sem '),11,'A asistió · T tardanza · F falta · otros: D, DM, V, L, P');
+ ['N°','NOMBRE','USUARIO'].concat(D.dias.map(x=>x.l)).concat(['FALTAS']).forEach((h,i)=>wa.getCell(3,i+1).value=h);hdr(wa.getRow(3),'3D4552');
+ ppl.forEach((p,i)=>{const rr=4+i;wa.getCell(rr,1).value=i+1;wa.getCell(rr,2).value=p.n;wa.getCell(rr,3).value=p.u;p.wk.forEach((v,k)=>{const c_=wa.getCell(rr,4+k);c_.value=v;c_.alignment={horizontal:'center'};if(v==='A')c_.fill=fill('C6EFCE');else if(v==='F')c_.fill=fill('FFC7CE');else if(v==='T')c_.fill=fill('FFEB9C');else if(v)c_.fill=fill('DDEBF7');});
+  wa.getCell(rr,10).value={formula:'COUNTIF(D'+rr+':I'+rr+',"F")',result:p.wk.filter(v=>v==='F').length};for(let k=1;k<=10;k++){wa.getCell(rr,k).border=bd;if(!wa.getCell(rr,k).font||k<4||k===10)wa.getCell(rr,k).font=F();}});
+ [5,34,14,10,10,10,10,10,10,9].forEach((w,i)=>wa.getColumn(i+1).width=w);wa.views=[{state:'frozen',ySplit:3,xSplit:3}];
+ // 4) META
+ const wm=wb.addWorksheet('META');title(wm,'META · CATEGORÍA Y META POR HORA DE CADA DÍA DE LA SEMANA',11,'Entre paréntesis: meta por hora de ese día. Meta del día = meta por hora de la categoría × 7,5 h.');
+ ['USUARIO','NOMBRE','ÁREA','GRUPO'].concat(D.dias.map(x=>x.l)).concat(['META DEL DÍA ('+D.lab+')']).forEach((h,i)=>wm.getCell(3,i+1).value=h);hdr(wm.getRow(3),'3D4552');
+ ppl.forEach((p,i)=>{const rr=4+i;[p.u,p.n,p.area,p.grupo].concat(p.mt).forEach((v,k)=>{const c_=wm.getCell(rr,k+1);c_.value=v;c_.border=bd;c_.font=F();});const c_=wm.getCell(rr,11);c_.value=p.mh*hrs;c_.numFmt='#,##0';c_.border=bd;c_.font=F({bold:true});});
+ [14,34,16,14,18,18,18,18,18,18,16].forEach((w,i)=>wm.getColumn(i+1).width=w);wm.views=[{state:'frozen',ySplit:3,xSplit:2}];
+ const wc=wb.addWorksheet('Criterios META');title(wc,'CRITERIOS DE CATEGORÍA',3);['CATEGORÍA','META POR HORA','META DEL DÍA (× 7,5 h)'].forEach((h,i)=>wc.getCell(3,i+1).value=h);hdr(wc.getRow(3),'3D4552');
+ Object.keys(window.METACAT||{}).forEach((c,i)=>{const rr=4+i,v=Number(window.METACAT[c])||0;wc.getCell(rr,1).value=c;wc.getCell(rr,2).value=v;wc.getCell(rr,3).value={formula:'B'+rr+'*7.5',result:v*7.5};for(let k=1;k<=3;k++){wc.getCell(rr,k).border=bd;wc.getCell(rr,k).font=F();}});[22,16,24].forEach((w,i)=>wc.getColumn(i+1).width=w);
+ return wb;}
+async function usrExportExcel(){
+ try{if(!window.ExcelJS)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';s.onload=ok;s.onerror=()=>no(new Error('sin conexión'));document.head.appendChild(s);});}
+ catch(e){window.__toast&&window.__toast('No pude cargar la librería de Excel: '+e.message);return;}
+ const d=usrExpData(),wb=usrBuildExcel(window.ExcelJS,d),buf=await wb.xlsx.writeBuffer(),a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='PROYECCION_PRODUCCION_'+d.D.td+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+function usrBuildPdfHtml(d,core){const D=d.D,ppl=d.people,hrs=d.hrs,lab=D.lab+(D.td===D.hoy?' · HOY':'');
+ const tb=(heads,rows,cls)=>'<table class="pt"><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</table>';
+ const lists=d.GR.map(([g,cats])=>{const conM=g==='PICKING'||g==='PACKING',pg=ppl.filter(p=>p.g===g).sort((a,b)=>ordCat(a.c)-ordCat(b.c)||a.n.localeCompare(b.n));
+  return '<h3>'+g+' · '+pg.filter(p=>p.pres).length+' asisten de '+pg.length+'</h3>'+tb(conM?['Usuario','Nombre','Categoría','Asistencia','Meta/h','Meta del día']:['Usuario','Nombre','Categoría','Asistencia'],pg.map(p=>[esc(p.u),esc(p.n),esc(p.c),p.pres?'<b style="color:#1e7b34">Asistió</b>':'<b style="color:#e31b2a">Falta</b>'].concat(conM?[fmn(p.mh),p.pres?fmn(p.mh*hrs):'0']:[])));}).join('');
+ const asis=tb(['N°','Nombre','Usuario'].concat(D.dias.map(x=>x.l)).concat(['Faltas']),ppl.map((p,i)=>[i+1,esc(p.n),esc(p.u)].concat(p.wk.map(v=>'<span class="st st'+(v||'x')+'">'+esc(v)+'</span>')).concat([p.wk.filter(v=>v==='F').length])));
+ const meta=tb(['Usuario','Nombre','Área','Grupo'].concat(D.dias.map(x=>x.l)).concat(['Meta día '+D.lab]),ppl.map(p=>[esc(p.u),esc(p.n),esc(p.area),esc(p.grupo)].concat(p.mt.map(esc)).concat([fmn(p.mh*hrs)])));
+ const crit=tb(['Categoría','Meta por hora','Meta del día (× 7,5 h)'],Object.keys(window.METACAT||{}).map(c=>[esc(c),fmn(Number(window.METACAT[c])||0),fmn((Number(window.METACAT[c])||0)*hrs)]));
+ return '<!doctype html><html><head><meta charset="utf-8"><title>Proyección de producción '+esc(lab)+'</title><style>@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#2d3139;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}.ex-hero{grid-column:auto}h2{margin:14px 0 4px;font-size:16px}h3{margin:12px 0 4px;font-size:13px;color:#5b6b7c;page-break-after:avoid}.pt{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px}.pt th{background:#3d4552;color:#fff;padding:4px 6px;text-align:left}.pt td{padding:3px 6px;border-bottom:1px solid #e1e7ed}.pt tr{page-break-inside:avoid}.pb{page-break-before:always}.st{display:inline-block;min-width:18px;text-align:center;border-radius:4px;padding:1px 3px}.stA{background:#c6efce}.stF{background:#ffc7ce}.stT{background:#ffeb9c}.ex-card{break-inside:avoid}.ex-ch svg{width:46px;height:46px}.ex-n{font-size:22px}</style>'+core.css+'</head><body>'+core.hero+'<div class="cards">'+core.cards+'</div><div class="pb"></div><h2>Listas por categoría · '+esc(lab)+'</h2>'+lists+'<div class="pb"></div><h2>Asistencia de la semana '+esc(d.wk.replace('-W',' · Sem '))+'</h2>'+asis+'<div class="pb"></div><h2>META · categoría y meta por hora de cada día</h2>'+meta+'<h3>Criterios de categoría</h3>'+crit+'</body></html>';}
+function usrExportPdf(){resumen();const root=$$('usrCats'),st=root.querySelector('style'),hero=root.querySelector('.ex-hero'),cards=[...root.querySelectorAll('.ex-card')].slice(0,4);
+ if(!st||!hero){window.__toast&&window.__toast('No hay datos para el PDF.');return;}
+ const h=usrBuildPdfHtml(usrExpData(),{css:st.outerHTML,hero:hero.outerHTML,cards:cards.map(c=>c.outerHTML).join('')}),f=document.createElement('iframe');
+ f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;
+ f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.__toast&&window.__toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};
+ window.__toast&&window.__toast('En la ventana de impresión elige "Guardar como PDF".');}
+$$('usrDownBtn').onclick=usrExportExcel;$$('usrPdfBtn').onclick=usrExportPdf;
+
 // ---- META individual por día (solo se ve al pulsar el botón) ----
 // Cada usuario guarda un historial de cambios: la meta de un día es la última con fecha <= ese día. Cambiar un día rige hacia adelante y no toca los anteriores.
 const FOREVER='1970-01-01',mp=$$('metaPanel');let mEdit=null;let metaMass=false;let metaEditCols=false;const MSEL=new Set();window.METAGRUPOS=window.METAGRUPOS||{};window.METACAT=window.METACAT||{};let metaDirty=false;
