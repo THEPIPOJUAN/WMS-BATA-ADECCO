@@ -1868,6 +1868,7 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
         <div class="mod-note">La meta global, el pendiente por semana, ruta y categoría salen de la última Corrida de Olas. Carga aquí PLANT_DE_ASIGNACION (corrida de ola) y CARTONES (pendiente por embalar). HC, equipo/h y proyección salen de USUARIOS, META y la asistencia del día.</div>
         <div class="mod-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><label class="btn" style="cursor:pointer">📂 Cargar PLANT_DE_ASIGNACION<input type="file" id="gerPlantIn" accept=".xlsx,.xls" hidden></label><label class="btn" style="cursor:pointer">📦 Cargar CARTONES<input type="file" id="gerCartIn" accept=".xlsx,.xls" hidden></label><button class="btn" id="gerXls" type="button">⬇ Descargar Excel</button><button class="btn" id="gerPdf" type="button">📄 Descargar PDF</button></div>
         <div class="mod-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><b>Consultar día</b><input type="date" id="gerFecha" class="pdetsel"><span id="gerDias" style="display:flex;gap:6px;flex-wrap:wrap"></span></div>
+        <div class="mod-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0"><label>Fecha de la carga (opcional) <input type="date" id="gerFechaCarga" class="pdetsel"></label><span class="n">Si la dejas vacía, la fecha se detecta sola de cada archivo.</span></div>
         <div class="mod-note" id="gerSt"></div><div id="gerBody"></div>
       </section>
     </div>
@@ -5794,7 +5795,7 @@ async function procOla(e){
  try{
   if(!window.XLSX)throw new Error('Motor Excel no disponible.');
   await new Promise(r=>setTimeout(r,30));
-  OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));window.__olaOut=OUT;try{window.__gerSaveOla&&window.__gerSaveOla(OUT);}catch(e){}
+  OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));window.__olaOut=OUT;try{window.__gerSaveOla&&window.__gerSaveOla(OUT,file&&file.lastModified);}catch(e){}
   st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · ACTIVO PARA PICKING: <b>'+OUT.acc['ACTIVO PARA PICKING'].toLocaleString('es-PE')+'</b> · TDAS PARADAS: <b>'+OUT.acc['TDAS PARADAS'].toLocaleString('es-PE')+'</b> · SIN STOCK ACTIVO: <b>'+OUT.acc['SIN STOCK ACTIVO'].toLocaleString('es-PE')+'</b>'+(OUT.avisos.length?' · ⚠️ '+OUT.avisos.join(' · '):'');
   btn.disabled=false;const s2=document.getElementById('olaStatus2');if(s2)s2.innerHTML=st.innerHTML;window.renderOla&&window.renderOla(OUT);
  }catch(err){OUT=null;st.textContent='Error: '+err.message;const s2=document.getElementById('olaStatus2');if(s2)s2.textContent=st.textContent;}
@@ -6537,6 +6538,13 @@ function usrExportPdf(){resumen();const root=$$('usrCats'),st=root.querySelector
  f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;
  f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){window.__toast&&window.__toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};
  window.__toast&&window.__toast('En la ventana de impresión elige "Guardar como PDF".');}
+// Datos de cualquier fecha a partir de la asistencia y la META guardadas (semana ISO de esa fecha)
+function isoWk(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),dn=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dn+3);const y=t.getUTCFullYear(),fw=new Date(Date.UTC(y,0,4));return {y,w:1+Math.round(((t-fw)/864e5-3+((fw.getUTCDay()+6)%7))/7)};}
+function usrDatosFecha(iso){const q=String(iso).split('-').map(Number),dt=new Date(q[0],q[1]-1,q[2]),wn=isoWk(dt),di=(dt.getDay()+6)%7,wk=wn.y+'-W'+String(wn.w).padStart(2,'0'),rec=(window.ASISTENCIA||{})[wk]||{},DN7=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],h=new Date(),hI=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+ const mhOf=c=>{const k=Object.keys(window.METACAT||{}).find(z=>catN(z)===c);return k==null?0:Number(window.METACAT[k])||0;};
+ const people=personas().map(x=>{const m=metaDe(x.r),c=catN(m&&window.__catAt?window.__catAt(m,iso):(m&&m.categoria)||''),y=rec[nk(x.r)]||{};return {u:x.usuario||x.r.usuario||'',n:nm(x.r)||'',c,pres:y['d'+di]==='A',mh:mhOf(c)};});
+ return {people,hrs:di===5?3.75:7.5,D:{lab:DN7[di]+' '+String(q[2]).padStart(2,'0')+'/'+String(q[1]).padStart(2,'0'),td:iso,hoy:hI},hasAsis:Object.keys(rec).length>0};}
+window.__gerDataFecha=usrDatosFecha;
 window.__gerData=usrExpData;
 $$('usrDownBtn').onclick=usrExportExcel;$$('usrPdfBtn').onclick=usrExportPdf;
 
@@ -7309,11 +7317,12 @@ const LS=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){re
 const f=n=>Math.round(+n||0).toLocaleString('es-PE'),pc=(a,b)=>b?(a/b*100).toFixed(1).replace('.',',')+'%':'—',esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase(),hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 const ORD=['INICIANDO','INTERMEDIO','MZN04','ANTIGUOS','PRE PACK'];
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),fdate=lm=>ymd(new Date(lm||Date.now())),fh=k=>String(k).split('-').reverse().join('/'),ov=()=>((document.getElementById('gerFechaCarga')||{}).value||null);   // la fecha de cada archivo se detecta; si la indicas a mano, manda la tuya
 // Fotos por fecha: cada carga guarda lo del día (Corrida de Olas, PLANT_DE_ASIGNACION, CARTONES + pickers y capacidad); se sincroniza con la nube
 const H=()=>{if(!window.GERHIST){window.GERHIST=LS('ger_hist')||{};const o=LS('ger_ola'),pl=LS('ger_plant'),c=LS('ger_cart');if(o||pl||c){const k=(o&&o.fecha)||(pl&&pl.fecha)||(c&&c.fecha)||hoy();window.GERHIST[k]=Object.assign(window.GERHIST[k]||{},o?{ola:o}:{},pl?{plant:pl}:{},c?{cart:c}:{},{ts:Date.now()});['ger_ola','ger_plant','ger_cart'].forEach(x=>{try{localStorage.removeItem(x);}catch(e){}});}}return window.GERHIST;};
 let selF=null,tmSave=null;const fSel=()=>selF||hoy();
 const usrSnap=d=>{const pk=d.people.filter(p=>p.pres&&ORD.indexOf(p.c)>=0).sort((a,b)=>ORD.indexOf(a.c)-ORD.indexOf(b.c)||a.n.localeCompare(b.n)).map(p=>({n:p.n,c:p.c,mh:p.mh})),em=d.people.filter(p=>p.pres&&p.c==='EMBALADOR');return {hrs:d.hrs,lab:d.D.lab,pk,emb:{n:em.length,eq:em.reduce((s,p)=>s+p.mh,0)}};};
-function snap(part){const H_=H(),k=hoy(),d=window.__gerData?window.__gerData():null,cur=Object.assign(H_[k]||{},part,{ts:Date.now()});if(d&&d.D.td===k)cur.usr=usrSnap(d);H_[k]=cur;const ks=Object.keys(H_).sort();while(ks.length>120)delete H_[ks.shift()];SV('ger_hist',H_);clearTimeout(tmSave);tmSave=setTimeout(()=>{try{window.saveCloud&&window.saveCloud();}catch(e){}},1500);}
+function snap(part,k){const H_=H();k=k||hoy();const d=window.__gerDataFecha?window.__gerDataFecha(k):null;const cur=Object.assign(H_[k]||{},part,{ts:Date.now()});if(d&&d.hasAsis)cur.usr=usrSnap(d);H_[k]=cur;const ks=Object.keys(H_).sort();while(ks.length>120)delete H_[ks.shift()];SV('ger_hist',H_);clearTimeout(tmSave);tmSave=setTimeout(()=>{try{window.saveCloud&&window.saveCloud();}catch(e){}},1500);}
 window.__gerMerge=function(c){const H_=H();Object.keys(c||{}).forEach(k=>{if(!H_[k]||(c[k].ts||0)>(H_[k].ts||0))H_[k]=c[k];});SV('ger_hist',H_);};
 if(window.__gerCloud)window.__gerMerge(window.__gerCloud);
 const CSS='.ger{--navy:#0f3157;--g:#1e8a3c;--r:#d62839;--o:#d9822b;--p:#7a4fb5;--b:#2166a8;--mu:#5b6b7c;--line:#dbe4ee;display:grid;gap:14px;color:#12263f;font:14px/1.35 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#eef3f8;padding:12px;border-radius:14px}.ger *{box-sizing:border-box}'
@@ -7321,7 +7330,7 @@ const CSS='.ger{--navy:#0f3157;--g:#1e8a3c;--r:#d62839;--o:#d9822b;--p:#7a4fb5;-
 +'.ger h2{margin:0 0 8px;font-size:15px}.ger .c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;break-inside:avoid}.ger .g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}.ger table{width:100%;border-collapse:collapse;font-size:13px}.ger th{background:var(--navy);color:#fff;padding:6px 8px;text-align:right;font-size:11px}.ger th:first-child,.ger td:first-child{text-align:left}.ger td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line)}.ger tr.t td{font-weight:800;background:#eef3f8}'
 +'.ger .G{color:var(--g)}.ger .R{color:var(--r)}.ger .O{color:var(--o)}.ger .P{color:var(--p)}.ger .B{color:var(--b)}.ger .bar{height:16px;background:var(--line);border-radius:8px;overflow:hidden;display:flex;margin:3px 0 8px}.ger .bar i{display:block;height:100%}.ger .row{display:flex;justify-content:space-between;font-size:12px}.ger .n{font-size:12px;color:var(--mu)}.ger .lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu)}.ger .lg u{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px}.ger .nb{border:2px dashed var(--line);border-radius:12px;padding:12px;color:var(--mu);font-size:13px;background:#fff}';
 const css0='@page{size:A4 landscape;margin:8mm}body{margin:0;background:#eef3f8}';
-function model(){const F=fSel(),h=H()[F]||{},d0=F===hoy()&&window.__gerData?window.__gerData():null,u=(d0&&d0.D.td===F)?usrSnap(d0):(h.usr||null),O=h.ola||null,P=h.plant||null,C=h.cart||null,hrs=u?u.hrs:7.5,pk=u?u.pk:[];
+function model(){const F=fSel(),h=H()[F]||{},d0=window.__gerDataFecha?window.__gerDataFecha(F):null,lv=d0&&d0.hasAsis?usrSnap(d0):null,u=(F===hoy()&&lv)?lv:(h.usr||lv),O=h.ola||null,P=h.plant||null,C=h.cart||null,hrs=u?u.hrs:7.5,pk=u?u.pk:[];
  const g=l=>{const a=pk.filter(p=>l.indexOf(p.c)>=0),eq=a.reduce((s,p)=>s+p.mh,0);return {hc:a.length,eq,proy:eq*hrs};};
  const s=g(ORD.slice(0,4)),pp=g(['PRE PACK']),cap=u?u.emb.eq*hrs:0,cs=P?P.soli:0,cp=P?P.pp:0,corr=cs+cp,proy=s.proy+pp.proy,meta=O?O.tot:0,falta=C?C.falta:0,carga=falta+proy;
  return {O,P,C,pk,hrs,s,pp,nEmb:u?u.emb.n:0,cap,cs,cp,corr,proy,meta,pend:meta-corr,falta,carga,sin:Math.max(0,carga-cap),cobE:carga?cap/carga:null,lab:u?u.lab+(F===hoy()?' · HOY':''):'',fecha:F};}
@@ -7339,6 +7348,7 @@ function body(m){const O=m.O,W=weeks(O),Ru=rutas(O),k=(l,v,c,i)=>'<div class="k"
  const pr=(l,v,w,c)=>'<div class="row"><span>'+l+'</span><b>'+v+'</b></div><div class="bar"><i style="width:'+Math.min(100,w)+'%;background:var(--'+c+')"></i></div>';
  const cat=nm=>O&&O.et[nm]?O.et[nm]:0;
  let h='<div class="hd"><div><h1>PICKING | META GLOBAL Y PROYECCIÓN</h1><small>Reporte gerencial de inicio de turno</small></div><div style="text-align:right"><b>'+esc(m.fecha.split('-').reverse().join('/'))+' · DÍA</b><br><small>'+esc(m.lab)+' · '+String(m.hrs).replace('.',',')+' h</small></div></div>';
+ h+='<div class="n">Datos de: '+[['Corrida de Olas',O],['PLANT_DE_ASIGNACION',m.P],['CARTONES',m.C]].filter(x=>x[1]).map(x=>x[0]+' '+fh(x[1].fecha||m.fecha)+(x[1].src?' ('+x[1].src+')':'')).join(' · ')+'</div>';
  if(miss.length)h+='<div class="nb"><b>Faltan datos:</b> '+miss.map(esc).join(' · ')+'.</div>';
  h+='<div class="c"><h2>BANNER EJECUTIVO</h2><div class="g2"><div><div class="n"><b>Cascada de la meta global</b> (und)</div>'+pr('Meta global',f(m.meta),100,'b')+pr('Corrida de ola',f(m.corr),m.corr/T*100,'o')+pr('Pendiente correr ola',f(m.pend),m.pend/T*100,'r')+pr('Proyección de picking',f(m.proy),m.proy/T*100,'g')+'</div>'
  +'<div><div class="n"><b>Carga vs capacidad</b> (corrida de ola contra proyección)</div>'+pr('SOLI · cobertura '+pc(m.s.proy,m.cs),f(m.s.proy)+' / '+f(m.cs),(cS||0)*100,col(cS)==='G'?'g':col(cS)==='O'?'o':'r')+pr('PRE PACK · cobertura '+pc(m.pp.proy,m.cp),f(m.pp.proy)+' / '+f(m.cp),(cP||0)*100,col(cP)==='G'?'g':col(cP)==='O'?'o':'r')+pr('TOTAL · cobertura '+pc(m.proy,m.corr),f(m.proy)+' / '+f(m.corr),(cT||0)*100,col(cT)==='G'?'g':col(cT)==='O'?'o':'r')+'</div>'
@@ -7361,24 +7371,27 @@ function body(m){const O=m.O,W=weeks(O),Ru=rutas(O),k=(l,v,c,i)=>'<div class="k"
  h+='<div class="c"><h2>4 · PACKING · PENDIENTE POR EMBALAR (archivo CARTONES)</h2><div class="k5">'+k('FALTA EMBALAR',f(m.falta),'R','CALZ '+f(Cc.calz)+' · ACC '+f(Cc.acc))+k('LIMA / PROVINCIA',f(Cc.lima)+' / '+f(Cc.prov),'','por embalar')+k('PROYECCIÓN DE PICKING',f(m.proy),'G','Cierre: '+f(m.falta)+' + '+f(m.proy)+' = '+f(m.carga))+k('CAPACIDAD PACKING',f(m.cap),'B',f(m.nEmb)+' embaladores × meta × '+String(m.hrs).replace('.',',')+' h')+k('COBERTURA DEL CIERRE',pc(m.cap,m.carga),col(m.cobE)||'P','Proyección de embalaje ÷ '+f(m.carga))+k('ESTIMADO SIN EMBALAR',f(m.sin),'R','Carga − capacidad')+'</div></div>';
  return '<div class="ger">'+h+'<p class="n">Fuentes: Corrida de Olas (PEND-STOCK-RUTA) · PLANT_DE_ASIGNACION (hoja MATRIZ) · CARTONES (hoja OB_LPN) · USUARIOS + META + asistencia del día.</p></div>';}
 function render(){const el=document.getElementById('gerBody');if(!el)return;const F=fSel(),H_=H(),inp=document.getElementById('gerFecha'),ch=document.getElementById('gerDias');
- if(F===hoy()&&H_[F]&&window.__gerData){const d=window.__gerData();if(d.D.td===F)H_[F].usr=usrSnap(d);}   // los pickers y la capacidad de hoy se mantienen al día
+ if(F===hoy()&&H_[F]&&window.__gerDataFecha){const d=window.__gerDataFecha(F);if(d.hasAsis)H_[F].usr=usrSnap(d);}   // los pickers y la capacidad de hoy se mantienen al día
  if(inp)inp.value=F;if(ch)ch.innerHTML=Object.keys(H_).sort().reverse().slice(0,14).map(k=>'<button type="button" class="btn" data-gf="'+k+'" style="'+(k===F?'background:#2d3139;color:#fff':'')+'">'+k.split('-').reverse().slice(0,2).join('/')+'</button>').join('');
  el.innerHTML='<style>'+CSS+'</style>'+(H_[F]?'':'<div class="nb" style="margin-bottom:10px">No hay foto guardada del '+esc(F.split('-').reverse().join('/'))+'. Se guarda sola al subir PEND-STOCK-RUTA, PLANT_DE_ASIGNACION o CARTONES.</div>')+body(model());}
 window.__gerRender=render;
-window.__gerSaveOla=function(O){const r={fecha:hoy(),tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
+window.__gerSaveOla=function(O,lm){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
  O.out.forEach(x=>{const v=Number(x[15])||0;if(v<=0)return;const a=x[19]==='ACTIVO PARA PICKING'?'ACTIVO':x[19]==='TDAS PARADAS'?'PARADAS':'SIN';r.tot+=v;r.acc[a]+=v;
   const e=nz(x[3])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
   const kk=(x[0]||'')+'|'+(x[1]||'');(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
- snap({ola:r});render();};
+ snap({ola:r},k);selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
 const st=t=>{const e=document.getElementById('gerSt');if(e)e.innerHTML=t;};
-async function leer(file,sheet){const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),n=wb.SheetNames.find(x=>nz(x)===sheet);if(!n)throw new Error('No encuentro la hoja '+sheet+'.');return XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:null});}
+async function leer(file,sheet){const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true}),n=wb.SheetNames.find(x=>nz(x)===sheet);if(!n)throw new Error('No encuentro la hoja '+sheet+'.');return XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:null});}
 const kf=(o,fn)=>Object.keys(o).find(k=>fn(nz(k)));
-document.getElementById('gerPlantIn').onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{st('Leyendo PLANT_DE_ASIGNACION…');const R=await leer(fl,'MATRIZ'),r={fecha:hoy(),soli:0,pp:0,filas:R.length};
+document.getElementById('gerPlantIn').onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{st('Leyendo PLANT_DE_ASIGNACION…');const R=await leer(fl,'MATRIZ'),r={fecha:hoy(),soli:0,pp:0,filas:R.length},cn={};
  R.forEach(x=>{const kp=kf(x,z=>z.startsWith('SOLI')&&z.indexOf('PRE')>0),kq=kf(x,z=>z.startsWith('CANTIDAD CONV'));if(!kp||!kq)return;const t=nz(x[kp]),q=Number(x[kq])||0;if(t==='SOLI')r.soli+=q;else if(t.indexOf('PRE')===0)r.pp+=q;});
- snap({plant:r});st('<b>PLANT_DE_ASIGNACION</b> cargado: SOLI '+f(r.soli)+' + PRE PACK '+f(r.pp)+' ('+f(r.filas)+' filas). Foto del día guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
+ R.forEach(x=>{const kd=kf(x,z=>z.startsWith('CREAR REGISTRO DE HORA'));if(!kd||x[kd]==null)return;const v=x[kd],dd=v instanceof Date?ymd(v):String(v).slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(dd))cn[dd]=(cn[dd]||0)+1;});
+ const top=Object.keys(cn).sort((a,b)=>cn[b]-cn[a])[0],k=ov()||top||fdate(fl.lastModified);r.fecha=k;r.src=ov()?'fecha indicada':top?'columna “Crear registro de hora” de la hoja MATRIZ':'fecha del archivo';
+ snap({plant:r},k);selF=k;st('<b>PLANT_DE_ASIGNACION</b> cargado: SOLI '+f(r.soli)+' + PRE PACK '+f(r.pp)+' ('+f(r.filas)+' filas). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
 document.getElementById('gerCartIn').onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{st('Leyendo CARTONES…');const R=await leer(fl,'OB_LPN'),r={fecha:hoy(),falta:0,calz:0,acc:0,lima:0,prov:0};
  R.forEach(x=>{const ks=kf(x,z=>z==='STATTUS'||z==='STATUS'),kq=kf(x,z=>z==='CANT'),kc=kf(x,z=>z.replace(/ /g,'')==='CALZACC'),kl=kf(x,z=>z.replace(/ /g,'')==='LIMA/PROV');if(!ks||!kq||nz(x[ks])!=='FALTA EMBALAR')return;const q=Number(x[kq])||0;r.falta+=q;if(kc&&nz(x[kc])==='ACC')r.acc+=q;else r.calz+=q;if(kl&&nz(x[kl])==='LIMA')r.lima+=q;else r.prov+=q;});
- snap({cart:r});st('<b>CARTONES</b> cargado: falta embalar '+f(r.falta)+' (CALZ '+f(r.calz)+' · ACC '+f(r.acc)+'). Foto del día guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
+ const k=ov()||fdate(fl.lastModified);r.fecha=k;r.src=ov()?'fecha indicada':'fecha de modificación del archivo';
+ snap({cart:r},k);selF=k;st('<b>CARTONES</b> cargado: falta embalar '+f(r.falta)+' (CALZ '+f(r.calz)+' · ACC '+f(r.acc)+'). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
 const lib=(g,u)=>window[g]?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('No pude cargar '+g));document.head.appendChild(s);});
 document.getElementById('gerPdf').onclick=()=>{render();const fr=document.createElement('iframe');fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(fr);
  fr.srcdoc='<!doctype html><html><head><meta charset="utf-8"><title>Reporte gerencial</title><style>'+css0+CSS+'.ger{border-radius:0}</style></head><body>'+body(model())+'</body></html>';
