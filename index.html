@@ -2341,16 +2341,17 @@ function obtenerAreaPicking(registro){
   for(const a of AREAS){if(ubicacion.startsWith(a))return a;}           // si no vino área, se deduce de la ubicación
   return areaOriginal||'GENERAL';
 }
-window.obtenerAreaPicking=obtenerAreaPicking;
+if(typeof window!=='undefined')window.obtenerAreaPicking=obtenerAreaPicking;   // el código también corre dentro del worker, donde no existe window
 // (ya no se agrupan AND, SEL y MZN01 como "1er PISO": cada área se muestra por separado)
 const AREA_LABEL_MAP={'AND':'1er PISO','SEL':'1er PISO','MZN01':'1er PISO'};
 function mapAreaLabel(rawArea){
   const v=norm(rawArea).toUpperCase();
   return AREA_LABEL_MAP[v]||norm(rawArea);
 }
+let STORE_OVR=null;   // tabla de tiendas de la plataforma (módulo RUTAS); si viene, manda sobre la tabla interna
 function storeInfoFromInstalacion(rawInstalacion){
   const code=stripFormulaWrap(rawInstalacion).trim();
-  const s=STORE_TABLE[code];
+  const s=(STORE_OVR||STORE_TABLE)[code];
   return s ? {zona:s[0],turno:s[1],ruta:s[2],tienda:s[3]||''} : null;
 }
 // ===== Fin adaptador Allocation =====
@@ -2359,6 +2360,7 @@ function storeInfoFromInstalacion(rawInstalacion){
 self.onmessage=async(e)=>{
   try{
     const file=e.data.file;
+    STORE_OVR=(e.data.stores&&Object.keys(e.data.stores).length)?e.data.stores:null;
     // Claves de filas ya cargadas en el dashboard (histórico + actualización del día).
     // Sirven para que un archivo nuevo se FUSIONE en vez de reemplazar: las líneas que
     // ya existen se ignoran y solo se agregan las que son realmente nuevas.
@@ -2463,6 +2465,7 @@ self.onmessage=async(e)=>{
         usSel:idx('Usuario de selección','Usuario de seleccion'),
         horaSel:idx('Hora de selección','Hora de seleccion'),
         ubicActiva:idx('Ubicación activa','Ubicacion activa'),
+        deUbic:idx('De ubicación','De ubicacion'),
         cantActual:idx('Cantidad actual'),
         cantEmpaquetada:idx('Cantidad empaquetada'),
         orden:idx('Número de orden','Numero de orden'),
@@ -2482,34 +2485,34 @@ self.onmessage=async(e)=>{
     // Unifica ambos formatos a los mismos campos lógicos que usa el resto del procesamiento.
     function getRowFields(raw){
       if(isAllocation){
+        // Lógica de la plantilla de PICKING: Fecha/Hora/Usuario = selección · cantidad = Cantidad empaquetada (0 si la ZONA es OTROS)
+        // Cantidad Conv = cantidad (SOLI) o EXTRAE(código;11;2) × cantidad (PRE PACK) · Turno: Día de 7 a 19 h · Área desde "De ubicación"
         const horaSelRaw=raw[AI.horaSel];
         const store=storeInfoFromInstalacion(raw[AI.instalacion]);
         const cantActualRaw=AI.cantActual>=0?raw[AI.cantActual]:undefined;
         const cantEmpRaw=AI.cantEmpaquetada>=0?raw[AI.cantEmpaquetada]:undefined;
-        // La cantidad base siempre es G2 = Cantidad empaquetada, tal cual las fórmulas:
-        // SI(LARGO(C2)=12;G2;EXTRAE(C2;11;2)*G2). "Cantidad actual" NO participa en ninguna
-        // de las dos ramas; solo se usa como respaldo si la columna Cantidad empaquetada
-        // no existiera en el archivo.
         const unitsRaw=(cantEmpRaw!==undefined && norm(cantEmpRaw)!=='') ? cantEmpRaw : cantActualRaw;
+        const zonaOtros=!store||norm(store.zona).toUpperCase()==='OTROS';
+        const q=zonaOtros?0:num(unitsRaw);
         const prePack=esPrePack(raw[AI.codigo]);
-        // Cantidad a devolver si es PRE PACK: =EXTRAE(Código;11;2)*G2, donde G2 es
-        // siempre la Cantidad empaquetada (no la Cantidad actual).
-        const ppQty=prePack ? String(ppMultiplier(raw[AI.codigo])*num(unitsRaw)) : 0;
+        const conv=prePack?ppMultiplier(raw[AI.codigo])*q:q;
+        const hm=/(\d{1,2}):\d{2}/.exec(String(horaSelRaw==null?'':horaSelRaw)),hh=hm?Number(hm[1]):0;
+        const ubicA=(AI.deUbic>=0&&norm(raw[AI.deUbic])!=='')?raw[AI.deUbic]:raw[AI.ubicActiva];
         return {
           cat: masterLookup(e.data.master,raw[AI.codigo])||categoriaFromCodigo(raw[AI.codigo]),
           fecha: norm(horaSelRaw).split(/\s+/)[0]||horaSelRaw,
           user: raw[AI.usSel],
-          turn: store ? (store.turno==='NOCHE'?'Noche':'Día') : 'Día',
-          area: areaFromUbicacion(raw[AI.ubicActiva]),
-          ubic: raw[AI.ubicActiva],
+          turn: (hh>=7&&hh<=19)?'Dia':'Noche',
+          area: areaFromUbicacion(ubicA),
+          ubic: ubicA,
           tipo: store ? store.zona : 'OTROS',
-          units: prePack ? 0 : unitsRaw,
-          rawunits: unitsRaw,
-          pp: ppQty,
+          units: String(conv),
+          rawunits: String(q),
+          pp: String(prePack ? conv : 0),
           hour: '',
           selection: horaSelRaw,
           _store: store,
-          _cantidadRaw: prePack ? ppQty : unitsRaw
+          _cantidadRaw: String(q)
         };
       }
       return {
@@ -3060,7 +3063,8 @@ function currentWorkerParams(){
   return {
     gapMinutes,
     opStartTime:SETTINGS.opStartTime||'08:11',
-    master:window.MAESTRO_MAP||{}
+    master:window.MAESTRO_MAP||{},
+    stores:(window.RUTAS&&window.RUTAS.length)?Object.fromEntries(window.RUTAS.map(r=>[String(parseInt(r.cdg,10)||r.cdg),[r.zona,'',r.ruta,r.tienda]])):null
   };
 }
 async function normalizeRawUploadFile(file){
@@ -5602,6 +5606,7 @@ updateDayData=async function(fl){
  const files=Array.isArray(fl)?fl:(fl?[fl]:[]);if(!files.length)return;const op=await askOp();if(!op)return;
  let A=0,D=0,done=0;
  for(const file of files){
+  try{const kd=await window.__fileKind(file);if(kd==='crudo')window.__toast('🧮 '+file.name+': descarga limpia del WMS → se trabaja con la plantilla de '+op+' y se sube ya trabajada.');else if(kd==='trabajado')window.__toast('✅ '+file.name+': archivo ya trabajado → se sube tal cual.');}catch(e){}
   let up=file,pkInfo=null;if(op==='PACKING'){try{pkInfo=await window.__packingCSV(file);up=pkInfo.file;}catch(err){window.__toast('❌ '+file.name+': '+err.message);continue;}}
   const pd=DAY_DATA.length,pt=DAY_DETAILS.length,pm=DAY_META.length;
   window.__skuBatch=pkInfo?[window.SKUPROD_FROM(pkInfo.details)]:[];
@@ -5903,7 +5908,7 @@ async function processedPacking(file,text){
   if(nrm(g(r,'fl'))!=='EMBALADO'||zona==='OTROS'||zona===''||conv<=0){skip++;return;}      // cantidad 0 → se omite
   const t=DF.fix(TT[i]);if(!t){skip++;return;}
   const sku=g(r,'sku'),cat0=nrm(g(r,'cat')),catF=['CALZ','ACC','INSUMO','MATERIALES'].includes(cat0)?cat0:'CALZ',cat=(window.masterCat&&window.masterCat(sku))||catF;
-  const fecha=t.Y+'-'+p2(t.M)+'-'+p2(t.D),tu=nrm(g(r,'t')),turno=tu==='NOCHE'?'NOCHE':(tu?'DIA':((t.h>=18||t.h<6)?'NOCHE':'DIA')),dest=g(r,'ds'),usr=clean(g(r,'u')),ord=clean(g(r,'o'));
+  const fecha=t.Y+'-'+p2(t.M)+'-'+p2(t.D),tu=nrm(g(r,'t')),turno=tu==='NOCHE'?'NOCHE':(tu?'DIA':((t.h>=7&&t.h<=19)?'DIA':'NOCHE')),dest=g(r,'ds'),usr=clean(g(r,'u')),ord=clean(g(r,'o'));
   out.push([fecha,cat,usr,turno,clean(g(r,'ar'))||'SIN AREA',zona,ord,conv,q,Number(g(r,'pp'))||0,t.h,fecha+' '+p2(t.h)+':'+p2(t.m)+':'+p2(t.s),clean(sku),clean(g(r,'lp')),clean(g(r,'ct')),clean(g(r,'ub')),clean(dest),clean(window.rutaTienda?window.rutaTienda(dest):'')].join(','));
   det.push({d:fecha,u:usr,h:t.h,ts:Date.UTC(t.Y,t.M-1,t.D,t.h,t.m,t.s),orden:ord,lpn:g(r,'lp'),lpnd:g(r,'ct'),sku,desc:'',ubicacion:g(r,'ub'),cantidad:conv,instalacion:dest,tienda:window.rutaTienda?window.rutaTienda(dest):''});
  });
@@ -5921,7 +5926,14 @@ function askDateFmt(amb){return new Promise((res,rej)=>{
  o.addEventListener('click',e=>{const b=e.target.closest('button[data-f]');if(b){o.remove();res(b.dataset.f);}else if(e.target.closest('.opcancel')){e.preventDefault();o.remove();rej(new Error('Carga cancelada: no se confirmó el formato de fecha.'));}});
  document.body.appendChild(o);});}
 window.rutaTienda=c=>{const r=RIDX.get(key(c));return r?r.tienda:'';};
+window.__fileKind=async function(file){   // 'crudo' = descarga limpia del WMS · 'trabajado' = ya procesado con la plantilla
+ try{const nr=h=>String(h||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();let heads=[];
+  if(/\.(csv|txt)$/i.test(file.name)){const t=await file.slice(0,6000).text(),l=t.replace(/^\uFEFF/,'').split(/\r?\n/)[0]||'',d=(l.split(';').length>l.split(',').length)?';':',';heads=l.split(d).map(nr);}
+  else{const wb=XLSX.read(await file.arrayBuffer(),{type:'array',sheetRows:1});wb.SheetNames.forEach(n=>{const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null})[0]||[];if(r.map(nr).includes('NUMERO DE ORDEN')||r.map(nr).includes('FECHA'))heads=heads.length?heads:r.map(nr);});}
+  const has=x=>heads.includes(x),raw=has('NUMERO DE ORDEN')&&has('CODIGO DE ARTICULO')&&has('CANTIDAD EMPAQUETADA'),done=has('CANTIDAD CONV')||has('UND_CANTIDAD CONV')||has('FILTRO')||has('LPN');
+  return (raw&&!done&&!has('FECHA'))?'crudo':(has('FECHA')||done)?'trabajado':'desconocido';}catch(e){return 'desconocido';}};
 window.__packingCSV=async function(file,opt){
+ let CSVROWS=null;   // descarga limpia del WMS en CSV (Allocation): se convierte a filas y se trabaja igual que el Excel
  if(/\.(csv|txt)$/i.test(file.name)){
   const head=await file.slice(0,3000).text();
   if(/Und_Cantidad Conv/i.test(head)&&/,LPN,/.test(head)&&/Orden_ID/.test(head)){
@@ -5933,19 +5945,23 @@ window.__packingCSV=async function(file,opt){
    return {file,kept:det.length,skip:0,details:det};}
   const txt=await readTextAny(file),h0=csvLine(txt.slice(0,txt.search(/\r?\n/)>0?txt.search(/\r?\n/):4000).replace(/^\uFEFF/,''),(txt.slice(0,3000).split(';').length>txt.slice(0,3000).split(',').length)?';':',').map(nrm);
   if(h0.includes('CANTIDAD CONV')&&h0.includes('SOLI.')&&h0.includes('FILTRO')&&h0.includes('ZONA'))return processedPacking(file,txt);
+  if(h0.includes('NUMERO DE ORDEN')&&h0.includes('CODIGO DE ARTICULO')&&h0.includes('CANTIDAD EMPAQUETADA')){
+   const dl=(txt.slice(0,3000).split(';').length>txt.slice(0,3000).split(',').length)?';':',',uw=v=>String(v==null?'':v).replace(/^="?/,'').replace(/"$/,'').trim();
+   CSVROWS=txt.split(/\r?\n/).filter(x=>x).map(x=>csvLine(x.replace(/^\uFEFF/,''),dl).map(c=>{c=uw(c);const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}:\d{2}(?::\d{2})?)$/.exec(c);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')+' '+m[4]:c;}));   // el CSV del WMS trae dd/mm/aaaa: se pasa a ISO para que no haya ambigüedad
+  }
  }
  if(!window.RUTAS.length)throw new Error('Primero carga RUTAS (Gestionar datos → Rutas) para identificar la ZONA.');
  const big=file.size>5e6;if(big)window.__toast('Leyendo archivo de packing (puede tardar unos segundos)…');
  await new Promise(r=>setTimeout(r,60));
- const ab=await file.arrayBuffer();
- const names=XLSX.read(ab,{type:'array',bookSheets:true}).SheetNames;
+ const ab=CSVROWS?null:await file.arrayBuffer();
+ const names=CSVROWS?['CSV']:XLSX.read(ab,{type:'array',bookSheets:true}).SheetNames;
  const pri=['EXCEL A SUBIR','HOJA1','LOGICA'],cand=[];
  pri.forEach(p=>{const n=names.find(x=>nrm(x)===p);if(n)cand.push(n);});names.forEach(n=>{if(!cand.includes(n))cand.push(n);});
  let rows=null,H=null,ix=null;
  for(const nm of cand){
-  const wb=XLSX.read(ab,{type:'array',sheets:[nm],cellFormula:false,cellHTML:false,cellStyles:false});
+  let rr;if(CSVROWS)rr=CSVROWS;else{const wb=XLSX.read(ab,{type:'array',sheets:[nm],cellFormula:false,cellHTML:false,cellStyles:false});
   const sh=wb.Sheets[nm];if(!sh)continue;
-  const rr=XLSX.utils.sheet_to_json(sh,{header:1,raw:true,defval:null});
+  rr=XLSX.utils.sheet_to_json(sh,{header:1,raw:true,defval:null});}
   const hh=(rr[0]||[]).map(nrm),c=n=>hh.indexOf(n);
   const t={iO:c('NUMERO DE ORDEN'),iS:c('CODIGO DE ARTICULO'),iD:c('INSTALACION DE DESTINO'),iU:c('CANTIDAD EMPAQUETADA'),iX:c('DE UBICACION'),iC:c('NUMERO DE CONTENEDOR'),iT:c('REGISTRO DE HORA DE MODIFICACION'),iUs:c('USUARIO DE MODIFICACION'),iL:c('NUMERO DE LPN DE ENTRADA'),iDs:c('DESCRIPCION DE ARTICULO')};
   if(['iO','iS','iD','iU','iX','iC','iT','iUs'].every(k=>t[k]>=0)){rows=rr;ix=t;break;}
@@ -5964,7 +5980,7 @@ window.__packingCSV=async function(file,opt){
   const x=String(r[ix.iX]||'').trim().toUpperCase(),area=((x[0]==='S'||x[0]==='A')?x.slice(0,3):x.slice(0,5))||'SIN AREA';
   const t=fixT(TT[i]);if(!t){skip++;continue;}
   const fecha=t.Y+'-'+p2(t.M)+'-'+p2(t.D),usr=String(r[ix.iUs]||'').trim(),ord=String(r[ix.iO]);
-  out.push([fecha,cat,cl(usr),(t.h>=18||t.h<6)?'NOCHE':'DIA',cl(area),zona,cl(ord),E,D,G,t.h,fecha+' '+p2(t.h)+':'+p2(t.m)+':'+p2(t.s),cl(sku),cl(r[ix.iL]),cl(cont),cl(x),cl(dest),cl(window.rutaTienda(dest))].join(','));
+  out.push([fecha,cat,cl(usr),(t.h>=7&&t.h<=19)?'DIA':'NOCHE',cl(area),zona,cl(ord),E,D,G,t.h,fecha+' '+p2(t.h)+':'+p2(t.m)+':'+p2(t.s),cl(sku),cl(r[ix.iL]),cl(cont),cl(x),cl(dest),cl(window.rutaTienda(dest))].join(','));
   det.push({d:fecha,u:usr.replace(/[",\r\n]/g,' '),h:t.h,ts:Date.UTC(t.Y,t.M-1,t.D,t.h,t.m,t.s),orden:ord,lpn:String(r[ix.iL]==null?'':r[ix.iL]),lpnd:cont.trim(),sku,desc:String(r[ix.iDs]==null?'':r[ix.iDs]),ubicacion:x,cantidad:E,instalacion:dest,tienda:window.rutaTienda(dest)});}
  if(out.length<2)throw new Error('Ninguna línea de PACKING cumple las condiciones (zona en RUTAS y contenedor embalado).');
  window.__toast('Packing: '+(out.length-1).toLocaleString('es-PE')+' líneas válidas · '+skip.toLocaleString('es-PE')+' omitidas (cantidad 0).');
