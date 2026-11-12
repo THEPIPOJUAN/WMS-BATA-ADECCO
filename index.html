@@ -2397,11 +2397,14 @@ self.onmessage=async(e)=>{
     }
     // Excel 2016 en español suele exportar CSV en Windows-1252/ANSI, no UTF-8.
     // Si detectamos caracteres corruptos típicos (mojibake) y no hay BOM UTF-8, reintentamos con esa codificación.
-    const looksMojibake=!hasUtf8Bom && (text.includes('\uFFFD') || /Ã[\u0080-\u00BF]|Â[ºª°]|â€™|â€œ|â€/.test(text));
+    const e00=text.indexOf('\n'),hdr0=e00>0?text.slice(0,e00):text.slice(0,2000);   // solo el encabezado decide la codificación
+    const looksMojibake=!hasUtf8Bom && (text.includes('\uFFFD') || /Ã[\u0080-\u00BF]|Â[ºª°]|â€™|â€œ|â€/.test(hdr0));
     if(looksMojibake){
       try{ text=new TextDecoder('windows-1252',{fatal:false}).decode(bytes); }catch(e){}
     }
 
+    {const e1=text.indexOf('\n'),h1=e1>0?text.slice(0,e1):'';   // encabezado con doble codificación (NÃºmero → Número)
+      if(h1&&/[ÃÂ]/.test(h1)){try{text=decodeURIComponent(escape(h1))+text.slice(h1.length);}catch(e){}}}
     const firstEnd=text.indexOf('\n');
     if(firstEnd<0) throw new Error('El archivo no contiene filas.');
 
@@ -3004,6 +3007,7 @@ function refreshFilterOptions(preserve=true){
   }
 }
 function rebuildCombinedData({resetRange=false,preserveFilters=true}={}){
+  setTimeout(()=>{try{window.__gerRender&&window.__gerRender();}catch(e){}},0);   // el reporte gerencial se redibuja con la producción nueva
   const dayDates=new Set(DAY_DATA.map(r=>(r.op||'PICKING')+'|'+r.d));
   const histWithoutUpdatedDays=HIST_DATA.filter(r=>!dayDates.has((r.op||'PICKING')+'|'+r.d));
   DATA=histWithoutUpdatedDays.concat(DAY_DATA);
@@ -5923,7 +5927,7 @@ async function dateFixer(TT){
   const useB=forced?forced==='mdy':(med!=null?Math.abs(b-med)<Math.abs(a-med):(a>hoy&&b<=hoy));if(!useB)return t;swapped++;return Object.assign({},t,{M:t.D,D:t.M});};
  return {fix,count:()=>swapped};}
 const clean=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,' ').replace(/[",]/g,' ').trim();
-async function readTextAny(file){const ab=await file.arrayBuffer();try{return new TextDecoder('utf-8',{fatal:true}).decode(ab);}catch(e){return new TextDecoder('windows-1252').decode(ab);}}
+async function readTextAny(file){const ab=await file.arrayBuffer(),b=new Uint8Array(ab);try{return new TextDecoder('utf-8',{fatal:true}).decode(ab);}catch(e){const o=[],n=b.length;let i=0;while(i<n){const c=b[i];if(c<128){o.push(c);i++;}else if(c>=194&&c<=223&&i+1<n&&(b[i+1]&192)===128){o.push(((c&31)<<6)|(b[i+1]&63));i+=2;}else if(c>=224&&c<=239&&i+2<n&&(b[i+1]&192)===128&&(b[i+2]&192)===128){o.push(((c&15)<<12)|((b[i+1]&63)<<6)|(b[i+2]&63));i+=3;}else{o.push(c);i++;}}const parts=[];for(let k=0;k<o.length;k+=30000)parts.push(String.fromCharCode.apply(null,o.slice(k,k+30000)));return parts.join('');}}
 function csvLine(line,d){const o=[];let c='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(q){if(ch==='"'){if(line[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}else if(ch==='"')q=true;else if(ch===d){o.push(c);c='';}else c+=ch;}o.push(c);return o;}
 // PACKING ya procesado (columnas A–N de tu hoja + filtros): ENCABEZADO 1 → ENCABEZADO 2
 // Número de orden→Orden_ID · cantidad→Und_cantidad · Cantidad Conv→Und_Cantidad Conv · SOLI.→Und_SOLI. · PRE PACK.→Und_PRE PACK. · ZONA→Tipo_Pedido · Hora→hora
@@ -5962,8 +5966,8 @@ function askDateFmt(amb){return new Promise((res,rej)=>{
  document.body.appendChild(o);});}
 window.rutaTienda=c=>{const r=RIDX.get(key(c));return r?r.tienda:'';};
 window.__fileKind=async function(file){   // 'crudo' = descarga limpia del WMS · 'trabajado' = ya procesado con la plantilla
- try{const nr=h=>String(h||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();let heads=[];
-  if(/\.(csv|txt)$/i.test(file.name)){const t=await file.slice(0,6000).text(),l=t.replace(/^\uFEFF/,'').split(/\r?\n/)[0]||'',d=(l.split(';').length>l.split(',').length)?';':',';heads=l.split(d).map(nr);}
+ try{const nr=h=>{let x=String(h||'');try{if(/[ÃÂ]/.test(x))x=decodeURIComponent(escape(x));}catch(e){}return x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();};let heads=[];
+  if(/\.(csv|txt)$/i.test(file.name)){let t=await file.slice(0,6000).text();if(t.includes('\uFFFD'))t=new TextDecoder('windows-1252').decode(await file.slice(0,6000).arrayBuffer());const l=t.replace(/^\uFEFF/,'').split(/\r?\n/)[0]||'',d=(l.split(';').length>l.split(',').length)?';':',';heads=l.split(d).map(nr);}
   else{const wb=XLSX.read(await file.arrayBuffer(),{type:'array',sheetRows:1});wb.SheetNames.forEach(n=>{const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null})[0]||[];if(r.map(nr).includes('NUMERO DE ORDEN')||r.map(nr).includes('FECHA'))heads=heads.length?heads:r.map(nr);});}
   const has=x=>heads.includes(x),raw=has('NUMERO DE ORDEN')&&has('CODIGO DE ARTICULO')&&has('CANTIDAD EMPAQUETADA'),done=has('CANTIDAD CONV')||has('UND_CANTIDAD CONV')||has('FILTRO')||has('LPN');
   return (raw&&!done&&!has('FECHA'))?'crudo':(has('FECHA')||done)?'trabajado':'desconocido';}catch(e){return 'desconocido';}};
@@ -7435,7 +7439,8 @@ function rutas(O){return O?Object.keys(O.ruta).map(k=>{const x=O.ruta[k],q=k.spl
 
 // ---- PRODUCCIÓN DEL DÍA: avance por cortes (10:00, 12:00, 15:00, 17:00 y cierre = total) con la meta como vaso que se llena ----
 const CORTES=[10,12,15,17],ETQ=[['Accesorios','ACC'],['Calzados','CALZ'],['Insumos','INS']];
-function prodDia(F){const D=(window.DATA||[]).filter(r=>r.d===F);if(!D.length)return null;const out={};
+function prodDia(F){const all=(typeof DATA!=='undefined'&&Array.isArray(DATA))?DATA:[],D=all.filter(r=>r.d===F);if(!D.length)return null;   // DATA es global de la página (let), no una propiedad de window
+ const out={};
  ['PICKING','PACKING'].forEach(tx=>{const R={ACC:[0,0,0,0,0],CALZ:[0,0,0,0,0],INS:[0,0,0,0,0]};let any=false;
   D.forEach(r=>{if((r.op||'PICKING')!==tx)return;const k=r.k==='ACC'?'ACC':r.k==='CALZ'?'CALZ':(r.k==='INSUMO'||r.k==='MATERIALES')?'INS':null;if(!k)return;const n=Number(r.n)||0,h=Number(r.h);any=true;CORTES.forEach((c,i)=>{if(h<c)R[k][i]+=n;});R[k][4]+=n;});
   out[tx]=any?R:null;});return (out.PICKING||out.PACKING)?out:null;}
