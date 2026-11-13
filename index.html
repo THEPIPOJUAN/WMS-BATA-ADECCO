@@ -5653,8 +5653,13 @@ updateDayData=async function(fl){
   window.SKUPROD_COMMIT(op,'d');
   const nr=DAY_DATA.slice(pd);const sid=newSrc(kindF==='crudo'?rawLabel(op,nr,file.name):file.name,op,'Operación del día');tag(DAY_DATA,pd,op,sid);tag(DAY_DETAILS,pt,op,sid);
   const meta=DAY_META.length>pm?DAY_META[DAY_META.length-1]:null;if(meta){meta.op=op;meta.src=sid;}
+  let replaced=false;{const ns=new Set(nr),ND=new Set(nr.map(x=>x.d)),exr=HIST_DATA.concat(DAY_DATA).filter(x=>!ns.has(x)&&opOf(x)===op&&ND.has(x.d));
+   if(exr.length){const nn=a=>a.reduce((q,x)=>q+(Number(x.n)||0),0),L=n=>Math.round(n).toLocaleString('es-PE');
+    if(confirm('Ya hay producción de '+op+' cargada para '+[...ND].map(labelDate).join(', ')+' ('+L(nn(exr))+' und).\nEsta carga trae '+L(nn(nr))+' und.\n\nAceptar → REEMPLAZAR: se quita lo anterior de ese día y queda solo este archivo (úsalo si la descarga del WMS es acumulada).\nCancelar → FUSIONAR: solo se agregan las líneas nuevas.')){
+     const nd=new Set(DAY_DETAILS.slice(pt)),del=x=>!ns.has(x)&&!nd.has(x)&&opOf(x)===op&&ND.has(x.d);
+     HIST_DATA=HIST_DATA.filter(x=>!del(x));DAY_DATA=DAY_DATA.filter(x=>!del(x));HIST_DETAILS=HIST_DETAILS.filter(x=>!del(x));DAY_DETAILS=DAY_DETAILS.filter(x=>!del(x));replaced=true;}}}
   let added=meta?meta.added||0:0,dup=meta?meta.duplicates||0:0;
-  if(nr.length&&DAY_DETAILS.length===pt){const r=mergeD(nr,op);added=r.added;dup=r.dup;
+  if(nr.length&&(replaced||DAY_DETAILS.length===pt)){const r=replaced?{added:nr.length,dup:0,drop:new Set(),repl:new Set()}:mergeD(nr,op);added=r.added;dup=r.dup;
    if(pkInfo){const kk=d=>d.d+'|'+d.u;DAY_DETAILS=DAY_DETAILS.filter(d=>!(opOf(d)===op&&r.repl.has(kk(d))));pkInfo.details.forEach(d=>{if(r.drop.has(kk(d)))return;d.op=op;d.src=sid;DAY_DETAILS.push(d);});}}
   rebuildCombinedData({resetRange:!HIST_DATA.length,preserveFilters:true});
   A+=added;D+=dup;done++;
@@ -5845,7 +5850,7 @@ async function procOla(e){
  try{
   if(!window.XLSX)throw new Error('Motor Excel no disponible.');
   await new Promise(r=>setTimeout(r,30));
-  OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));window.__olaOut=OUT;try{window.__gerSaveOla&&window.__gerSaveOla(OUT,file&&file.lastModified,file&&file.name);}catch(e){}
+  OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));window.__olaOut=OUT;try{window.__gerSaveOla&&window.__gerSaveOla(OUT,file&&file.lastModified,file&&file.name,file);}catch(e){}
   st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · ACTIVO PARA PICKING: <b>'+OUT.acc['ACTIVO PARA PICKING'].toLocaleString('es-PE')+'</b> · TDAS PARADAS: <b>'+OUT.acc['TDAS PARADAS'].toLocaleString('es-PE')+'</b> · SIN STOCK ACTIVO: <b>'+OUT.acc['SIN STOCK ACTIVO'].toLocaleString('es-PE')+'</b>'+(OUT.avisos.length?' · ⚠️ '+OUT.avisos.join(' · '):'');
   btn.disabled=false;const s2=document.getElementById('olaStatus2');if(s2)s2.innerHTML=st.innerHTML;window.renderOla&&window.renderOla(OUT);
  }catch(err){OUT=null;st.textContent='Error: '+err.message;const s2=document.getElementById('olaStatus2');if(s2)s2.textContent=st.textContent;}
@@ -7412,6 +7417,15 @@ const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
 const H=()=>{if(!window.GERHIST){window.GERHIST=LS('ger_hist')||{};const o=LS('ger_ola'),pl=LS('ger_plant'),c=LS('ger_cart');if(o||pl||c){const k=(o&&o.fecha)||(pl&&pl.fecha)||(c&&c.fecha)||hoy();window.GERHIST[k]=Object.assign(window.GERHIST[k]||{},o?{ola:o}:{},pl?{plant:pl}:{},c?{cart:c}:{},{ts:Date.now()});['ger_ola','ger_plant','ger_cart'].forEach(x=>{try{localStorage.removeItem(x);}catch(e){}});}}return window.GERHIST;};
 let selF=null,tmSave=null;const fSel=()=>{if(selF)return selF;const t=hoy(),H_=H(),pd=prodDates();if(H_[t]||pd.indexOf(t)>=0)return t;const all=Object.keys(H_).concat(pd).sort();return all.length?all[all.length-1]:t;};
 const usrSnap=d=>{const pk=d.people.filter(p=>p.pres&&ORD.indexOf(p.c)>=0).sort((a,b)=>ORD.indexOf(a.c)-ORD.indexOf(b.c)||a.n.localeCompare(b.n)).map(p=>({n:p.n,c:p.c,mh:p.mh})),em=d.people.filter(p=>p.pres&&p.c==='EMBALADOR');return {hrs:d.hrs,lab:d.D.lab,pk,emb:{n:em.length,eq:em.reduce((s,p)=>s+p.mh,0)}};};
+/*CSVSTORE*/
+
+// ---- Copia en CSV de cada documento cargado (se guarda en este equipo, IndexedDB) ----
+const idb=()=>new Promise((ok,no)=>{const q=indexedDB.open('ger_csv',1);q.onupgradeneeded=()=>q.result.createObjectStore('f');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error);});
+const idbPut=async(k,v)=>{const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('f','readwrite');t.objectStore('f').put(v,k);t.oncomplete=ok;t.onerror=()=>no(t.error);});};
+const idbGet=async k=>{const d=await idb();return new Promise((ok,no)=>{const r=d.transaction('f').objectStore('f').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});};
+async function saveCsv(id,file,sheets,k,tipo){try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[];sheets.forEach(sn=>{const n=wb.SheetNames.find(x=>nz(x)===nz(sn));if(!n)return;out.push({n:tipo+'_'+k+'_'+nz(sn).replace(/[^A-Z0-9]+/g,'_')+'.csv',t:'\uFEFF'+XLSX.utils.sheet_to_csv(wb.Sheets[n],{FS:';'})});});if(out.length)await idbPut(id,out);}catch(e){}}
+async function dlCsv(id){let v=null;try{v=await idbGet(id);}catch(e){}if(!v||!v.length){alert('El CSV de esta carga no está guardado en este equipo (se guarda en el equipo donde se subió el archivo).');return;}
+ v.forEach((x,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x.t],{type:'text/csv;charset=utf-8'}));a.download=x.n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);},i*450));}
 const TL={ola:'Corrida de Olas (PEND-STOCK-RUTA)',plant:'PLANT_DE_ASIGNACION',cart:'CARTONES'};
 function snap(part,k,info){const H_=H();k=k||hoy();const cur=H_[k]||{};cur.vers=cur.vers||[];const tipo=part.ola?'ola':part.plant?'plant':'cart',data=part[tipo];let replace=true;
  if(cur[tipo]){const hh=cur[tipo+'At']?new Date(cur[tipo+'At']).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}):'';
@@ -7421,7 +7435,7 @@ function snap(part,k,info){const H_=H();k=k||hoy();const cur=H_[k]||{};cur.vers=
  if(cur.vers.length>12){const act=v=>v.id===cur[v.tipo+'Id'],keep=cur.vers.filter(act).concat(cur.vers.filter(v=>!act(v)).slice(-8));cur.vers=cur.vers.filter(v=>keep.indexOf(v)>=0);}
  cur.ts=Date.now();const d=window.__gerDataFecha?window.__gerDataFecha(k):null;if(d&&d.hasAsis)cur.usr=usrSnap(d);H_[k]=cur;
  const ks=Object.keys(H_).sort();while(ks.length>120)delete H_[ks.shift()];SV('ger_hist',H_);clearTimeout(tmSave);tmSave=setTimeout(()=>{try{window.saveCloud&&window.saveCloud();}catch(e){}},1500);
- if(!replace)st('Se conservó la carga actual de '+TL[tipo]+' del <b>'+fh(k)+'</b>; la nueva quedó en <b>HISTORIAL</b>.');return replace;}
+ if(!replace)st('Se conservó la carga actual de '+TL[tipo]+' del <b>'+fh(k)+'</b>; la nueva quedó en <b>HISTORIAL</b>.');return rec;}
 window.__gerMerge=function(c){const H_=H();Object.keys(c||{}).forEach(k=>{if(!H_[k]||(c[k].ts||0)>(H_[k].ts||0))H_[k]=c[k];});SV('ger_hist',H_);};
 if(window.__gerCloud)window.__gerMerge(window.__gerCloud);
 const CSS='.ger{--navy:#0f3157;--g:#1e8a3c;--r:#d62839;--o:#d9822b;--p:#7a4fb5;--b:#2166a8;--mu:#5b6b7c;--line:#dbe4ee;display:grid;gap:14px;color:#12263f;font:14px/1.35 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#eef3f8;padding:12px;border-radius:14px}.ger *{box-sizing:border-box}'
@@ -7439,7 +7453,7 @@ function weeks(O){return O?Object.keys(O.sem).sort().map(w=>{const x=O.sem[w];re
 function rutas(O){return O?Object.keys(O.ruta).map(k=>{const x=O.ruta[k],q=k.split('|');return {lp:q[0],ruta:q[1],a:x.ACTIVO,p:x.PARADAS,s:x.SIN,t:x.ACTIVO+x.PARADAS+x.SIN};}).sort((a,b)=>b.t-a.t):[];}
 
 // ---- PRODUCCIÓN DEL DÍA: cortes 10:00, 12:00, 15:00, 17:00 y cierre (= total), resúmenes, producción por hora, usuarios por hora y vaso de meta ----
-const CORTES=[10,12,15,17],ETQ=[['Accesorios','ACC'],['Calzados','CALZ'],['Insumos','INS']],PFK=['CALZ','ACC','SOLI','PRE PACK','INSUMOS'],PF={};
+const CORTES=[10,12,15,17],visCuts=F=>{const n=new Date(),hoyI=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'),mm=n.getHours()*60+n.getMinutes();return CORTES.map(c=>F!==hoyI||mm>=c*60);},ETQ=[['Accesorios','ACC'],['Calzados','CALZ'],['Insumos','INS']],PFK=['CALZ','ACC','SOLI','PRE PACK','INSUMOS'],PF={};
 const prodRows=()=>(typeof DATA!=='undefined'&&Array.isArray(DATA))?DATA:[];   // DATA es global de la página (let), no una propiedad de window
 function prodDates(){const q=new Set();prodRows().forEach(r=>{if(r.d)q.add(r.d);});return [...q].sort();}
 const etq=r=>r.k==='ACC'?'ACC':r.k==='CALZ'?'CALZ':(r.k==='INSUMO'||r.k==='MATERIALES')?'INS':null;
@@ -7463,12 +7477,13 @@ function hourChart(hr,col){const H=Object.keys(hr).map(Number).sort((a,b)=>a-b);
 function prodHtml(m){const P=prodDia(m.fecha);if(!P)return '';const kk=(l,v,c,i)=>'<div class="k"><span>'+l+'</span><b class="'+c+'">'+v+'</b><i>'+(i||'')+'</i></div>';
  const blk=(tx,nombre,meta,cards,col)=>{const X=P[tx];if(!X)return '<div class="n" style="margin:8px 0">Sin producción de '+nombre+' este día.</div>';
   const R=X.R,tot=[0,0,0,0,0];ETQ.forEach(e=>R[e[1]].forEach((v,i)=>tot[i]+=v));const pp=meta?tot[4]/meta:null,hs=Object.keys(X.hr).map(Number).sort((a,b)=>X.hr[b]-X.hr[a]),h0=hs.length?hs[0]:null,PV=pivData(tx,X.rows),hd=hid('pv'+tx);
-  const cuts=['10:00','12:00','15:00','17:00'];
-  return '<div class="pdb"><h3 class="pdt" style="border-left:6px solid '+col+'">'+nombre+'</h3><div class="k5">'+cards+kk('AVANCE DE '+nombre,f(tot[4]),'P',h0==null?'':'Hora más alta de '+String(h0).padStart(2,'0')+' a '+String(h0+1).padStart(2,'0')+' · '+f(X.hr[h0]))+'</div>'
+  const cuts=['10:00','12:00','15:00','17:00'],vis=visCuts(m.fecha),cv=(v,j)=>(j<4&&!vis[j])?'-':f(v);
+  const sr={};X.rows.forEach(r=>{const k=r.src&&(window.FILES||[]).some(q=>q.id===r.src)?r.src:'legacy';sr[k]=(sr[k]||0)+(Number(r.n)||0);});const sk=Object.keys(sr),warn=sk.length>1?'<div class="nb" style="border-color:#d9822b;margin:0 0 8px">⚠ Esta producción de '+nombre+' viene de <b>'+sk.length+' cargas</b>: '+sk.map(k=>{const q=(window.FILES||[]).find(z=>z.id===k);return esc(q?q.name:'Datos anteriores')+' ('+f(sr[k])+' und)';}).join(' · ')+'. Si una incluye lo de la otra, se está sumando doble: elimina la repetida en 📁 Archivos cargados.</div>':'';
+  return '<div class="pdb"><h3 class="pdt" style="border-left:6px solid '+col+'">'+nombre+'</h3>'+warn+'<div class="k5">'+cards+kk('AVANCE DE '+nombre,f(tot[4]),'P',h0==null?'':'Hora más alta de '+String(h0).padStart(2,'0')+' a '+String(h0+1).padStart(2,'0')+' · '+f(X.hr[h0]))+'</div>'
    +'<div class="pdg"><table class="pd"><tr><th class="l">ETIQUETA</th>'+cuts.map(c=>'<th>CORTE<br><b>'+c+'</b></th>').join('')+'<th>CIERRE<br><b>DE TURNO</b></th><th style="width:150px">META</th></tr>'
-   +ETQ.map((e,i)=>'<tr><td class="l"><b>'+e[0]+'</b></td>'+R[e[1]].map((v,j)=>'<td'+(j===4?' class="cl"':'')+'>'+f(v)+'</td>').join('')+(i===0?'<td rowspan="5" style="background:#f6f8fb;vertical-align:middle">'+vaso(pp,meta,tot[4])+'</td>':'')+'</tr>').join('')
-   +'<tr class="tt"><td class="l">TOTAL</td>'+tot.map((v,j)=>'<td'+(j===4?' class="cl"':'')+'>'+f(v)+'</td>').join('')+'</tr>'
-   +'<tr><td class="l n">% de la meta</td>'+tot.map(v=>'<td><div class="mb"><i style="width:'+Math.min(100,meta?v/meta*100:0)+'%;background:'+col+'"></i></div><small>'+(meta?pc(v,meta):'—')+'</small></td>').join('')+'</tr></table></div>'
+   +ETQ.map((e,i)=>'<tr><td class="l"><b>'+e[0]+'</b></td>'+R[e[1]].map((v,j)=>'<td'+(j===4?' class="cl"':'')+'>'+cv(v,j)+'</td>').join('')+(i===0?'<td rowspan="5" style="background:#f6f8fb;vertical-align:middle">'+vaso(pp,meta,tot[4])+'</td>':'')+'</tr>').join('')
+   +'<tr class="tt"><td class="l">TOTAL</td>'+tot.map((v,j)=>'<td'+(j===4?' class="cl"':'')+'>'+cv(v,j)+'</td>').join('')+'</tr>'
+   +'<tr><td class="l n">% de la meta</td>'+tot.map((v,j)=>(j<4&&!vis[j])?'<td>-</td>':'<td><div class="mb"><i style="width:'+Math.min(100,meta?v/meta*100:0)+'%;background:'+col+'"></i></div><small>'+(meta?pc(v,meta):'—')+'</small></td>').join('')+'</tr></table></div>'
    +'<div class="n" style="margin:10px 0 2px"><b>Producción por hora</b> (la hora más alta en rojo)</div>'+hourChart(X.hr,col)
    +'<h4 class="pdt2">Producción por usuario y hora '+tgb('pv'+tx)+'</h4>'+(hd?'':'<div class="fl">'+PFK.map(q=>'<button type="button" class="tg'+(PV.F_[q]?' on':'')+'" data-pf="'+tx+'|'+q+'">'+q+'</button>').join('')+'</div>'
    +'<div class="ow2"><table class="pd pv"><tr><th class="l">Usuarios</th>'+PV.H.map(h=>'<th>'+h+'</th>').join('')+'<th>Total general</th></tr>'+PV.us.map(u=>'<tr><td class="l">'+esc(u)+'</td>'+PV.H.map(h=>{const v=PV.U[u].h[h]||0;return '<td style="background:rgba(33,102,168,'+(v?(0.06+v/PV.mx*0.26).toFixed(2):0)+')">'+(v?f(v):'')+'</td>';}).join('')+'<td class="cl">'+f(PV.U[u].t)+'</td></tr>').join('')+'<tr class="tt"><td class="l">Total general</td>'+PV.tot.map(v=>'<td>'+f(v)+'</td>').join('')+'<td class="cl">'+f(PV.tot.reduce((a,b)=>a+b,0))+'</td></tr></table></div>')+'</div>';};
@@ -7522,11 +7537,11 @@ window.__gerRender=render;
 document.getElementById('gerBody').addEventListener('click',e=>{const pf=e.target.closest('[data-pf]');if(pf){const q=pf.dataset.pf.split('|'),F_=PF[q[0]]=PF[q[0]]||{CALZ:1,ACC:1,SOLI:1,'PRE PACK':1,INSUMOS:1};F_[q[1]]=F_[q[1]]?0:1;render();return;}
  const pd=e.target.closest('[data-pd]');if(pd){if(pd.dataset.pd==='pdf')prodPdf();else prodXls();return;}
  const b=e.target.closest('[data-tg]');if(!b)return;COL[b.dataset.tg]=!COL[b.dataset.tg];render();});
-window.__gerSaveOla=function(O,lm,fname){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
+window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
  O.out.forEach(x=>{const v=Number(x[15])||0;if(v<=0)return;const a=x[19]==='ACTIVO PARA PICKING'?'ACTIVO':x[19]==='TDAS PARADAS'?'PARADAS':'SIN';r.tot+=v;r.acc[a]+=v;
   const e=nz(x[3])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
   const rt=String(x[1]==null?'':x[1]).trim(),kk=(x[0]||'SIN ZONA')+'|'+(rt&&nz(rt)!=='NAN'?rt:'SIN RUTA · '+(x[7]||x[6]||'tienda sin nombre'));(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
- snap({ola:r},k,{file:fname});selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
+ const rc=snap({ola:r},k,{file:fname});if(file&&rc)saveCsv(rc.id,file,['PEND','STOCK','RUTA Y PRIORIDAD'],k,'PEND-STOCK-RUTA');selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
 const st=t=>{const e=document.getElementById('gerSt');if(e)e.innerHTML=t;};
 async function leer(file,sheet){const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true}),n=wb.SheetNames.find(x=>nz(x)===sheet);if(!n)throw new Error('No encuentro la hoja '+sheet+'.');return XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:null});}
 const kf=(o,fn)=>Object.keys(o).find(k=>fn(nz(k)));
@@ -7536,11 +7551,11 @@ document.getElementById('gerPlantIn').onchange=async e=>{const fl=e.target.files
   else if(t.indexOf('PRE')===0){r.pp+=q;if(tk!=null)ts.p.add(tk);const a=ka?nz(x[ka]):'',lb=a.indexOf('CDBUFFER')>=0?(/^CDBUFFER[\s_-]*C/.test(a)?'BUFFER-C':'BUFFER A-B'):(a||'SIN ÁREA');r.ppA[lb]=(r.ppA[lb]||0)+q;}});   // Buffer: -C → BUFFER-C; A o B → BUFFER A-B
  R.forEach(x=>{const kd=kf(x,z=>z.startsWith('CREAR REGISTRO DE HORA'));if(!kd||x[kd]==null)return;const v=x[kd],dd=v instanceof Date?ymd(v):String(v).slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(dd))cn[dd]=(cn[dd]||0)+1;});
  r.tS=ts.s.size;r.tP=ts.p.size;const top=Object.keys(cn).sort((a,b)=>cn[b]-cn[a])[0],k=ov()||top||fdate(fl.lastModified);r.fecha=k;r.src=ov()?'fecha indicada':top?'columna “Crear registro de hora” de la hoja MATRIZ':'fecha del archivo';
- snap({plant:r},k,{file:fl.name});selF=k;st('<b>PLANT_DE_ASIGNACION</b> cargado: SOLI '+f(r.soli)+' + PRE PACK '+f(r.pp)+' ('+f(r.filas)+' filas). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
+ const rc=snap({plant:r},k,{file:fl.name});if(rc)saveCsv(rc.id,fl,['MATRIZ'],k,'PLANT_DE_ASIGNACION');selF=k;st('<b>PLANT_DE_ASIGNACION</b> cargado: SOLI '+f(r.soli)+' + PRE PACK '+f(r.pp)+' ('+f(r.filas)+' filas). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
 document.getElementById('gerCartIn').onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{st('Leyendo CARTONES…');const R=await leer(fl,'OB_LPN'),r={fecha:hoy(),falta:0,calz:0,acc:0,lima:0,prov:0};
  R.forEach(x=>{const ks=kf(x,z=>z==='STATTUS'||z==='STATUS'),kq=kf(x,z=>z==='CANT'),kc=kf(x,z=>z.replace(/ /g,'')==='CALZACC'),kl=kf(x,z=>z.replace(/ /g,'')==='LIMA/PROV');if(!ks||!kq||nz(x[ks])!=='FALTA EMBALAR')return;const q=Number(x[kq])||0;r.falta+=q;if(kc&&nz(x[kc])==='ACC')r.acc+=q;else r.calz+=q;if(kl&&nz(x[kl])==='LIMA')r.lima+=q;else r.prov+=q;});
  const k=ov()||fdate(fl.lastModified);r.fecha=k;r.src=ov()?'fecha indicada':'fecha de modificación del archivo';
- snap({cart:r},k,{file:fl.name});selF=k;st('<b>CARTONES</b> cargado: falta embalar '+f(r.falta)+' (CALZ '+f(r.calz)+' · ACC '+f(r.acc)+'). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
+ const rc=snap({cart:r},k,{file:fl.name});if(rc)saveCsv(rc.id,fl,['OB_LPN'],k,'CARTONES');selF=k;st('<b>CARTONES</b> cargado: falta embalar '+f(r.falta)+' (CALZ '+f(r.calz)+' · ACC '+f(r.acc)+'). Fecha detectada: <b>'+fh(k)+'</b> ('+r.src+'). Foto guardada.');render();}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
 const lib=(g,u)=>window[g]?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('No pude cargar '+g));document.head.appendChild(s);});
 
 // ---- Descargas independientes de PRODUCCIÓN DEL DÍA (siempre del día en consulta y con los datos actuales) ----
@@ -7555,7 +7570,7 @@ async function prodXls(){try{st('Generando Excel de la producción del día…')
  const wb=new ExcelJS.Workbook(),w0=wb.addWorksheet('Producción del día',{views:[{showGridLines:false}]});w0.addImage(wb.addImage({base64:cv.toDataURL('image/png'),extension:'png'}),{tl:{col:0,row:0},ext:{width:cv.width/1.5,height:cv.height/1.5}});
  const L1={style:'thin',color:{argb:'FFD0D7DE'}},bd={top:L1,left:L1,bottom:L1,right:L1},fill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}});
  const sh=(n,head,rows,wd)=>{const w=wb.addWorksheet(n),h=w.addRow(head);h.eachCell(c=>{c.fill=fill('0F3157');c.font={bold:true,color:{argb:'FFFFFFFF'},name:'Arial'};c.alignment={horizontal:'center',wrapText:true};c.border=bd;});rows.forEach(r=>{const x=w.addRow(r);x.eachCell(c=>{c.border=bd;c.font={name:'Arial',size:10};if(typeof c.value==='number')c.numFmt='#,##0';});});wd.forEach((v,i)=>w.getColumn(i+1).width=v);w.views=[{state:'frozen',ySplit:1}];};
- const rowsC=[];[['PICKING',m.proy],['PACKING',m.cap]].forEach(([tx,meta])=>{const X=P[tx];if(!X)return;const tot=[0,0,0,0,0];ETQ.forEach(e=>{rowsC.push([tx,e[0]].concat(X.R[e[1]]).concat(['','']));X.R[e[1]].forEach((v,i)=>tot[i]+=v);});rowsC.push([tx,'TOTAL'].concat(tot).concat([Math.round(meta),meta?Math.round(tot[4]/meta*1000)/10:'']));});
+ const rowsC=[];[['PICKING',m.proy],['PACKING',m.cap]].forEach(([tx,meta])=>{const X=P[tx];if(!X)return;const tot=[0,0,0,0,0];ETQ.forEach(e=>{rowsC.push([tx,e[0]].concat(X.R[e[1]].map((v,j)=>(j<4&&!visCuts(m.fecha)[j])?'-':v)).concat(['','']));X.R[e[1]].forEach((v,i)=>tot[i]+=v);});rowsC.push([tx,'TOTAL'].concat(tot).concat([Math.round(meta),meta?Math.round(tot[4]/meta*1000)/10:'']));});
  sh('Cortes',['TRANSACCIÓN','ETIQUETA','CORTE 10:00','CORTE 12:00','CORTE 15:00','CORTE 17:00','CIERRE','META DEL DÍA','% DE LA META'],rowsC,[14,16,13,13,13,13,13,15,13]);
  const rowsH=[];['PICKING','PACKING'].forEach(tx=>{const X=P[tx];if(!X)return;let ac=0;Object.keys(X.hr).map(Number).sort((a,b)=>a-b).forEach(h=>{ac+=X.hr[h];rowsH.push([tx,String(h).padStart(2,'0')+':00 – '+String(h+1).padStart(2,'0')+':00',X.hr[h],ac]);});});
  sh('Por hora',['TRANSACCIÓN','HORA','UNIDADES','ACUMULADO'],rowsH,[14,18,13,13]);
@@ -7588,10 +7603,11 @@ function listVers(){const H_=H(),rows=[];Object.keys(H_).forEach(k=>{const c=H_[
 const rsm=(t,d)=>t==='ola'?'Meta global '+f(d.tot):t==='plant'?'SOLI '+f(d.soli)+' · PRE PACK '+f(d.pp):'Falta embalar '+f(d.falta);
 function openHist(){let ov=document.getElementById('gerHistOv');if(!ov){ov=document.createElement('div');ov.id='gerHistOv';ov.style.cssText='position:fixed;inset:0;background:rgba(10,24,41,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:14px';document.body.appendChild(ov);ov.addEventListener('click',histClick);}
  const rows=listVers();ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:16px 18px;max-width:1040px;width:100%;max-height:88vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">📜 HISTORIAL de documentos cargados</h2><button class="btn" data-hx="close" type="button">✕ Cerrar</button></div><p class="n" style="margin:6px 0 10px">Respaldo de cada carga. “Usar esta versión” la convierte en la del reporte de ese día.</p>'
-  +(rows.length?'<table class="heatmap"><tr><th>Fecha del dato</th><th>Documento</th><th>Archivo</th><th>Cargado</th><th>Resumen</th><th>Estado</th><th></th></tr>'+rows.map(r=>'<tr><td><b>'+fh(r.k)+'</b></td><td>'+esc(TL[r.tipo])+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.file)+'">'+esc(r.file||'—')+'</td><td>'+(r.ts?new Date(r.ts).toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td><td>'+esc(rsm(r.tipo,r.data))+'</td><td>'+(r.act?'<b style="color:#1e8a3c">✔ En uso</b>':'<span style="color:#7a8896">Versión anterior</span>')+'</td><td style="white-space:nowrap"><button class="btn pw-btn" data-hx="view" data-k="'+r.k+'" type="button">Ver día</button>'+(r.act||r.legacy?'':' <button class="btn pw-btn" data-hx="use" data-k="'+r.k+'" data-id="'+r.id+'" type="button">Usar esta versión</button> <button class="btn pw-btn" data-hx="del" data-k="'+r.k+'" data-id="'+r.id+'" type="button">Eliminar</button>')+'</td></tr>').join('')+'</table>':'<div class="nb">Aún no hay documentos cargados.</div>')+'</div>';ov.style.display='flex';}
+  +(rows.length?'<table class="heatmap"><tr><th>Fecha del dato</th><th>Documento</th><th>Archivo</th><th>Cargado</th><th>Resumen</th><th>Estado</th><th></th></tr>'+rows.map(r=>'<tr><td><b>'+fh(r.k)+'</b></td><td>'+esc(TL[r.tipo])+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.file)+'">'+esc(r.file||'—')+'</td><td>'+(r.ts?new Date(r.ts).toLocaleString('es-PE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td><td>'+esc(rsm(r.tipo,r.data))+'</td><td>'+(r.act?'<b style="color:#1e8a3c">✔ En uso</b>':'<span style="color:#7a8896">Versión anterior</span>')+'</td><td style="white-space:nowrap"><button class="btn pw-btn" data-hx="view" data-k="'+r.k+'" type="button">Ver día</button>'+(r.legacy?'':' <button class="btn pw-btn" data-hx="csv" data-id="'+r.id+'" type="button">⬇ CSV</button>')+(r.act||r.legacy?'':' <button class="btn pw-btn" data-hx="use" data-k="'+r.k+'" data-id="'+r.id+'" type="button">Usar esta versión</button> <button class="btn pw-btn" data-hx="del" data-k="'+r.k+'" data-id="'+r.id+'" type="button">Eliminar</button>')+'</td></tr>').join('')+'</table>':'<div class="nb">Aún no hay documentos cargados.</div>')+'</div>';ov.style.display='flex';}
 function histClick(e){const b=e.target.closest('[data-hx]'),ov=document.getElementById('gerHistOv');if(e.target===ov){ov.style.display='none';return;}if(!b)return;const a=b.dataset.hx,H_=H(),c=H_[b.dataset.k];
  if(a==='close'){ov.style.display='none';return;}
  if(a==='view'){selF=b.dataset.k;ov.style.display='none';render();return;}
+ if(a==='csv'){dlCsv(b.dataset.id);return;}
  if(!c)return;const v=(c.vers||[]).find(x=>x.id===b.dataset.id);if(!v)return;
  if(a==='use'){c[v.tipo]=v.data;c[v.tipo+'Id']=v.id;c[v.tipo+'At']=v.ts;c.ts=Date.now();}
  if(a==='del'){if(!confirm('¿Eliminar esta versión del respaldo?'))return;c.vers=c.vers.filter(x=>x.id!==v.id);c.ts=Date.now();}
@@ -7602,7 +7618,7 @@ const histUp=async(e,id)=>{const d=document.getElementById('gerFechaCarga').valu
 document.getElementById('gerHPlant').onchange=e=>histUp(e,'gerPlantIn');
 document.getElementById('gerHCart').onchange=e=>histUp(e,'gerCartIn');
 document.getElementById('gerHOla').onchange=async e=>{const d=document.getElementById('gerFechaCarga').value,fl=e.target.files[0];if(!d){alert('Elige primero la fecha de los datos.');e.target.value='';return;}if(!fl)return;
- try{st('Procesando PEND-STOCK-RUTA…');const O=window.__olaRunWb(XLSX.read(await fl.arrayBuffer(),{type:'array'}));window.__gerSaveOla(O,fl.lastModified,fl.name);}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
+ try{st('Procesando PEND-STOCK-RUTA…');const O=window.__olaRunWb(XLSX.read(await fl.arrayBuffer(),{type:'array'}));window.__gerSaveOla(O,fl.lastModified,fl.name,fl);}catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}e.target.value='';};
 document.getElementById('gerFecha').onchange=e=>{selF=e.target.value||null;render();};
 document.getElementById('gerDias').addEventListener('click',e=>{const b=e.target.closest('[data-gf]');if(!b)return;selF=b.dataset.gf;render();});
 document.querySelector('.viewtab[data-view="ger"]').addEventListener('click',()=>setTimeout(render,50));
