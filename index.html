@@ -2350,6 +2350,7 @@ function mapAreaLabel(rawArea){
   const v=norm(rawArea).toUpperCase();
   return AREA_LABEL_MAP[v]||norm(rawArea);
 }
+let UNK={},STORE_RULES_W={};
 let STORE_OVR=null;   // tabla de tiendas de la plataforma (módulo RUTAS); si viene, manda sobre la tabla interna
 function storeInfoFromInstalacion(rawInstalacion){
   const code=stripFormulaWrap(rawInstalacion).trim();
@@ -2363,6 +2364,7 @@ self.onmessage=async(e)=>{
   try{
     const file=e.data.file;
     STORE_OVR=(e.data.stores&&Object.keys(e.data.stores).length)?e.data.stores:null;
+    UNK={};STORE_RULES_W=e.data.storeRules||{};
     // Claves de filas ya cargadas en el dashboard (histórico + actualización del día).
     // Sirven para que un archivo nuevo se FUSIONE en vez de reemplazar: las líneas que
     // ya existen se ignoran y solo se agregan las que son realmente nuevas.
@@ -2493,7 +2495,11 @@ self.onmessage=async(e)=>{
         // Lógica de la plantilla de PICKING: Fecha/Hora/Usuario = selección · cantidad = Cantidad empaquetada (0 si la ZONA es OTROS)
         // Cantidad Conv = cantidad (SOLI) o EXTRAE(código;11;2) × cantidad (PRE PACK) · Turno: Día de 7 a 19 h · Área desde "De ubicación"
         const horaSelRaw=raw[AI.horaSel];
-        const store=storeInfoFromInstalacion(raw[AI.instalacion]);
+        let store=storeInfoFromInstalacion(raw[AI.instalacion]);
+        {const stCode=stripFormulaWrap(raw[AI.instalacion]).trim(),stNum=Number(stCode);
+         if(!store){const rl=STORE_RULES_W[stCode];
+          if(rl==='incluir')store={zona:'SIN ZONA',turno:'',ruta:'',tienda:''};
+          else if(stNum>=50100&&stNum<=50999&&rl!=='excluir'){const u=UNK[stCode]=UNK[stCode]||{rows:0,qty:0};u.rows++;u.qty+=num((AI.cantEmpaquetada>=0&&norm(raw[AI.cantEmpaquetada])!=='')?raw[AI.cantEmpaquetada]:(AI.cantActual>=0?raw[AI.cantActual]:0));}}}
         const cantActualRaw=AI.cantActual>=0?raw[AI.cantActual]:undefined;
         const cantEmpRaw=AI.cantEmpaquetada>=0?raw[AI.cantEmpaquetada]:undefined;
         const unitsRaw=(cantEmpRaw!==undefined && norm(cantEmpRaw)!=='') ? cantEmpRaw : cantActualRaw;
@@ -2711,6 +2717,7 @@ self.onmessage=async(e)=>{
       records,
       details: details||[],
       stats:{
+        unknownStores:Object.keys(UNK).map(c=>({code:c,rows:UNK[c].rows,qty:UNK[c].qty})),
         total,kept,duplicates,minDate,maxDate,file:file.name,delimiter:delim,sourceFormat:(isAllocation?'Allocation (WMS)':'Data (procesado)'),
         userDays:userDays.size,
         sessions:sessionsCount,
@@ -3070,7 +3077,8 @@ function currentWorkerParams(){
     gapMinutes,
     opStartTime:SETTINGS.opStartTime||'08:11',
     master:window.MAESTRO_MAP||{},
-    stores:(window.RUTAS&&window.RUTAS.length)?Object.fromEntries(window.RUTAS.map(r=>[String(parseInt(r.cdg,10)||r.cdg),[r.zona,'',r.ruta,r.tienda]])):null
+    stores:(window.RUTAS&&window.RUTAS.length)?Object.fromEntries(window.RUTAS.map(r=>[String(parseInt(r.cdg,10)||r.cdg),[r.zona,'',r.ruta,r.tienda]])):null,
+    storeRules:window.__storeRules?window.__storeRules():{}
   };
 }
 async function normalizeRawUploadFile(file){
@@ -3083,7 +3091,19 @@ async function normalizeRawUploadFile(file){
   if(!csv.trim()) throw new Error('La primera hoja del XLSX está vacía.');
   return new File([csv],file.name.replace(/\.xlsx$/i,'.csv'),{type:'text/csv;charset=utf-8'});
 }
-function processRawFile(file,contextLabel='Archivo',extraParams={}){
+window.__storeRules=()=>{try{return JSON.parse(localStorage.getItem('STORE_RULES')||'{}');}catch(e){return {};}};
+// Alerta: tiendas que no están en RUTAS y caen en 50100–50999 → se decide si cuentan en la producción (queda guardado)
+window.__askUnknownStores=function(list){return new Promise(res=>{const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(10,24,41,.55);z-index:100001;display:flex;align-items:center;justify-content:center;padding:14px';
+ ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:18px 20px;max-width:640px;width:100%;max-height:86vh;overflow:auto"><h2 style="margin:0 0 6px;font-size:17px">⚠️ Tiendas sin ruta dentro del rango 50100–50999</h2><p style="margin:0 0 10px;color:#5b6b7c;font-size:13px">Estas tiendas no están en el módulo RUTAS. Define si se consideran en la producción (por defecto no se cuentan, igual que la plantilla). La decisión queda guardada; también puedes agregarlas en RUTAS.</p><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left">Tienda</th><th>Líneas</th><th>Unidades</th><th>Decisión</th></tr>'+list.map(x=>'<tr><td><b>'+x.code+'</b></td><td style="text-align:center">'+x.rows+'</td><td style="text-align:center">'+Math.round(x.qty).toLocaleString('es-PE')+'</td><td><select data-c="'+x.code+'"><option value="excluir">No considerar</option><option value="incluir">Considerar en la producción</option></select></td></tr>').join('')+'</table><div style="text-align:right;margin-top:12px"><button class="btn" id="usOk" type="button">Guardar decisión</button></div></div>';
+ document.body.appendChild(ov);ov.querySelector('#usOk').onclick=()=>{const r=window.__storeRules();ov.querySelectorAll('select[data-c]').forEach(q=>{r[q.dataset.c]=q.value;});try{localStorage.setItem('STORE_RULES',JSON.stringify(r));}catch(e){}ov.remove();res();};});};
+async function processRawFile(file,contextLabel='Archivo',extraParams={}){
+  if(!(window.RUTAS&&window.RUTAS.length)&&window.__toast)window.__toast('⚠ El módulo RUTAS está vacío: se usa la tabla interna de tiendas y los totales pueden diferir de la plantilla. Carga RUTAS primero.');
+  let m=await processRawFileCore(file,contextLabel,extraParams);
+  const un=m&&m.stats&&m.stats.unknownStores;
+  if(un&&un.length){const before=JSON.stringify(window.__storeRules());await window.__askUnknownStores(un);const after=window.__storeRules();
+   if(JSON.stringify(after)!==before&&Object.keys(after).some(k=>after[k]==='incluir')){if(window.__skuBatch)window.__skuBatch.pop();m=await processRawFileCore(file,contextLabel,extraParams);}}
+  return m;}
+function processRawFileCore(file,contextLabel='Archivo',extraParams={}){
   return new Promise((resolve,reject)=>{
     normalizeRawUploadFile(file).then(file=>{
       const code=$('worker-script').textContent;
@@ -5880,10 +5900,10 @@ async function readWB(f){return XLSX.read(await f.arrayBuffer(),{type:'array'});
 function parseRutas(wb){
  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
  const hi=rows.findIndex(r=>r.some(c=>nrm(c)==='CDG'));if(hi<0)throw new Error('No se encontró la columna CDG en el archivo de rutas.');
- const H=rows[hi].map(nrm),g=n=>H.lastIndexOf(n),iC=g('CDG'),iZ=g('ZONA'),iT=g('TRANSPORTE'),iN=g('TURNO'),iD=g('F. DESPACHO'),iS=g('TIENDA'),iP=g('DEPARTAMENTO');
+ const H=rows[hi].map(nrm),g=n=>H.lastIndexOf(n),iC=g('CDG'),iZ=g('ZONA'),iT=g('TRANSPORTE'),iN=g('TURNO'),iD=g('F. DESPACHO'),iS=g('TIENDA'),iP=g('DEPARTAMENTO'),iR=g('RUTA');
  const out=[];
  rows.slice(hi+1).forEach(r=>{const cdg=String(r[iC]==null?'':r[iC]).trim();if(!cdg)return;
-  const zona=nrm(r[iZ]);const ruta=zona==='LIMA'?(String(r[iD]||'').trim()+' '+String(r[iN]||'').trim()).trim():String(r[iT]||'').trim();
+  const zona=nrm(r[iZ]);const rd=iR>=0?String(r[iR]==null?'':r[iR]).trim():'',ruta=rd||(zona==='LIMA'?(String(r[iD]||'').trim()+' '+String(r[iN]||'').trim()).trim():String(r[iT]||'').trim());   // columna RUTA directa o, en el formato antiguo, F. DESPACHO + TURNO / TRANSPORTE
   out.push({cdg:String(parseInt(cdg,10)||cdg),tienda:String(r[iS]||'').trim(),depto:String(r[iP]||'').trim(),zona:zona||'SIN ZONA',ruta:ruta||'SIN RUTA'});});
  if(!out.length)throw new Error('El archivo de rutas no tiene tiendas con CDG.');return out;
 }
@@ -6015,9 +6035,13 @@ window.__packingCSV=async function(file,opt){
  const DF=await dateFixer(TT),fixT=DF.fix;
  const out=['Fecha,Categoria,Usuario,Turno,Area,Tipo_Pedido,Orden_ID,Und_Cantidad Conv,Und_cantidad,Und_PRE PACK.,hora,Hora de selección,SKU,LPN,LPN_Destino,Ubicacion,Instalacion,Tienda'],det=[];let skip=0;
  const cl=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,' ').replace(/[",]/g,' ').trim();
+ let SR=window.__storeRules?window.__storeRules():{};
+ {const UN={};for(let i=1;i<rows.length;i++){const r=rows[i];if(!r||r[ix.iO]==null)continue;const dest=String(r[ix.iD]==null?'':r[ix.iD]).trim(),cont=String(r[ix.iC]==null?'':r[ix.iC]),dn=Number(dest);
+   if(window.rutaZona(dest)||!cont.startsWith('508')||!(dn>=50100&&dn<=50999)||SR[dest])continue;const u=UN[dest]=UN[dest]||{code:dest,rows:0,qty:0};u.rows++;u.qty+=Number(r[ix.iU])||0;}
+  const ul=Object.values(UN);if(ul.length){await window.__askUnknownStores(ul);SR=window.__storeRules();}}
  for(let i=1;i<rows.length;i++){const r=rows[i];if(!r||r[ix.iO]==null)continue;
   const sku=String(r[ix.iS]==null?'':r[ix.iS]).trim(),dest=String(r[ix.iD]==null?'':r[ix.iD]).trim(),cont=String(r[ix.iC]==null?'':r[ix.iC]);
-  const zona=window.rutaZona(dest)||'OTROS',D=(zona==='OTROS'||!cont.startsWith('508'))?0:(Number(r[ix.iU])||0);
+  let zona=window.rutaZona(dest)||'OTROS';if(zona==='OTROS'&&SR[dest]==='incluir')zona='SIN ZONA';const D=(zona==='OTROS'||!cont.startsWith('508'))?0:(Number(r[ix.iU])||0);
   if(D<=0){skip++;continue;}
   const cat=(window.masterCat&&window.masterCat(sku))||(sku.length===5?'MATERIALES':INS.includes(sku.slice(0,7))?'INSUMO':sku[0]==='9'?'ACC':'CALZ');
   const l12=sku.length===12,mu=parseInt(sku.substr(10,2),10),E=l12?D:(isNaN(mu)?D:mu*D),G=l12?0:E;
