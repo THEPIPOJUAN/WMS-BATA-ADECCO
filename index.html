@@ -2453,7 +2453,7 @@ self.onmessage=async(e)=>{
       user:idx('Usuario'),
       turn:idx('Turno'),
       area:idx('Area','Área'),
-      ubic:idx('Ubicacion','Ubicación'),
+      ubic:idx('De ubicación','De ubicacion','Ubicacion','Ubicación','Ubicación activa','Ubicacion activa'),
       tipo:idx('Tipo_Pedido','Tipo Pedido','SOLI - PRE PACK'),
       order:idx('Orden_ID','Orden ID'),
       units:idx('Und_Cantidad Conv','Und Cantidad Conv','Cantidad Conv'),
@@ -5835,16 +5835,19 @@ function run(wb){
  const rm=new Map();
  R.forEach(r=>{const o={};Object.keys(r).forEach(k=>o[norm(k)]=r[k]);const ord=Number(o['ORDEN']);if(isNaN(ord)||rm.has(ord))return;
   o.__act=kAct?norm(r[kAct]):'SI';o.__hub=(kAlm&&norm(r[kAlm])==='HUB')?'HUB':'Regular';rm.set(ord,o);});
+ // SEMANA-DIA → día de atención: la semana empieza el viernes (el correo del viernes se atiende el lunes); solo se proyecta de lunes a viernes
+ const DATN={VIERNES:'LUNES',LUNES:'MARTES',MARTES:'MIÉRCOLES',MIERCOLES:'JUEVES',JUEVES:'VIERNES'},sinD=new Set(),atn=d=>{const k=norm(d);if(!k)return '';const v=DATN[k];if(!v)sinD.add(String(d));return v||'';};
  let cruce=0,pendN=0;
  const rows=P.filter(r=>r[0]!=null||r[2]!=null).map(r=>{
   const sku=String(r[2]==null?'':r[2]).trim(),no=Number(r[0]),ru=rm.get(no)||{};if(rm.has(no))cruce++;
   const sol=num(r[3]),asg=num(r[4]),pend=sol-asg;if(pend>0)pendN++;
   const sem=String(ru['SEMANA']==null?'':ru['SEMANA']).trim(),dia=String(ru['DIA CORREO']==null?'':ru['DIA CORREO']).trim(),lpv=ru['LIMA / PROV']||(window.rutaZona?window.rutaZona(r[5]):'')||'';
   const on=Number(ru['ORDEN']);
-  return {no,sku,sol,asg,pend,pc:pend*mult(sku),est:r[1],tda:r[5],desc:r[6],lp:lpv,ruta:ru['RUTA']||(window.rutaNombre?window.rutaNombre(r[5]):''),sd:(sem+' '+dia).trim(),etq:String(ru['ETIQUETA']==null?'':ru['ETIQUETA']).trim(),nom:ru['NOMBR'],
+  return {no,sku,sol,asg,pend,pc:pend*mult(sku),est:r[1],tda:r[5],desc:r[6],lp:lpv,ruta:ru['RUTA']||(window.rutaNombre?window.rutaNombre(r[5]):''),sd:(sem+' '+dia).trim(),s6:(sem+' '+dia).trim().slice(0,6),da:atn(dia),ca:String(sku).replace(/-/g,''),etq:String(ru['ETIQUETA']==null?'':ru['ETIQUETA']).trim(),nom:ru['NOMBR'],
    act:ru.__act||'',hub:ru.__hub||'Regular',pa:ru.__act==='NO'?1:0,ph:ru.__hub==='HUB'?0:1,on:isNaN(on)?99999:on,disp:tot.get(sku)||0,
    a:niv.has(sku)?best(niv.get(sku)):'',ab:nbf.has(sku)?best(nbf.get(sku)):''};});
  // validación: las órdenes de PEND deben cruzar con RUTA Y PRIORIDAD y debe haber pendientes
+ if(sinD.size)avisos.push('día de correo sin regla de atención (DIA DE ATENCION queda vacío): '+[...sinD].join(', '));
  if(!rows.length||pendN===0)throw new Error('No hay pendientes en la hoja PEND.');
  if(cruce===0)throw new Error('Ninguna orden de PEND cruza con la columna Orden de RUTA Y PRIORIDAD (0%). Revisa el archivo.');
  // orden de consumo de stock: ruta activa SI antes que NO → HUB antes que Regular → ORDEN de ruta → N° orden → SKU
@@ -5859,8 +5862,8 @@ function run(wb){
   r.ac=!r.ok?'SIN STOCK ACTIVO':(r.act==='NO'?'TDAS PARADAS':'ACTIVO PARA PICKING');acc[r.ac]++;if(r.ok)si++;else no_++;});
  // salida: ordenada por NIVEL (PISO), RUTA, N° orden, SKU
  const srt=rows.slice().sort((x,y)=>cmp(x.A,y.A)||((x.ruta===''?1:0)-(y.ruta===''?1:0))||cmp(String(x.ruta),String(y.ruta))||((x.no||0)-(y.no||0))||cmp(x.sku,y.sku));
- const H=['LIMA/PROV','RUTA','SEMANA-DIA','ETIQUETA','RUTA ACTIVA?','HUB?','TDA DESTINO','NOMBRE TIENDA','N° ORDEN','SKU','DESCRIPCIÓN','ESTADO ORDEN','CANT. SOL','CANT. ASIG','CANT. PEND','PEND. CONVERTIDO','NIVEL (PISO)','NIVEL + BUFFER','DISP. CONVERTIDO','ACCION'];
- const out=srt.map(r=>[r.lp,r.ruta,r.sd,r.etq,r.act,r.hub,r.tda,r.nom,r.no,r.sku,r.desc,r.est,r.sol,r.asg,r.pend,r.pc,r.A,r.AB,r.disp,r.ac]);
+ const H=['LIMA/PROV','RUTA','SEMANA','SEMANA-DIA','DIA DE ATENCION','ETIQUETA','RUTA ACTIVA?','HUB?','TDA DESTINO','NOMBRE TIENDA','N° ORDEN','SKU','COD ALTERNATIVO','DESCRIPCIÓN','ESTADO ORDEN','CANT. SOL','CANT. ASIG','CANT. PEND','PEND. CONVERTIDO','NIVEL (PISO)','NIVEL + BUFFER','DISP. CONVERTIDO','ACCION'];
+ const out=srt.map(r=>[r.lp,r.ruta,r.s6,r.sd,r.da,r.etq,r.act,r.hub,r.tda,r.nom,r.no,r.sku,r.ca,r.desc,r.est,r.sol,r.asg,r.pend,r.pc,r.A,r.AB,r.disp,r.ac]);
  return {H,out,si,no:no_,acc,avisos,cruce:Math.round(cruce/rows.length*100),total:rows.length};
 }
 window.__olaRunWb=wb=>run(wb);
@@ -5878,7 +5881,7 @@ async function procOla(e){
 }
 inp.addEventListener('change',procOla);const inp2=document.getElementById('olaInput2');if(inp2)inp2.addEventListener('change',procOla);
 btn.addEventListener('click',()=>{if(!OUT)return;
- const ws=XLSX.utils.aoa_to_sheet([OUT.H].concat(OUT.out));ws['!cols']=OUT.H.map((h,i)=>({wch:[10,10,16,12,12,10,12,24,12,18,30,12,10,10,10,14,14,16,14,22][i]}));
+ const ws=XLSX.utils.aoa_to_sheet([OUT.H].concat(OUT.out));ws['!cols']=OUT.H.map((h,i)=>({wch:[10,10,9,16,16,12,12,10,12,24,12,18,16,30,12,10,10,10,14,14,16,14,22][i]}));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'DETALLE OLAS WMS');XLSX.writeFile(wb,'CORRIDA_OLA_WMS.xlsx');});
 })();
 </script>
@@ -5931,7 +5934,7 @@ $$('rutaDownBtn').onclick=()=>{if(!window.RUTAS.length)return;const ws=XLSX.util
 window.renderRutas();
 // ---- Corrida de olas (módulo) ----
 window.renderOla=o=>{const t=$$('olaTable');if(!t||!o)return;
- t.innerHTML='<tr>'+o.H.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr>'+o.out.slice(0,500).map(r=>'<tr>'+r.map((v,i)=>'<td'+((i===16||i===17)&&v==='SIN STOCK'?' class="sinstock"':'')+'>'+esc(v)+'</td>').join('')+'</tr>').join('')+(o.out.length>500?'<tr><td colspan="'+o.H.length+'">Se muestran 500 de '+o.out.length.toLocaleString('es-PE')+' líneas. El Excel descargado trae todas.</td></tr>':'');};
+ t.innerHTML='<tr>'+o.H.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr>'+o.out.slice(0,500).map(r=>'<tr>'+r.map((v,i)=>'<td'+((i===19||i===20)&&v==='SIN STOCK'?' class="sinstock"':'')+'>'+esc(v)+'</td>').join('')+'</tr>').join('')+(o.out.length>500?'<tr><td colspan="'+o.H.length+'">Se muestran 500 de '+o.out.length.toLocaleString('es-PE')+' líneas. El Excel descargado trae todas.</td></tr>':'');};
 $$('olaDownloadBtn2').onclick=()=>$$('olaDownloadBtn').click();
 // ---- PACKING: lógica del Excel convertida al formato del dashboard ----
 const INS=['9992849','9992847','9992846','9005800','9992848','9945990','9946996','9946995','9949997','9949998','9949999','9900300','9900301','9903902','9903903','9900602'];
@@ -7353,7 +7356,7 @@ function collect(){
  ['PICKING','PACKING'].forEach(tx=>{const r=reps[tx];if(!r){prod[tx]=null;return;}const g=r.tables[0],top=g.users.slice(0,3).map(u=>({u:u.u,v:u.total}));let b=0,l=0;r.dayTot.forEach((v,i)=>{if(v>r.dayTot[b])b=i;if(v<r.dayTot[l])l=i;});
   prod[tx]={days:r.days,dayTot:r.dayTot,total:r.generalTotal,users:r.users,top,best:{l:r.days[b],v:r.dayTot[b]},low:{l:r.days[l],v:r.dayTot[l]}};});
  const rp=reps.PICKING,lab={};if(rp)rp.datesISO.forEach((d,i)=>lab[d]=rp.days[i]);
- const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a0=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',a=(window.obtenerAreaPicking?window.obtenerAreaPicking({ubicacion:r.ub||r.ubicacion||'',area:a0}):a0),kk=a+'|'+lab[f];am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
+ const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a0=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',a=((x0,u0)=>{const y=window.obtenerAreaPicking?window.obtenerAreaPicking({ubicacion:u0,area:x0}):x0;return (/^CDBUFFER$/i.test(x0)&&!u0)?'BUFFER (sin separar)':String(y).replace(/\s*\(\s*PRE PACK\s*\)\s*$/i,'');})(a0,r.ub||r.ubicacion||''),kk=a+'|'+lab[f];/* CDBUFFER-C → BUFFER C · otros CDBUFFER → BUFFER A-B */am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
  const area={days:rp?rp.days:[],rows:[...am].map(([kk,n])=>{const i=kk.lastIndexOf('|');return {a:kk.slice(0,i),d:kk.slice(i+1),n};}).filter(x=>x.n>0)};
  return {week:w,year:y,range:dmy(dates[0])+'/'+y+' al '+dmy(dates[6])+'/'+y,gen:new Date().toLocaleString('es-PE'),umbral:(X._cfg&&X._cfg.umbral)||{verde:1,ambar:.8},asis:st.asis||asisDesdeModulo(k,dates),aten:st.aten||null,prod,attr:attrData(dates),area,reps};}
 const tpl=id=>document.getElementById(id).textContent;
@@ -7562,9 +7565,9 @@ document.getElementById('gerBody').addEventListener('click',e=>{const pf=e.targe
  const pd=e.target.closest('[data-pd]');if(pd){if(pd.dataset.pd==='pdf')prodPdf();else prodXls();return;}
  const b=e.target.closest('[data-tg]');if(!b)return;COL[b.dataset.tg]=!COL[b.dataset.tg];render();});
 window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
- O.out.forEach(x=>{const v=Number(x[15])||0;if(v<=0)return;const a=x[19]==='ACTIVO PARA PICKING'?'ACTIVO':x[19]==='TDAS PARADAS'?'PARADAS':'SIN';r.tot+=v;r.acc[a]+=v;
-  const e=nz(x[3])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
-  const rt=String(x[1]==null?'':x[1]).trim(),kk=(x[0]||'SIN ZONA')+'|'+(rt&&nz(rt)!=='NAN'?rt:'SIN RUTA · '+(x[7]||x[6]||'tienda sin nombre'));(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
+ O.out.forEach(x=>{const v=Number(x[18])||0;if(v<=0)return;const a=x[22]==='ACTIVO PARA PICKING'?'ACTIVO':x[22]==='TDAS PARADAS'?'PARADAS':'SIN';r.tot+=v;r.acc[a]+=v;
+  const e=nz(x[5])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
+  const rt=String(x[1]==null?'':x[1]).trim(),kk=(x[0]||'SIN ZONA')+'|'+(rt&&nz(rt)!=='NAN'?rt:'SIN RUTA · '+(x[9]||x[8]||'tienda sin nombre'));(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
  const rc=snap({ola:r},k,{file:fname});if(file&&rc)saveCsv(rc.id,file,['PEND','STOCK','RUTA Y PRIORIDAD'],k,'PEND-STOCK-RUTA');selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
 const st=t=>{const e=document.getElementById('gerSt');if(e)e.innerHTML=t;};
 async function leer(file,sheet){const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true}),n=wb.SheetNames.find(x=>nz(x)===sheet);if(!n)throw new Error('No encuentro la hoja '+sheet+'.');return XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:null});}
