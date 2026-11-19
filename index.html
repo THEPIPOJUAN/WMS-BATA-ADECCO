@@ -6877,7 +6877,7 @@ $$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const k
 window.renderUsuarios();
 })();
 </script>
-<script type="text/plain" id="rep-css">tr.dg1 td{background:rgba(0,0,0,.045)}tr.dstart td{border-top:3px solid var(--red,#e31b2a)}.vdh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.vd{border:0;background:var(--red,#e31b2a);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.4px;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit}.vd:hover{filter:brightness(1.1)}.vdbox{margin-top:10px}@media print{.vd{display:none}.vdbox{display:block!important}}:root{--bg:#f1f4f7;--card:#fff;--tx:#2d3139;--mu:#5b6b7c;--ln:#e1e7ed;--g:#2d3139;--red:#d9232d;--amb:#e0a43a;--ok:#2f8f5b;--okb:#d9f2e3;--ambb:#fbe9c3;--redb:#f6c9cc;--blu:#dce8fb;box-sizing:border-box}
+<script type="text/plain" id="rep-css">.ksub{display:grid;gap:3px;margin-top:8px;padding-top:7px;border-top:1px dashed var(--ln);font-size:12px;color:var(--mu);text-align:left}.ksub>span{display:flex;justify-content:space-between;gap:8px}.ksub i{font-style:normal;font-weight:700;color:var(--tx)}tr.dg1 td{background:rgba(0,0,0,.045)}tr.dstart td{border-top:3px solid var(--red,#e31b2a)}.vdh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.vd{border:0;background:var(--red,#e31b2a);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.4px;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit}.vd:hover{filter:brightness(1.1)}.vdbox{margin-top:10px}@media print{.vd{display:none}.vdbox{display:block!important}}:root{--bg:#f1f4f7;--card:#fff;--tx:#2d3139;--mu:#5b6b7c;--ln:#e1e7ed;--g:#2d3139;--red:#d9232d;--amb:#e0a43a;--ok:#2f8f5b;--okb:#d9f2e3;--ambb:#fbe9c3;--redb:#f6c9cc;--blu:#dce8fb;box-sizing:border-box}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d2128;--tx:#eef0f2;--mu:#9aa6b2;--ln:#2c323b;--g:#aeb6c1;--okb:#1d3a2b;--ambb:#4a3b17;--redb:#4a1f23;--blu:#233049}}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 Helvetica,Arial,sans-serif}
@@ -6978,6 +6978,7 @@ thead{display:table-header-group}
 <div class="card" style="margin-top:12px"><h3>Resumen de producción (sin insumos)</h3><div class="tw"><table id="pa-s"></table></div></div>
 <div class="card"><h3 id="pa-tt"></h3><div class="chips" id="pa-flt"></div><div class="chips"><input class="inp" id="pa-q" placeholder="Buscar por nombre o usuario…"></div><div class="sc"><table id="pa-t"></table></div></div>
 </div></section>
+<section id="sec-fin"><div id="fin-body"></div></section>
 <div class="foot" style="margin-top:14px"><span id="rp-foot"></span><span class="noprint">Toca una barra o un filtro · Ctrl+P para guardar en PDF</span></div>
 </div>
 </script>
@@ -7008,7 +7009,7 @@ function donut(el,items,center){const tot=items.reduce((a,x)=>a+x.v,0),W=640,H=2
  g+='<text class="t1" x="'+cx+'" y="'+(cy-2)+'" font-size="24" font-weight="700" text-anchor="middle">'+fm(tot)+'</text><text class="t2" x="'+cx+'" y="'+(cy+20)+'" font-size="13" text-anchor="middle">'+esc(center||'')+'</text>';
  items.forEach((x,k)=>{const y=40+k*36;g+='<rect x="320" y="'+(y-13)+'" width="14" height="14" rx="3" style="fill:'+(x.c||COL[k%8])+'"/><text class="t1" x="342" y="'+y+'" font-size="14" font-weight="700">'+esc(String(x.l).slice(0,32))+'</text><text class="t2" x="342" y="'+(y+16)+'" font-size="13">'+fm(x.v)+' · '+Math.round(x.v/tot*100)+'%</text>';});
  $(el).innerHTML=sv(W,H,g);}
-const KP=(a)=>a.map(k=>'<div class="k '+(k[2]||'')+'"><small>'+k[0]+'</small><b'+(k[3]?' style="font-size:19px;padding-top:8px"':'')+'>'+k[1]+'</b></div>').join('');
+const KP=(a)=>a.map(k=>'<div class="k '+(k[2]||'')+'"><small>'+k[0]+'</small><b'+(k[3]?' style="font-size:19px;padding-top:8px"':'')+'>'+k[1]+'</b>'+(k[4]||'')+'</div>').join('');
 const LI=a=>a.map(x=>'<li>'+x+'</li>').join('');
 const ST={A:'s-ok',F:'s-rd',T:'s-am',D:'s-bl',DM:'s-bl',V:'s-bl',L:'s-bl'};
 const stCell=v=>v?'<span class="st '+(ST[v]||'')+'">'+v+'</span>':'<span class="t2">·</span>';
@@ -7042,7 +7043,8 @@ function secAten(){const A=R.aten;if(!A||!A.rows.length){none('at-body','Sin arc
   chips('at-cats','Categoría',CATS.map(c=>({k:c,l:dl(c)})),AT.cats,k=>{if(AT.cats.has(k)){if(AT.cats.size>1)AT.cats.delete(k);}else AT.cats.add(k);draw();},true);
   chips('at-days','Día',[{k:'',l:'Toda la semana'}].concat(DAYS.map(d=>({k:d,l:dl(d)}))),AT.day||'',k=>{AT.day=k||null;draw();});
   const mot=[[LB.n,sel.n],[LB.u,sel.u],[LB.f,sel.f]].sort((a,b)=>b[1]-a[1])[0];
-  $('at-k').innerHTML=KP([['Prescrito'+(AT.day?' · '+dl(AT.day):''),fm(sel.p)],['Atendido',fm(sel.a)],['% atendido',pc(pct(sel)),cl(pct(sel),.97,.93)],['Sin atender',fm(sel.s),sel.s?'rd':'ok'],['Principal causa',sel.s?mot[0]:'Sin pendientes','',1]]);
+  const cx=CATS.filter(c=>AT.cats.has(c)).map(c=>({c,...sum(R0.filter(r=>r.c===c&&(!AT.day||r.d===AT.day)))})).filter(x=>x.p>0),sbx=f=>subCat(cx.map(x=>[dl(x.c),f(x)]));
+  $('at-k').innerHTML=KP([['Prescrito'+(AT.day?' · '+dl(AT.day):''),fm(sel.p),'',0,sbx(x=>fm(x.p))],['Atendido',fm(sel.a),'',0,sbx(x=>fm(x.a))],['% atendido',pc(pct(sel)),cl(pct(sel),.97,.93),0,sbx(x=>pc(x.p?x.a/x.p:0))],['Sin atender',fm(sel.s),sel.s?'rd':'ok',0,sbx(x=>fm(x.s))],['Principal causa',sel.s?mot[0]:'Sin pendientes','',1]]);
   const ord=bd.slice().sort((a,b)=>pct(b)-pct(a)),cs=CATS.filter(c=>AT.cats.has(c)).map(c=>({c,...sum(R0.filter(r=>r.c===c&&(!AT.day||r.d===AT.day)))})).filter(x=>x.p>0).sort((a,b)=>pct(a)-pct(b)),L=[];
   L.push('Se atendió el '+pc(pct(sel))+' de lo prescrito ('+fm(sel.a)+' de '+fm(sel.p)+' unidades)'+(AT.day?' el '+AT.day.toLowerCase():' en la semana')+'.');
   if(!AT.day&&ord.length>1)L.push('Mejor día: '+dl(ord[0].d)+' con '+pc(pct(ord[0]))+'. Día más bajo: '+dl(ord[ord.length-1].d)+' con '+pc(pct(ord[ord.length-1]))+' ('+fm(ord[ord.length-1].s)+' sin atender).');
@@ -7129,7 +7131,8 @@ const FLT={},FKEYS=['CALZ','ACC','SOLI PACK','PRE PACK','PRE PACK CAJAS','INSUMO
   const um=new Map();det.forEach(r=>{if(!sel(r))return;const v=val(r);if(!v)return;const nmx=(X.names||{})[String(r.u).toLowerCase()]||'';if(q&&lw(r.u+' '+nmx).indexOf(q)<0)return;
    let o=um.get(r.u);if(!o){o={u:r.u,nm:nmx,by:X.days.map(()=>0),total:0};um.set(r.u,o);}o.by[r.i]+=v;o.total+=v;});
   const U=[...um.values()].sort((a,b)=>b.total-a.total||String(a.u).localeCompare(String(b.u))),dayT=X.days.map((_,i)=>U.reduce((a,u)=>a+u.by[i],0)),tot=dayT.reduce((a,v)=>a+v,0);
-  const isDef=!cajas&&!ins&&on.size===4&&FDEF.every(k=>on.has(k)),mt=isDef?U.reduce((a,u)=>a+((gm.get(u.u)||{}).meta||0),0):0,pt=mt?tot/mt:null;
+  const isDef=MT&&!cajas&&!ins&&on.size===4&&FDEF.every(k=>on.has(k)),mt=isDef?U.reduce((a,u)=>a+((gm.get(u.u)||{}).meta||0),0):0,pt=mt?tot/mt:null;
+  if(isDef)U.sort((a,b)=>{const pa=(gm.get(a.u)||{}).meta?a.total/gm.get(a.u).meta:-1,pb=(gm.get(b.u)||{}).meta?b.total/gm.get(b.u).meta:-1;return pb-pa||b.total-a.total;});
   let bi=-1,li=-1;dayT.forEach((v,i)=>{if(v<=0)return;if(bi<0||v>dayT[bi])bi=i;if(li<0||v<dayT[li])li=i;});
   $(id+'-k').innerHTML=KP([[cajas?'Total cajas Pre Pack':ins?'Total insumos':'Total selección',fm(tot)],['Operarios',fm(U.length)],['Mejor día',bi>=0?X.days[bi]+' · '+fm(dayT[bi]):'-','',1],['Día más bajo',li>=0?X.days[li]+' · '+fm(dayT[li]):'-','',1]].concat(pt!=null?[['Cumplimiento de meta',pc(pt),cl(pt,R.umbral.verde,R.umbral.ambar)]]:[]));
   $(id+'-tt').textContent='REPORTE GENERAL · '+(cajas?'PRE PACK / CAJAS':ins?'INSUMO (unidades)':(cs.concat(bs).join(' + ')||'CALZ + ACC')+' · pares / unidades (Pre Pack convertido a pares)')+(F.q?' · búsqueda: '+F.q:'');
@@ -7143,25 +7146,35 @@ const DYS={i:null,hd:null};
 function diasSemana(){const m=String(R.range||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(!m)return [];const b=Date.UTC(+m[3],+m[2]-1,+m[1]),n=['lun','mar','mié','jue','vie','sáb'];return n.map((x,i)=>{const d=new Date(b+i*864e5);return {l:x+' '+String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0'),iso:d.toISOString().slice(0,10),i};});}
 function refreshDay(){secDia();try{secAsis();}catch(e){}try{secProd();}catch(e){}const D=diasSemana(),a=R.area,rp=R.reps&&R.reps.PICKING;
  if(a&&window.__areaDraw){AR.day=(DYS.i==null||!rp||!D[DYS.i])?'':((a.days||[])[rp.datesISO.indexOf(D[DYS.i].iso)]||'');window.__areaDraw();}}
+const MT=R.meta!==false;
+const CN={CALZ:'Calzado',ACC:'Accesorio'},DNM={lun:'LUNES',mar:'MARTES','mié':'MIERCOLES',mie:'MIERCOLES',jue:'JUEVES',vie:'VIERNES','sáb':'SABADO',sab:'SABADO',dom:'DOMINGO'};
+function subCat(a){return a.length?'<span class="ksub">'+a.map(x=>'<span>'+x[0]+'<i>'+x[1]+'</i></span>').join('')+'</span>':'';}
+function catSplit(X,u,di){const o={CALZ:0,ACC:0};((X&&X.det)||[]).forEach(r=>{if(o[r.c]===undefined)return;if(u&&r.u!==u)return;if(di!=null&&r.i!==di)return;o[r.c]+=r.n;});return o;}
+function catSub(o){return subCat(Object.keys(CN).filter(k=>o[k]>0).map(k=>[CN[k],fm(o[k])]));}
+function dnOf(l){return DNM[String(l||'').slice(0,3).toLowerCase()]||null;}
+function atenCard(lab,dn){const A=R.aten;if(!A||!A.rows||!A.rows.length)return '';const rows=A.rows.filter(r=>!dn||r.d===dn);
+ if(!rows.length)return '<div class="card"><h3>Prescrito vs atendido · '+lab+'</h3><div class="empty">Sin datos de atención para este día.</div></div>';
+ const sum=a=>a.reduce((o,r)=>({p:o.p+r.p,a:o.a+r.a,s:o.s+r.s}),{p:0,a:0,s:0}),t=sum(rows),pt=t.p?t.a/t.p:0,cs=(A.cats||[]).map(c=>({c,...sum(rows.filter(r=>r.c===c))})).filter(x=>x.p>0),sb=f=>subCat(cs.map(x=>[dl(x.c),f(x)]));
+ return '<div class="card"><h3>Prescrito vs atendido · '+lab+'</h3><div class="kpis">'+KP([['Prescrito',fm(t.p),'',0,sb(x=>fm(x.p))],['Atendido',fm(t.a),'',0,sb(x=>fm(x.a))],['% atendido',pc(pt),cl(pt,.97,.93),0,sb(x=>pc(x.p?x.a/x.p:0))],['Sin atender',fm(t.s),t.s?'rd':'ok',0,sb(x=>fm(x.s))]])+'</div></div>';}
+function top3(L,X,di){if(!L.length)return '<div class="empty">Sin datos.</div>';
+ if(MT){const A=L.filter(x=>x.m>0).map(x=>({u:x.u,v:x.v,p:x.v/x.m})).sort((a,b)=>b.p-a.p||b.v-a.v);if(!A.length)return '<div class="empty">Sin meta registrada.</div>';return '<div class="top3">'+A.slice(0,3).map((x,i)=>'<div><small>Top '+(i+1)+' · % meta</small><b>'+pc(x.p)+'</b>'+esc(x.u)+'<small>'+fm(x.v)+' u.</small>'+(X?catSub(catSplit(X,x.u,di)):'')+'</div>').join('')+'</div>';}
+ const A=L.slice().sort((a,b)=>b.v-a.v);return '<div class="top3">'+A.slice(0,3).map((x,i)=>'<div><small>Top '+(i+1)+' · cantidad</small><b>'+fm(x.v)+'</b>'+esc(x.u)+(X?catSub(catSplit(X,x.u,di)):'')+'</div>').join('')+'</div>';}
+function kpiMeta(L,tot,met,p,lab){return MT?[['Meta '+lab,met?fm(met):'-'],['Cumplimiento',p==null?'-':pc(p),p==null?'':cl(p,R.umbral.verde,R.umbral.ambar)]]:[['Promedio por operario',L.length?fm(tot/L.length):'-'],['Mayor picado',L.length?fm(Math.max.apply(null,L.map(x=>x.v)))+' · '+L.slice().sort((a,b)=>b.v-a.v)[0].u:'-','',1]];}
 function secDia(){const D=diasSemana();if(!D.length){none('dy-body','Sin fechas para el resumen del día.');return;}
  chips('dy-f','Día',[{k:'',l:'Toda la semana'}].concat(D.map(d=>({k:String(d.i),l:d.l}))),DYS.i==null?'':String(DYS.i),k=>{DYS.i=k===''?null:+k;refreshDay();});
  if(DYS.i==null){$('dy-body').innerHTML=weekCards()+'<div id="dy-hr"></div>';weekArea();return;}
  const d=D[DYS.i],A=R.asis;let h='<div class="grid">';
- if(A&&A.rows.length){let as=0,ta=0,fa=0,de=0,sr=0;const fl=[];A.rows.forEach(r=>{const v=(r.d||[])[DYS.i]||'';if(v==='A'||v==='T'||v==='TD'){as++;if(v==='T')ta++;}else if(v==='F'){fa++;fl.push(r);}else if(v)de++;else sr++;});const p=as+fa?as/(as+fa):null;
-  h+='<div class="card"><h3>Asistencia · '+esc(d.l)+'</h3><div class="kpis">'+KP([['Asistieron',fm(as)],['Faltaron',fm(fa),fa?'rd':'ok'],['% asistencia',p==null?'-':pc(p),p==null?'':cl(p,.95,.9)],['Descanso / otros',fm(de)]])+'</div>'+(ta?'<div class="foot"><span>Tardanzas: '+ta+'</span></div>':'')+'<h3 style="margin-top:10px">Faltaron ('+fl.length+')</h3>'+(fl.length?fl.map(r=>'<span class="fchip">'+esc(r.name)+(r.obs?' <i>'+esc(String(r.obs).slice(0,48))+'</i>':'')+'</span>').join(''):'<div class="empty">Nadie faltó este día.</div>')+'</div>';}
+ h+=atenCard(esc(d.l),dnOf(d.l));
  ['PICKING','PACKING'].forEach(tx=>{const X=R.reps&&R.reps[tx],idx=X?X.datesISO.indexOf(d.iso):-1;if(!X||idx<0){h+='<div class="card"><h3>'+TXN[tx]+' · '+esc(d.l)+'</h3><div class="empty">Sin producción este día.</div></div>';return;}
   const L=X.tables[0].users.map(u=>({u:u.u,v:(u.by||[])[idx]||0,m:(u.metaBy||[])[idx]||0})).filter(x=>x.v>0);let tot=0,met=0;L.forEach(x=>{tot+=x.v;met+=x.m;});L.sort((a,b)=>b.v-a.v);const p=met?tot/met:null;
-  h+='<div class="card"><h3>'+TXN[tx]+' · '+esc(d.l)+'</h3><div class="kpis">'+KP([['Unidades (sin insumos)',fm(tot)],['Operarios',fm(L.length)],['Meta del día',met?fm(met):'-'],['Cumplimiento',p==null?'-':pc(p),p==null?'':cl(p,R.umbral.verde,R.umbral.ambar)]])+'</div><h3 style="margin-top:10px">Top 3 del día</h3>'+(L.length?'<div class="top3">'+L.slice(0,3).map((x,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(x.v)+'</b>'+esc(x.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>')+'</div>';});
+  h+='<div class="card"><h3>'+TXN[tx]+' · '+esc(d.l)+'</h3><div class="kpis">'+KP([['Unidades (sin insumos)',fm(tot),'',0,catSub(catSplit(X,null,idx))],['Operarios',fm(L.length)],...kpiMeta(L,tot,met,p,'del día')])+'</div><h3 style="margin-top:10px">Top 3 del día</h3>'+top3(L,X,idx)+'</div>';});
  const a=R.area,rp=R.reps&&R.reps.PICKING;if(a&&rp){const lb=(a.days||[])[rp.datesISO.indexOf(d.iso)];if(lb){const m=new Map();a.rows.forEach(r=>{if(r.d===lb)m.set(r.a,(m.get(r.a)||0)+r.n);});const L=[...m].map(([k,v])=>({l:k,v})).sort((x,y)=>y.v-x.v).slice(0,6);h+='<div class="card"><h3>Áreas de picking · '+esc(d.l)+'</h3><div id="dy-ar"></div></div>';$('dy-body').innerHTML=h+'</div><div id="dy-hr"></div>';hbars('dy-ar',L,{one:1,lm:150});showHr(DYS.i);return;}}
  $('dy-body').innerHTML=h+'</div><div id="dy-hr"></div>';showHr(DYS.i);}
 // Un reporte por día (toda la semana); al hacer clic en un día se abre abajo su detalle por hora
-function weekCards(){const A=R.asis;let h='<div class="grid">';
- if(A&&A.rows.length){const nd=A.days.length>6?6:A.days.length,H=A.header||{};let a=0,f=0;A.rows.forEach(r=>r.d.slice(0,nd).forEach(v=>{if(v==='A'||v==='T'||v==='TD')a++;else if(v==='F')f++;}));
-  const P=H.personal||A.rows.length,AS_=H.asist||a,FA=H.faltas||f,PCT=H.pct?(+String(H.pct).replace(',','.'))/100:(a+f?a/(a+f):0);
-  h+='<div class="card"><h3>Asistencia · semana</h3><div class="kpis">'+KP([['Personal',fm(P)],['Asistencias',fm(AS_)],['Faltas',fm(FA),FA?'rd':'ok'],['% asistencia',pc(PCT),cl(PCT,.95,.9)]])+'</div></div>';}
+function weekCards(){let h='<div class="grid">'+atenCard('semana',null);
  ['PICKING','PACKING'].forEach(tx=>{const X=R.reps&&R.reps[tx];if(!X){h+='<div class="card"><h3>'+TXN[tx]+' · semana</h3><div class="empty">Sin producción esta semana.</div></div>';return;}
   const sm=a=>(a||[]).reduce((s,x)=>s+(+x||0),0),L=X.tables[0].users.map(u=>({u:u.u,v:sm(u.by),m:sm(u.metaBy)})).filter(x=>x.v>0);let tot=0,met=0;L.forEach(x=>{tot+=x.v;met+=x.m;});L.sort((a,b)=>b.v-a.v);const p=met?tot/met:null;
-  h+='<div class="card"><h3>'+TXN[tx]+' · semana</h3><div class="kpis">'+KP([['Unidades (sin insumos)',fm(tot)],['Operarios',fm(L.length)],['Meta de la semana',met?fm(met):'-'],['Cumplimiento',p==null?'-':pc(p),p==null?'':cl(p,R.umbral.verde,R.umbral.ambar)]])+'</div><h3 style="margin-top:10px">Top 3 de la semana</h3>'+(L.length?'<div class="top3">'+L.slice(0,3).map((x,i)=>'<div><small>Top '+(i+1)+'</small><b>'+fm(x.v)+'</b>'+esc(x.u)+'</div>').join('')+'</div>':'<div class="empty">Sin datos.</div>')+'</div>';});
+  h+='<div class="card"><h3>'+TXN[tx]+' · semana</h3><div class="kpis">'+KP([['Unidades (sin insumos)',fm(tot),'',0,catSub(catSplit(X,null,null))],['Operarios',fm(L.length)],...kpiMeta(L,tot,met,p,'de la semana')])+'</div><h3 style="margin-top:10px">Top 3 de la semana</h3>'+top3(L,X,null)+'</div>';});
  if(R.area&&R.area.rows.length)h+='<div class="card"><h3>Áreas de picking · semana</h3><div id="dy-ar"></div></div>';
  return h+'</div>';}
 function weekArea(){if(!$('dy-ar'))return;const m=new Map();R.area.rows.forEach(r=>m.set(r.a,(m.get(r.a)||0)+r.n));hbars('dy-ar',[...m].map(([k,v])=>({l:k,v})).sort((x,y)=>y.v-x.v).slice(0,6),{one:1,lm:150});}
@@ -7170,17 +7183,33 @@ function showHr(i){const el=$('dy-hr');if(!el)return;if(i==null){el.innerHTML=''
  ['PICKING','PACKING'].forEach(tx=>{const X=R.reps&&R.reps[tx],a=(X&&X.hr&&X.hr[d.iso])||[];h+='<div><h3 style="margin:8px 0 4px">'+TXN[tx]+'</h3>';
   if(!a.length){h+='<div class="empty">Sin datos por hora este día.</div></div>';return;}
   const mx=Math.max.apply(null,a.map(r=>r.n).concat([1]));let ac=0,ae=0;
-  h+='<table><tr><th>Hora</th><th></th><th>Unidades</th><th>Acum.</th><th>Operarios</th><th>Meta/h</th><th>Cumpl.</th></tr>'+a.map(r=>{ac+=r.n;ae+=r.e;const p=r.e?r.n/r.e:null;return '<tr><td>'+String(r.h).padStart(2,'0')+':00</td><td style="width:90px"><div style="background:#e8edf2;border-radius:4px"><div style="height:10px;border-radius:4px;background:#e31b2a;width:'+(r.n/mx*100)+'%"></div></div></td><td>'+fm(r.n)+'</td><td>'+fm(ac)+'</td><td>'+fm(r.pk)+'</td><td>'+(r.e?fm(r.e):'-')+'</td><td class="'+(p==null?'':cl(p,R.umbral.verde,R.umbral.ambar))+'">'+(p==null?'-':pc(p))+'</td></tr>';}).join('')
-   +'<tr><td><b>Total</b></td><td></td><td><b>'+fm(ac)+'</b></td><td></td><td></td><td><b>'+(ae?fm(ae):'-')+'</b></td><td><b>'+(ae?pc(ac/ae):'-')+'</b></td></tr></table></div>';});
+  h+='<table><tr><th>Hora</th><th></th><th>Unidades</th><th>Acum.</th><th>Operarios</th>'+(MT?'<th>Meta/h</th><th>Cumpl.</th>':'')+'</tr>'+a.map(r=>{ac+=r.n;ae+=r.e;const p=r.e?r.n/r.e:null;return '<tr><td>'+String(r.h).padStart(2,'0')+':00</td><td style="width:90px"><div style="background:#e8edf2;border-radius:4px"><div style="height:10px;border-radius:4px;background:#e31b2a;width:'+(r.n/mx*100)+'%"></div></div></td><td>'+fm(r.n)+'</td><td>'+fm(ac)+'</td><td>'+fm(r.pk)+'</td>'+(MT?'<td>'+(r.e?fm(r.e):'-')+'</td><td class="'+(p==null?'':cl(p,R.umbral.verde,R.umbral.ambar))+'">'+(p==null?'-':pc(p))+'</td>':'')+'</tr>';}).join('')
+   +'<tr><td><b>Total</b></td><td></td><td><b>'+fm(ac)+'</b></td><td></td><td></td>'+(MT?'<td><b>'+(ae?fm(ae):'-')+'</b></td><td><b>'+(ae?pc(ac/ae):'-')+'</b></td>':'')+'</tr></table></div>';});
  el.innerHTML=h+'</div></div>';}
 $('dy-body').addEventListener('click',e=>{const x=e.target.closest('[data-hc]');if(x){DYS.hd=null;DYS.i==null?showHr(null):(DYS.i=null,secDia());return;}const c=e.target.closest('[data-hd]');if(c){DYS.hd=+c.dataset.hd;showHr(DYS.hd);const el=$('dy-hr');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-vd]');if(!b)return;const id=b.dataset.vd,el=$(id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';open?VD.add(id):VD.delete(id);b.textContent=open?'OCULTAR DETALLE':'VER DETALLE';});
+function secFin(){const el=$('fin-body');if(!el)return;
+ const sm=a=>(a||[]).reduce((s,x)=>s+(+x||0),0);
+ const T=tx=>{const X=R.reps&&R.reps[tx];if(!X)return null;let v=0,m=0;const dt=X.days.map(()=>0);X.tables[0].users.forEach(u=>{v+=sm(u.by);m+=sm(u.metaBy);(u.by||[]).forEach((x,i)=>dt[i]+=(+x||0));});let bi=-1;dt.forEach((x,i)=>{if(x>0&&(bi<0||x>dt[bi]))bi=i;});return {v,m,best:bi>=0?{l:X.days[bi],v:dt[bi]}:null};};
+ const P=T('PICKING'),K=T('PACKING');let h='';
+ const nota=String(R.nota||'').trim();
+ if(nota){h+='<div class="sec" style="margin-top:18px"><h2>9 · Solicitudes y comentarios</h2></div><div class="card" style="border-left:4px solid var(--red,#e31b2a)"><div style="white-space:pre-wrap;line-height:1.55">'+esc(nota)+'</div></div>';
+  const nv=document.querySelector('.nav');if(nv)nv.insertAdjacentHTML('beforeend','<a href="#sec-fin">9 · Solicitudes</a>');}
+ const parts=[];
+ if(P||K)parts.push('La semana '+R.week+' ('+R.range+') cerró con '+[P?fm(P.v)+' unidades en picking':'',K?fm(K.v)+' en packing':''].filter(Boolean).join(' y ')+'.');
+ if(MT){const vm=(P&&P.m?P.v:0)+(K&&K.m?K.v:0),mm=(P&&P.m?P.m:0)+(K&&K.m?K.m:0),pg=mm?vm/mm:null;
+  if(pg!=null){const tone=pg>=R.umbral.verde?'Felicitamos al equipo: se alcanzó la meta con '+pc(pg)+' de cumplimiento.':pg>=R.umbral.ambar?'El cumplimiento de meta fue de '+pc(pg)+', un avance sólido con margen para seguir creciendo.':'El cumplimiento de meta fue de '+pc(pg)+'; vemos una oportunidad clara de mejora y quedamos atentos para acompañarla.';parts.push(tone);}}
+ else if(P&&P.best)parts.push('El día de mayor picking fue '+P.best.l+' con '+fm(P.best.v)+' unidades, reflejo del esfuerzo del equipo.');
+ const AQ=R.aten;if(AQ&&AQ.rows&&AQ.rows.length){let pp=0,aa=0;AQ.rows.forEach(r=>{pp+=r.p;aa+=r.a;});if(pp)parts.push('Se atendió el '+pc(aa/pp)+' de lo prescrito ('+fm(aa)+' de '+fm(pp)+' unidades).');}
+ const now=new Date(),dw=now.getDay(),hr=now.getHours(),sal=hr<12?'Que tengan una excelente mañana':hr<19?'Que tengan una excelente tarde':'Que tengan una excelente noche',cierre=dw===5?sal+' y un muy buen fin de semana.':(dw===0||dw===6)?sal+' y un merecido descanso.':sal+' y una semana de grandes resultados.';
+ h+='<div class="card" style="margin-top:18px;background:#2d3139;color:#fff;border:0;-webkit-print-color-adjust:exact;print-color-adjust:exact"><h3 style="color:#fff;margin:0 0 8px">Cierre del reporte</h3>'+(parts.length?'<p style="margin:0 0 10px;line-height:1.55">'+esc(parts.join(' '))+'</p>':'')+'<p style="margin:0 0 10px;line-height:1.55">Agradecemos el compromiso y la dedicación de todo el equipo. '+(nota?'Quedamos atentos a sus comentarios y a la atención de las solicitudes planteadas. ':'Quedamos atentos a cualquier consulta o comentario. ')+esc(cierre)+'</p><p style="margin:0;font-weight:700">Atentamente,<br><span style="color:#ffb3b8">Equipo Adecco · Centro de Distribución Aldeas — Bata</span></p></div>';
+ el.innerHTML=h;}
 // ================= arranque =================
-$('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range;
+$('rp-title').textContent='Reporte ejecutivo semanal · Semana '+R.week;$('rp-sub').textContent='Bata · Centro de Distribución Aldeas · '+R.range+' · Medición: '+(MT?'por meta (% de cumplimiento)':'por mayor cantidad picada');
 const fixHead=t=>{if(!t.tHead&&t.rows[0]&&t.rows[0].querySelector('th')){const h=t.createTHead();h.appendChild(t.rows[0]);}};
 document.querySelectorAll('table').forEach(t=>new MutationObserver(()=>fixHead(t)).observe(t,{childList:true}));
 const _obs=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.querySelectorAll)n.querySelectorAll('table').forEach(t=>{fixHead(t);new MutationObserver(()=>fixHead(t)).observe(t,{childList:true});});})));_obs.observe(document.body,{childList:true,subtree:true});
-[secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING'),secDia].forEach(f=>{try{f();}catch(e){console.error(e);}});
+[secAsis,secAten,secProd,secAttr,secArea,()=>secRep('PICKING'),()=>secRep('PACKING'),secDia,secFin].forEach(f=>{try{f();}catch(e){console.error(e);}});
 document.querySelectorAll('table').forEach(fixHead);
 $('rp-foot').textContent='Fuente: Dashboard Logística Picking & Packing WMS (producción), MAESTRO SKU, asistencia y % de atención cargados · Generado el '+R.gen;
 </script>
@@ -7383,10 +7412,14 @@ function init(){const n=isoNow();$$('rsYear').value=n.y;$$('rsWeek').value=Math.
  $$('rsXls').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!window.requestUploadAccess())return;
   try{const set=m=>$$('rsMsg').textContent=m,mf=f.name.match(/sem[_\s-]*(\d{1,2})/i),want=+$$('rsWeek').value,a=await leerAtencionArchivo(f,mf?+mf[1]:want,set);if(a.week)$$('rsWeek').value=a.week;else if(mf)$$('rsWeek').value=+mf[1];const k=key();(window.REPSEM[k]=window.REPSEM[k]||{}).aten=a;set('% de atención leído (de la '+a.origen+'): '+a.rows.length+' filas · semana '+(a.week||$$('rsWeek').value)+(a.semanas&&a.semanas.length>1?' (el archivo trae las semanas '+a.semanas.join(', ')+')':'')+'.');estado();await persist();}
   catch(err){$$('rsMsg').textContent='❌ '+err.message;}});
- const make=()=>{if(!window.WMSX){toast('El dashboard aún no terminó de cargar.');return null;}return buildHTML(collect());};
- $$('rsView').onclick=()=>{const h=make();if(!h)return;const u=URL.createObjectURL(new Blob([h],{type:'text/html'}));window.open(u,'_blank');};
- $$('rsHtml').onclick=()=>{const h=make();if(!h)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));a.download='Reporte_ejecutivo_semanal_Semana_'+$$('rsWeek').value+'.html';a.click();};
- $$('rsPdfBtn').onclick=()=>{const h=make();if(!h)return;const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};toast('En la ventana de impresión elige "Guardar como PDF".');};
+ const askMeta=()=>new Promise(res=>{const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto';
+  o.innerHTML='<div style="background:#fff;color:#2d3139;border-radius:14px;max-width:480px;width:100%;padding:22px;font-family:inherit;box-shadow:0 10px 40px rgba(0,0,0,.35)"><h3 style="margin:0 0 6px;font-size:18px">Generar reporte semanal</h3><p style="margin:0 0 12px;color:#5b6b7c;font-size:14px">Escribe tu solicitud o comentario (opcional) y elige cómo medir la producción.</p><label style="font-weight:700;font-size:13px">📝 Solicitudes y comentarios (opcional)</label><textarea id="rsNota" maxlength="2000" rows="4" placeholder="Ej.: Solicitamos reforzar el turno tarde en packing…" style="width:100%;box-sizing:border-box;margin:6px 0 14px;padding:10px;border:1px solid #c9d3dc;border-radius:9px;font:inherit;font-size:14px;resize:vertical"></textarea><div style="font-weight:700;font-size:13px;margin-bottom:6px">¿Cómo medir la producción?</div><div style="display:grid;gap:10px"><button type="button" data-m="1" class="btn" style="padding:12px;text-align:left"><b>🎯 Considerar meta</b><br><small>Mide por % de cumplimiento de meta (semáforo, meta y horas).</small></button><button type="button" data-m="0" class="btn" style="padding:12px;text-align:left"><b>📦 Sin meta · mayor cantidad picada</b><br><small>Mide y ordena por unidades picadas; oculta meta y cumplimiento.</small></button><button type="button" data-m="x" style="padding:8px;border:0;background:none;color:#5b6b7c;cursor:pointer">Cancelar</button></div></div>';
+  const ta=o.querySelector('#rsNota');ta.value=window.__repNota||'';
+  const end=v=>{o.remove();res(v);};o.addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b){if(b.dataset.m==='x')return end(null);window.__repNota=ta.value.trim();end({m:b.dataset.m==='1',nota:ta.value.trim()});}else if(e.target===o)end(null);});document.body.appendChild(o);setTimeout(()=>ta.focus(),50);});
+ const make=async()=>{if(!window.WMSX){toast('El dashboard aún no terminó de cargar.');return null;}const q=await askMeta();if(q==null)return null;const D=collect();D.meta=q.m;D.nota=q.nota;return buildHTML(D);};
+ $$('rsView').onclick=async()=>{const h=await make();if(!h)return;const u=URL.createObjectURL(new Blob([h],{type:'text/html'}));window.open(u,'_blank');};
+ $$('rsHtml').onclick=async()=>{const h=await make();if(!h)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));a.download='Reporte_ejecutivo_semanal_Semana_'+$$('rsWeek').value+'.html';a.click();};
+ $$('rsPdfBtn').onclick=async()=>{const h=await make();if(!h)return;const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);f.srcdoc=h;f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){toast('No pude abrir la impresión.');}setTimeout(()=>f.remove(),60000);},700);};toast('En la ventana de impresión elige "Guardar como PDF".');};
  document.querySelectorAll('.viewtab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.view==='repsem')setTimeout(estado,50);}));estado();}
 const fmt0=n=>Math.round(Number(n)||0).toLocaleString('es-PE');
 let mdTx='PICKING';const DOWL=['dom','lun','mar','mié','jue','vie','sáb'],dl2=d=>DOWL[new Date(d+'T00:00:00Z').getUTCDay()]+' '+d.slice(8,10)+'/'+d.slice(5,7);
