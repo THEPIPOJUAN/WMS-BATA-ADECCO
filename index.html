@@ -6877,7 +6877,7 @@ $$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const k
 window.renderUsuarios();
 })();
 </script>
-<script type="text/plain" id="rep-css">.vdh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.vd{border:0;background:var(--red,#e31b2a);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.4px;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit}.vd:hover{filter:brightness(1.1)}.vdbox{margin-top:10px}@media print{.vd{display:none}.vdbox{display:block!important}}:root{--bg:#f1f4f7;--card:#fff;--tx:#2d3139;--mu:#5b6b7c;--ln:#e1e7ed;--g:#2d3139;--red:#d9232d;--amb:#e0a43a;--ok:#2f8f5b;--okb:#d9f2e3;--ambb:#fbe9c3;--redb:#f6c9cc;--blu:#dce8fb;box-sizing:border-box}
+<script type="text/plain" id="rep-css">tr.dg1 td{background:rgba(0,0,0,.045)}tr.dstart td{border-top:3px solid var(--red,#e31b2a)}.vdh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.vd{border:0;background:var(--red,#e31b2a);color:#fff;font-weight:800;font-size:12.5px;letter-spacing:.4px;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit}.vd:hover{filter:brightness(1.1)}.vdbox{margin-top:10px}@media print{.vd{display:none}.vdbox{display:block!important}}:root{--bg:#f1f4f7;--card:#fff;--tx:#2d3139;--mu:#5b6b7c;--ln:#e1e7ed;--g:#2d3139;--red:#d9232d;--amb:#e0a43a;--ok:#2f8f5b;--okb:#d9f2e3;--ambb:#fbe9c3;--redb:#f6c9cc;--blu:#dce8fb;box-sizing:border-box}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d2128;--tx:#eef0f2;--mu:#9aa6b2;--ln:#2c323b;--g:#aeb6c1;--okb:#1d3a2b;--ambb:#4a3b17;--redb:#4a1f23;--blu:#233049}}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 Helvetica,Arial,sans-serif}
@@ -6944,7 +6944,7 @@ thead{display:table-header-group}
 <div class="card"><h3>Causas de lo sin atender</h3><div id="at-c4"></div></div></div>
 <div class="card ch" style="margin-top:12px"><h3>Motivos sin atender por categoría</h3><div id="at-c5"></div></div>
 <div class="card"><h3>Resumen por día</h3><div class="tw"><table id="at-t1"></table></div></div>
-<div class="card"><h3>Detalle por día y categoría</h3><div class="tw"><table id="at-t2"></table></div><div class="foot"><span>Semáforo: verde ≥ 97% · ámbar 93% a 97% · rojo &lt; 93%</span></div></div>
+<div class="card"><div class="vdh"><h3>Detalle por día y categoría</h3><button type="button" class="vd" data-vd="at-t2w">VER DETALLE</button></div><div id="at-t2w" class="vdbox" style="display:none"><div class="tw"><table id="at-t2"></table></div><div class="foot"><span>Semáforo: verde ≥ 97% · ámbar 93% a 97% · rojo &lt; 93%</span></div></div></div>
 </div></section>
 
 <section id="sec-prod"><div class="sec"><h2>3 · Producción Picking vs Packing (sin insumos)</h2></div><div id="pr-body">
@@ -7058,7 +7058,7 @@ function secAten(){const A=R.aten;if(!A||!A.rows.length){none('at-body','Sin arc
   const T=(x,l)=>'<tr'+(l?' class="tot"':'')+'><td>'+(l||dl(x.d))+'</td><td>'+fm(x.p)+'</td><td>'+fm(x.a)+'</td><td>'+fm(x.s)+'</td><td>'+fm(x.n)+'</td><td>'+fm(x.u)+'</td><td>'+fm(x.f)+'</td><td class="'+sc(pct(x))+'"><b>'+pc(pct(x))+'</b></td></tr>';
   const H1='<th>Prescrito</th><th>Atendido</th><th>Sin atender</th><th>'+LB.n+'</th><th>'+LB.u+'</th><th>'+LB.f+'</th><th>% atendido</th>';
   $('at-t1').innerHTML='<tr><th>Día</th>'+H1+'</tr>'+bd.map(x=>T(x)).join('')+T(sum(R0),'Total general');
-  let h2='<tr><th>Día</th><th>Categoría</th>'+H1+'</tr>';DAYS.filter(d=>!AT.day||d===AT.day).forEach(d=>CATS.filter(c=>AT.cats.has(c)).forEach(c=>{const rr=R0.filter(r=>r.d===d&&r.c===c);if(rr.length)h2+=T({...sum(rr),d}).replace('<td>'+dl(d)+'</td>','<td><b>'+dl(d)+'</b></td><td>'+dl(c)+'</td>');}));$('at-t2').innerHTML=h2;};
+  let h2='<tr><th>Día</th><th>Categoría</th>'+H1+'</tr>';let di=0;DAYS.filter(d=>!AT.day||d===AT.day).forEach(d=>{let first=1;CATS.filter(c=>AT.cats.has(c)).forEach(c=>{const rr=R0.filter(r=>r.d===d&&r.c===c);if(rr.length){h2+=T({...sum(rr),d}).replace('<td>'+dl(d)+'</td>','<td><b>'+dl(d)+'</b></td><td>'+dl(c)+'</td>').replace('<tr>','<tr class="dg'+(di%2)+(first?' dstart':'')+'">');first=0;}});if(!first)di++;});$('at-t2').innerHTML=h2;};
  draw();document.addEventListener('click',e=>{const b=e.target.closest('#at-c1 [data-pick],#at-c2 [data-pick]');if(b){const d=DAYS.find(x=>dl(x)===b.dataset.pick);AT.day=AT.day===d?null:d;draw();}});}
 // ================= 3 · PICKING vs PACKING =================
 function secProd(){const P=R.prod||{},a=P.PICKING,b=P.PACKING;if(!a&&!b){none('pr-body','Sin datos de producción para esta semana.');$('pr-body').style.display='block';return;}
