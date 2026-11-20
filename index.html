@@ -1453,6 +1453,17 @@ body.v38-tv .v38-tvexit{display:block}
 .v38-act{padding:7px 12px}
 }
 @media screen and (max-height:780px){#dash .viewtab{padding:2px 8px!important;font-size:12px!important}.v38-ico{width:24px;height:24px}.v38-ico svg{width:16px;height:16px}.v38-gh{padding:7px 12px;margin-top:4px}.v38-head{display:none}}
+
+/* ===== ancho completo + letra y gráficos un poco más grandes ===== */
+@media screen{
+:root{--ui:1.15}
+.wrap{max-width:none!important;margin:0!important;padding-right:18px}
+body.v38-side .wrap{padding-left:calc(var(--side) + 18px)}
+.hero,#upload,#dash>:not(.viewtabs){zoom:var(--ui)}
+body.v38-tv{--ui:1.25}
+}
+@media screen and (min-width:2200px){:root{--ui:1.3}}
+@media screen and (max-width:900px){:root{--ui:1}.wrap{padding-right:14px}body.v38-side .wrap{padding-left:14px}}
 </style>
 </head>
 <body>
