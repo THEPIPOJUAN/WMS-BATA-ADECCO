@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Logística Picking & Packing WMS · Online Público V37</title>
+<title>Logística Picking & Packing WMS · Online Público V38</title>
 <style>
 :root{
   --red:#e31b2a; --red2:#f04450; --navy:#2d3139; --navy2:#1d2026;
@@ -1356,6 +1356,78 @@ tr.trow-total td,tr.trow-total th{font-weight:800;background:#f0f0f2;color:var(-
 .pk{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
 .pk span{display:block;font-size:10.5px;color:#5b6b7c}.pk b{font-size:20px;color:var(--navy)}
 @media(max-width:900px){.pkpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="v38-ui">
+/* ===== V38 · mejoras visuales (solo estilos, no toca la lógica) ===== */
+@media screen{
+:root{--side:224px;--shadow:0 1px 3px rgba(29,32,38,.06),0 6px 18px rgba(29,32,38,.05)}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.val,td,th{font-variant-numeric:tabular-nums}
+@keyframes v38fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.viewsection.active{animation:v38fade .35s ease both}
+/* cabecera */
+.hero{background:linear-gradient(110deg,var(--red) 0%,#b3121e 26%,var(--navy) 26.2%,var(--navy2) 100%);border:0;box-shadow:var(--shadow)}
+.hero .title{color:#fff}.hero .sub,.hero .status{color:#c9ced6}.hero .status b{color:#fff}
+/* tarjetas y KPIs */
+.card{transition:transform .2s ease,box-shadow .2s ease;box-shadow:var(--shadow)}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(29,32,38,.12)}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px}
+.kpis .kpi{position:relative;overflow:hidden;padding:14px 16px 14px 20px!important}
+.kpis .kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+.kpis .kpi.highlight:before{background:var(--green)}
+.kpis .kpi .lab{font-size:12px!important;letter-spacing:.2px}
+.kpis .kpi .val{font-size:32px!important;margin-top:6px}
+.kpis .kpi .small{font-size:11px!important}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+/* tablas */
+tbody tr{transition:background .15s}
+tbody tr:hover td{background:#fff3f4}
+/* botones y filtros */
+.toolbar .btn,.optabs button{transition:all .15s;border-radius:999px}
+.toolbar .btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.filter{border-radius:999px;padding:6px 14px;box-shadow:none;transition:border-color .15s}
+.filter:hover,.filter:focus-within{border-color:var(--red)}
+/* centro de carga */
+.loadcard{transition:transform .2s,box-shadow .2s}
+.loadcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.loadcard .ld{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.loadcard:hover .ld{-webkit-line-clamp:unset}
+.v38-how{margin:10px 0 4px;background:var(--soft);border-radius:10px;padding:8px 12px}
+.v38-how summary{cursor:pointer;font-weight:700;color:var(--navy)}
+/* barra lateral */
+body.v38-side .wrap{padding-left:calc(var(--side) + 18px)}
+#dash .viewtabs{position:fixed;left:0;top:0;bottom:0;width:var(--side);background:var(--navy2);padding:14px 10px;overflow-y:auto;z-index:60;display:flex!important;flex-direction:column;flex-wrap:nowrap;gap:2px;border:0;margin:0;border-radius:0}
+#dash .viewtab{width:100%;text-align:left;background:transparent!important;color:#c9ced6!important;border:0!important;border-radius:10px!important;padding:9px 12px!important;font-size:13px!important;font-weight:600;display:flex;align-items:center;gap:10px;white-space:normal;transition:background .15s,color .15s,transform .15s}
+#dash .viewtab:hover{background:rgba(255,255,255,.08)!important;color:#fff!important;transform:translateX(3px)}
+#dash .viewtab.active{background:var(--red)!important;color:#fff!important;box-shadow:0 4px 12px rgba(227,27,42,.35)}
+.v38-ico{width:20px;text-align:center;flex:none}
+.v38-head{padding:6px 10px 14px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px}
+.v38-logo{color:#fff;font-weight:800;font-size:20px}.v38-logo span{font-weight:400;opacity:.7}
+.v38-sub{color:#8d95a1;font-size:11px;margin-top:2px}
+.v38-grp{color:#7d8591;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:14px 12px 4px}
+.v38-foot{margin-top:auto;padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.v38-act{background:rgba(255,255,255,.08);color:#e6e9ee;border:0;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;text-align:left;transition:background .15s}
+.v38-act:hover{background:rgba(255,255,255,.16)}
+@media(max-width:900px){
+ body.v38-side .wrap{padding-left:14px}
+ #dash .viewtabs{position:static;width:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;border-radius:12px;padding:8px;margin-bottom:10px}
+ #dash .viewtab{width:auto;white-space:nowrap}
+ .v38-head,.v38-grp{display:none}.v38-foot{margin:0 0 0 8px;flex-direction:row;padding:0}
+}
+/* modo oscuro */
+html[data-theme=dark]{filter:invert(1) hue-rotate(180deg);background:#fff}
+html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] canvas,html[data-theme=dark] #dash .viewtabs{filter:invert(1) hue-rotate(180deg)}
+/* modo pantalla (TV) */
+body.v38-tv #dash .viewtabs,body.v38-tv .toolbar,body.v38-tv #filtersWrap,body.v38-tv #upload,body.v38-tv .optabs{display:none!important}
+body.v38-tv .wrap{padding-left:14px}
+body.v38-tv .kpis .kpi .val{font-size:52px!important}
+body.v38-tv .kpis .kpi .lab{font-size:16px!important}
+.v38-tvexit{display:none;position:fixed;right:14px;bottom:14px;z-index:99;background:var(--navy);color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;opacity:.6}
+.v38-tvexit:hover{opacity:1}
+body.v38-tv .v38-tvexit{display:block}
+}
+@media(prefers-reduced-motion:reduce){.viewsection.active{animation:none}.card,.loadcard,#dash .viewtab{transition:none}}
 </style>
 </head>
 <body>
@@ -7687,6 +7759,78 @@ document.getElementById('gerHOla').onchange=async e=>{const d=document.getElemen
 document.getElementById('gerFecha').onchange=e=>{selF=e.target.value||null;render();};
 document.getElementById('gerDias').addEventListener('click',e=>{const b=e.target.closest('[data-gf]');if(!b)return;selF=b.dataset.gf;render();});
 document.querySelector('.viewtab[data-view="ger"]').addEventListener('click',()=>setTimeout(render,50));
+})();
+</script>
+<script id="v38-js">
+/* ===== V38 · mejoras de interfaz (no modifica la lógica ni los datos) ===== */
+(function(){
+'use strict';
+try{
+var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var dash=$('#dash'),root=document.documentElement;if(!dash)return;
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function setTheme(t){if(t==='dark')root.setAttribute('data-theme','dark');else root.removeAttribute('data-theme');store('v38theme',t)}
+setTheme(store('v38theme')==='dark'?'dark':'light');
+
+/* barra lateral agrupada */
+var tabs=$('.viewtabs',dash);
+if(tabs){
+ var ICON={gerencia:'📊',jefatura:'📈',supervision:'👷',asignacion:'🧩',olas:'🌊',ger:'📑',repsem:'🗓️',presc:'📝',rutas:'🗺️',maestro:'🏷️',archivos:'🗂️',usuarios:'👥'};
+ var GROUPS=[['Dashboards',['gerencia','jefatura','supervision']],['Operación',['asignacion','olas','rutas']],['Reportes',['ger','repsem','presc']],['Datos',['maestro','archivos','usuarios']]];
+ var by={};$$('.viewtab',tabs).forEach(function(b){by[b.getAttribute('data-view')]=b;
+  if(!$('.v38-ico',b))b.insertAdjacentHTML('afterbegin','<span class="v38-ico">'+(ICON[b.getAttribute('data-view')]||'•')+'</span>')});
+ var head=document.createElement('div');head.className='v38-head';
+ head.innerHTML='<div class="v38-logo">Bata <span>Adecco</span></div><div class="v38-sub">Logística Picking & Packing</div>';
+ tabs.insertBefore(head,tabs.firstChild);
+ GROUPS.forEach(function(g){var l=document.createElement('div');l.className='v38-grp';l.textContent=g[0];tabs.appendChild(l);
+  g[1].forEach(function(v){if(by[v])tabs.appendChild(by[v])})});
+ $$('.viewtab',tabs).forEach(function(b){tabs.appendChild(b)});
+ var foot=document.createElement('div');foot.className='v38-foot';
+ foot.innerHTML='<button type="button" class="v38-act" id="v38Theme"></button><button type="button" class="v38-act" id="v38Tv">📺 Modo pantalla</button>';
+ tabs.appendChild(foot);
+ var tb=$('#v38Theme');function lab(){tb.textContent=root.getAttribute('data-theme')==='dark'?'☀️ Modo claro':'🌙 Modo oscuro'}
+ lab();tb.addEventListener('click',function(){setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');lab()});
+}
+function sync(){document.body.classList.toggle('v38-side',getComputedStyle(dash).display!=='none')}
+new MutationObserver(sync).observe(dash,{attributes:true,attributeFilter:['style','class']});sync();setInterval(sync,1000);
+
+/* modo pantalla: rota Gerencia, Jefatura y Supervisión */
+var tvT=null,ex=document.createElement('button');ex.type='button';ex.className='v38-tvexit';ex.textContent='✕ Salir de modo pantalla';document.body.appendChild(ex);
+function tvOn(){document.body.classList.add('v38-tv');
+ try{var p=root.requestFullscreen&&root.requestFullscreen();if(p&&p.catch)p.catch(function(){})}catch(e){}
+ var order=['gerencia','jefatura','supervision'],i=0;clearInterval(tvT);
+ tvT=setInterval(function(){i=(i+1)%order.length;var b=$('.viewtab[data-view="'+order[i]+'"]');if(b)b.click()},25000)}
+function tvOff(){document.body.classList.remove('v38-tv');clearInterval(tvT);tvT=null;try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+var tv=$('#v38Tv');if(tv)tv.addEventListener('click',tvOn);ex.addEventListener('click',tvOff);
+document.addEventListener('fullscreenchange',function(){if(!document.fullscreenElement&&document.body.classList.contains('v38-tv'))tvOff()});
+
+/* centro de carga: instrucciones plegables y descripciones completas al pasar el mouse */
+var up=$('#upload');
+if(up){var p=$('p',up),st=$('.steps',up);
+ if(p&&st&&p.parentNode===up){var d=document.createElement('details');d.className='v38-how';d.innerHTML='<summary>ℹ️ Cómo funciona la carga</summary>';up.insertBefore(d,p);d.appendChild(p);d.appendChild(st)}
+ $$('.loadcard .ld',up).forEach(function(e){e.title=e.textContent.trim()})}
+
+/* KPIs: contador animado (el texto final queda idéntico al original) */
+if(!(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)){
+ var RE=/-?\d[\d.,]*/;
+ function fmt(n,dec,th,de){var s=Math.abs(n).toFixed(dec),a=s.split('.'),i=a[0];if(th)i=i.replace(/\B(?=(\d{3})+(?!\d))/g,th);return (n<0?'-':'')+i+(dec?de+a[1]:'')}
+ function count(el){var t=el.textContent;if(el._b||el._l===t)return;var m=t.match(RE);if(!m){el._l=t;return}
+  var raw=m[0],th='',de='.',dec=0,num;
+  var lc=Math.max(raw.lastIndexOf(','),raw.lastIndexOf('.')),seps=(raw.match(/[.,]/g)||[]).length;
+  if(lc>-1){var tail=raw.length-lc-1;
+   if(seps>1&&raw.indexOf(raw[lc])!==lc){th=raw[lc]==='.'?',':'.';de=raw[lc];dec=tail}
+   else if(tail!==3){de=raw[lc];dec=tail;th=''}else{th=raw[lc]}}
+  num=parseFloat(raw.split(th||'\u0000').join('').replace(de,'.'));
+  if(!isFinite(num)||Math.abs(num)<10){el._l=t;return}
+  el._b=1;var t0=null,pre=t.slice(0,m.index),post=t.slice(m.index+raw.length);
+  (function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/650),e=1-Math.pow(1-k,3);
+   if(k<1){el.textContent=pre+fmt(num*e,dec,th,de)+post;requestAnimationFrame(step)}
+   else{el.textContent=t;el._l=t;setTimeout(function(){el._b=0},0)}})(performance.now?performance.now():0);
+  requestAnimationFrame(function(ts){});}
+ new MutationObserver(function(rs){var seen=[];rs.forEach(function(r){var n=r.target.nodeType===3?r.target.parentElement:r.target;
+  var el=n&&n.closest&&n.closest('.kpi .val');if(el&&seen.indexOf(el)<0){seen.push(el);count(el)}})}).observe(dash,{subtree:true,childList:true,characterData:true});
+}
+}catch(err){console.warn('V38 UI:',err)}
 })();
 </script>
 </body>
