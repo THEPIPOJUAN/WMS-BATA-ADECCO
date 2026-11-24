@@ -7505,7 +7505,7 @@ function extraerAtencion(ws,h,wantWeek){
  const days=[...new Set(rows.map(x=>x.d))].sort((a,b)=>{const i=DIAORD.indexOf(a),j=DIAORD.indexOf(b);return (i<0?99:i)-(j<0?99:j);}),ord=['CALZADO','ACCESORIOS','INSUMOS','UNIFORMES'],cats=[...new Set(rows.map(x=>x.c))].sort((x,y)=>(ord.indexOf(x)<0?9:ord.indexOf(x))-(ord.indexOf(y)<0?9:ord.indexOf(y)));
  const faltan=[];if(cN<0)faltan.push('NO TIENE STOCK');if(cU<0)faltan.push('STOCK UBICACION NO');if(cX<0)faltan.push('STOCK ACTIVO');
  const tS=rows.reduce((o,x)=>o+x.s,0),tM=rows.reduce((o,x)=>o+x.n+x.u+x.f,0);
- return {faltan,difMot:Math.round(tS-tM),rows:rows.map(x=>({d:x.d,c:x.c,p:x.p,a:x.a,s:x.s,n:x.n,u:x.u,f:x.f})),days,cats,week,semanas:weeks,labels:{n:'SIN STOCK EN UBICACIONES ACTIVAS',u:'UBICACIÓN NO DISPONIBLE',f:'STOCK QUE NO SE ENCUENTRA'}};}
+ return {faltan,difMot:Math.round(tS-tM),rows:rows.map(x=>({d:x.d,c:x.c,p:x.p,a:x.a,s:x.s,n:x.n,u:x.u,f:x.f})),days,cats,week,semanas:weeks,labels:{n:'SIN STOCK EN UBICACIONES ACTIVAS',u:'UBICACIÓN NO DISPONIBLE',f:'SI TIENE STOCK EN ACTIVO'}};}
 async function leerAtencionArchivo(file,wantWeek,setMsg){
  const buf=new Uint8Array(await file.arrayBuffer());
  const peek=XLSX.read(buf,{type:'array',sheetRows:25});let cand=null;
@@ -7550,7 +7550,7 @@ function collect(){
  const rp=reps.PICKING,lab={};if(rp)rp.datesISO.forEach((d,i)=>lab[d]=rp.days[i]);
  const am=new Map();(X._raw()||[]).forEach(r=>{const m=X._map(r);if(!m||String(m.transaccion||'').toUpperCase()!=='PICKING')return;const f=String(m.fecha||'').slice(0,10);if(!lab[f])return;const c=String(m.categoria||'').toUpperCase();if(EXC.indexOf(c)>=0)return;const a0=String(m.area||r.a||'SIN ÁREA').trim()||'SIN ÁREA',a=((x0,u0)=>{const y=window.obtenerAreaPicking?window.obtenerAreaPicking({ubicacion:u0,area:x0}):x0;return (/^CDBUFFER$/i.test(x0)&&!u0)?'BUFFER (sin separar)':String(y).replace(/\s*\(\s*PRE PACK\s*\)\s*$/i,'');})(a0,r.ub||r.ubicacion||''),kk=a+'|'+lab[f];/* CDBUFFER-C → BUFFER C · otros CDBUFFER → BUFFER A-B */am.set(kk,(am.get(kk)||0)+(+m.unidades||0));});
  const area={days:rp?rp.days:[],rows:[...am].map(([kk,n])=>{const i=kk.lastIndexOf('|');return {a:kk.slice(0,i),d:kk.slice(i+1),n};}).filter(x=>x.n>0)};
- return {week:w,year:y,range:dmy(dates[0])+'/'+y+' al '+dmy(dates[6])+'/'+y,gen:new Date().toLocaleString('es-PE'),umbral:(X._cfg&&X._cfg.umbral)||{verde:1,ambar:.8},asis:st.asis||asisDesdeModulo(k,dates),aten:st.aten||null,prod,attr:attrData(dates),area,reps};}
+ return {week:w,year:y,range:dmy(dates[0])+'/'+y+' al '+dmy(dates[6])+'/'+y,gen:new Date().toLocaleString('es-PE'),umbral:(X._cfg&&X._cfg.umbral)||{verde:1,ambar:.8},asis:st.asis||asisDesdeModulo(k,dates),aten:st.aten?Object.assign({},st.aten,{labels:Object.assign({},st.aten.labels,{f:'SI TIENE STOCK EN ACTIVO'})}):null,prod,attr:attrData(dates),area,reps};}
 const tpl=id=>document.getElementById(id).textContent;
 function buildHTML(R){return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reporte ejecutivo semanal · Semana '+R.week+'</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>'+tpl('rep-css')+'</style></head><body>'+tpl('rep-body')+'<scr'+'ipt>const R='+JSON.stringify(R).replace(/</g,'\\u003c')+';\n'+tpl('rep-js')+'</scr'+'ipt></body></html>';}
 // ---------- interfaz ----------
