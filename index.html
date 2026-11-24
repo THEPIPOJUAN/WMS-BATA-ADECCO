@@ -6531,10 +6531,10 @@ const personasU=()=>personas().filter(x=>x.src==='U');   // las que están en la
 const CAT_PICK=['INICIANDO','INTERMEDIO','MZN04','ANTIGUOS','PRE PACK'],CAT_PACK=['EMBALADOR','ENCAJADOR'];
 const catN=c=>{const x=nrm(c);return x==='ANTIGUO'?'ANTIGUOS':(x==='OTROS'?'OTRO':x);};
 // Día seleccionado del resumen (por defecto HOY) y asistencia guardada de esa semana
-function diaSel(){const iso=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'),hoy=new Date(),mon=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)+7*(US.catSem||0)),
+function diaSel(){const iso=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'),hoy=new Date(),cm0=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()-((hoy.getDay()+6)%7)),sy=+(($$('asisYear')||{}).value),sw=+(($$('asisWeek')||{}).value),mon=(sy&&sw)?(()=>{const j=new Date(sy,0,4);return new Date(sy,0,4-((j.getDay()+6)%7)+7*(sw-1));})():cm0,
   dias=['Lun','Mar','Mié','Jue','Vie','Sáb'].map((n,i)=>{const x=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i);return {n,d:iso(x),l:n+' '+String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0')};}),
   hI=iso(hoy),td=dias.some(x=>x.d===US.catDia)?US.catDia:(dias.some(x=>x.d===hI)?hI:dias[0].d),di=dias.findIndex(x=>x.d===td),wn=isoWk(mon),wkKey=wn.y+'-W'+String(wn.w).padStart(2,'0');
- return {dias,td,di,hoy:hI,lab:dias[di].l,hrs:(td===dias[5].d?3.75:7.5),wkKey,semLab:'Sem '+wn.w+' · '+dias[0].l.slice(4)+' – '+dias[5].l.slice(4),off:US.catSem||0,rec:window.ASISTENCIA[wkKey]||{}};}
+ return {dias,td,di,hoy:hI,lab:dias[di].l,hrs:(td===dias[5].d?3.75:7.5),wkKey,semLab:'Sem '+wn.w+' · '+dias[0].l.slice(4)+' – '+dias[5].l.slice(4),off:Math.round((mon-cm0)/6048e5),rec:window.ASISTENCIA[wkKey]||{}};}
 function resumenCats(L){const D=diaSel(),dias=D.dias,td=D.td,di=D.di,rec=D.rec,hrs=D.hrs,hs=String(D.hrs).replace('.',','),cnt={},asis={},prod={},det={PICKING:[],PACKING:[],WEB:[],OTROS:[]};let sin=0,allA=0,diff=0;
  const cm=c=>{const k=Object.keys(window.METACAT||{}).find(x=>catN(x)===c);return k==null?0:Number(window.METACAT[k])||0;};   // meta por hora DE LA CATEGORÍA
  L.forEach(x=>{const m=metaDe(x.r),c=catN(m&&window.__catAt?window.__catAt(m,td):(m&&m.categoria)||''),y=rec[nk(x.r)],pres=!!(y&&y['d'+di]==='A');   // solo A cuenta; lo demás es falta
@@ -6580,7 +6580,7 @@ window.renderUsuarios=function(){
  if($$('metaPanel')&&$$('metaPanel').style.display!=='none')renderMetas();};
 const persist=async()=>{window.renderUsuarios();if(window.saveCloud)await window.saveCloud();};
 $$('usrAreas').addEventListener('click',e=>{const b=e.target.closest('[data-area]');if(!b)return;US.area=b.dataset.area;window.renderUsuarios();});
-$$('usrCats').addEventListener('click',e=>{const sw=e.target.closest('[data-csem]');if(sw&&!sw.disabled){const v=+sw.dataset.csem;US.catSem=v===0?0:Math.min(0,(US.catSem||0)+v);US.catDia='';resumen();return;}const d=e.target.closest('[data-cdet]');if(d){US.catDet=!US.catDet;resumen();return;}const b=e.target.closest('[data-cdia]');if(!b)return;US.catDia=b.dataset.cdia;resumen();});
+$$('usrCats').addEventListener('click',e=>{const sw=e.target.closest('[data-csem]');if(sw&&!sw.disabled){const v=+sw.dataset.csem;US.catDia='';$$(v===0?'asisNow':v<0?'asisPrev':'asisNext').click();return;}const d=e.target.closest('[data-cdet]');if(d){US.catDet=!US.catDet;resumen();return;}const b=e.target.closest('[data-cdia]');if(!b)return;US.catDia=b.dataset.cdia;resumen();});
 $$('usrC1').addEventListener('click',e=>{const g=e.target.closest('[data-area]');if(!g)return;US.area=US.area===g.dataset.area?'':g.dataset.area;window.renderUsuarios();});
 
 // ---- Lectura de archivos: Excel (usuarios, asistencia o metas) y PDF ----
@@ -6964,7 +6964,8 @@ $$('usrTable').addEventListener('change',e=>{const c=e.target;if(c.id==='selAll'
  if(c.classList&&c.classList.contains('sel-ck')){if(c.checked)SEL.add(c.dataset.k);else SEL.delete(c.dataset.k);selBar();}});
 $$('selDelBtn').onclick=async()=>{const n=SEL.size;if(!n)return;if(!confirm('¿Borrar '+n+' persona'+(n===1?'':'s')+' y su asistencia? Esta acción no se puede deshacer.'))return;if(!window.requestUploadAccess())return;
  const k=[...SEL];SEL.clear();const g=borrarUsuarios(k);window.__toast&&window.__toast(g+' persona'+(g===1?'':'s')+' borrada'+(g===1?'':'s')+'.');await persist();selBar();};
-['asisYear','asisWeek'].forEach(i=>$$(i).addEventListener('change',()=>{unlocked=false;pintar();}));
+['asisYear','asisWeek'].forEach(i=>$$(i).addEventListener('change',()=>{unlocked=false;pintar();US.catDia='';resumen();}));
+['asisPrev','asisNext','asisNow'].forEach(i=>$$(i).addEventListener('click',()=>setTimeout(()=>{US.catDia='';resumen();},0)));
 $$('asisPrev').onclick=()=>mover(-1);$$('asisNext').onclick=()=>mover(1);$$('asisNow').onclick=hoy;$$('asisUnlock').onclick=()=>{unlocked=true;pintar();};
 $$('usrTable').addEventListener('dblclick',e=>{if(!unlocked&&estado()==='past'&&e.target.closest('td')&&!e.target.closest('button')){unlocked=true;pintar();window.__toast&&window.__toast('Edición habilitada para esta semana. Pulsa Guardar asistencia al terminar.');}});
 $$('usrTable').addEventListener('input',e=>{const inp=e.target.closest('.asis-in');if(!inp)return;inp.value=inp.value.toUpperCase().replace(/[^A-Z]/g,'');const v=inp.value;
