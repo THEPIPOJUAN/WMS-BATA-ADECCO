@@ -2362,6 +2362,8 @@ function num(v){
 }
 function dateISO(v){
   v=norm(v);
+  // Fecha como número de Excel (ej. 46272 = 15/09/2026, o 46272.40529 con hora)
+  if(/^\d{5}([.,]\d+)?$/.test(v)){ const x=Number(v.replace(',','.')); if(x>20000&&x<80000) return new Date(Math.floor(x-25569)*86400000).toISOString().slice(0,10); }
   let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
   m=v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
