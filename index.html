@@ -90,6 +90,7 @@ input[type=file]{display:none}
 .filter select,.filter input{width:100%;border:0;outline:none;background:transparent;color:#273948;font-size:13px}
 .datebox{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.vistabar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0}.vistabar .vistabtn{cursor:pointer;font-weight:800;font-size:12.5px;letter-spacing:.3px;padding:9px 16px;border-radius:10px;background:#fff;color:var(--navy);border:1px solid var(--line)}.vistabar .vistabtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}.vistabar.off .vistabtn{opacity:.55}.vistabar .vistanote{font-size:12px;color:#6b7280}.vistatbl th{position:sticky;top:0;background:#f4f5f7;z-index:1}
 .kpis .card{padding:10px 11px;min-width:0}
 .kpis .kpi .lab,.kpis .lab{font-size:10px;line-height:1.2}
 .kpis .kpi .val,.kpis .val{font-size:23px;line-height:1.05}
@@ -1761,6 +1762,8 @@ body.v38-tv{--ui:1.25}
     </div>
 
     <div id="view-gerencia" class="viewsection active">
+    <div class="vistabar" data-vistabar><button type="button" class="vistabtn" data-vista="week">VISTA SEMANAL</button><button type="button" class="vistabtn" data-vista="day">VISTA DIARIA</button><span class="vistanote"></span></div>
+    <section class="card vistatbl" style="display:none;margin-top:10px"><div class="tblbox" style="max-height:380px;overflow:auto"><table class="mgmt" id="vistaTblGT"></table></div></section>
     <section class="kpis">
       <div class="card kpi">
         <div class="lab">Producción Picking</div>
@@ -2180,6 +2183,8 @@ body.v38-tv{--ui:1.25}
 
 
     <div id="view-jefatura" class="viewsection">
+    <div class="vistabar" data-vistabar><button type="button" class="vistabtn" data-vista="week">VISTA SEMANAL</button><button type="button" class="vistabtn" data-vista="day">VISTA DIARIA</button><span class="vistanote"></span></div>
+    <section class="card vistatbl" style="display:none;margin-top:10px"><div class="tblbox" style="max-height:380px;overflow:auto"><table class="mgmt" id="vistaTblJT"></table></div></section>
     <section class="card" style="margin-top:10px;padding:10px 14px">
       <div class="h" style="font-size:15px">Contexto de Jefatura</div>
       <div class="mini">Referencia visible del criterio aplicado para todas las vistas de jefatura.</div>
@@ -3427,7 +3432,43 @@ function currentProdMode(){
   return $('prodMode')?.value || SETTINGS.prodMode || 'operational';
 }
 function shouldSeparateByDay(){return getMultiSelected('day').size!==1;}
-function enforceDailyExecutiveView(){const s=$('mgmtLevel');if(s&&shouldSeparateByDay()&&s.value!=='day')s.value='day';}
+// ===== VISTA SEMANAL / DIARIA (solo cuando NO hay filtros globales activos) =====
+let VISTA='week',__prevNoFilter=true;
+function noGlobalFilter(){return Object.keys(MULTI_STATE).every(k=>!MULTI_STATE[k].size);}
+function scopeVista(all){
+  const on=noGlobalFilter()&&all.length>0;
+  return {arr:all,on,label:VISTA==='day'?'detalle por d\u00eda (m\u00e1s reciente primero)':'detalle por semana (m\u00e1s reciente primero)'};
+}
+function updateVistaUI(SC){
+  document.querySelectorAll('[data-vistabar]').forEach(bar=>{
+    bar.classList.toggle('off',!SC.on);
+    bar.querySelectorAll('[data-vista]').forEach(b=>b.classList.toggle('active',b.dataset.vista===VISTA));
+    const n=bar.querySelector('.vistanote');
+    if(n)n.textContent=SC.on?('Mostrando: '+SC.label):(noGlobalFilter()?'':'Hay filtros activos: se muestra la informaci\u00f3n de los filtros.');
+  });
+  document.querySelectorAll('.vistatbl').forEach(x=>{x.style.display=SC.on?'':'none';});
+  const k=document.querySelector('#view-gerencia > .kpis');if(k)k.style.display=SC.on?'none':'';
+}
+function vistaTable(el,arr,unitFn,meta,unitLabel,prodText){
+  if(!el)return;
+  const byDay=VISTA==='day',isEff=currentProdMode()==='effective';
+  const lab=k=>byDay?labelDate(k):('Sem '+isoWeekNumber(k)+' \u00b7 '+labelDate(k));
+  const g=grouped(arr,r=>byDay?r.d:weekStart(r.d),currentProdMode(),unitFn).sort((a,b)=>b.k.localeCompare(a.k));
+  const T=summarize(arr,currentProdMode(),unitFn);
+  const row=(name,x,tasks,b)=>`<tr${b?' style="font-weight:800"':''}><td>${name}</td><td class="num">${fmt(x.units)}</td><td class="num">${fmt1(x.hh)}</td><td class="num" style="color:${colorFor(x.prod,meta)};font-weight:800">${fmt1(x.prod)}</td><td class="num">${fmt(x.pickers)}</td><td class="num">${fmt(tasks)}</td><td class="num" style="color:${colorFor(x.prodOp,meta)}">${fmt1(x.prodOp)}</td><td class="num" style="color:${colorFor(x.prodEff,meta)}">${fmt1(x.prodEff)}</td><td class="num">${fmt1(x.utilization)}%</td></tr>`;
+  el.innerHTML=`<tr><th>${byDay?'D\u00eda':'Semana'}</th><th class="num">${escapeHtml(unitLabel)}</th><th class="num">${isEff?'HH efectivas':'HH operativas'}</th><th class="num">${escapeHtml(prodText)}</th><th class="num">Pickers</th><th class="num">Sesiones</th><th class="num">Prod. operativa</th><th class="num">Prod. efectiva</th><th class="num">Utilizaci\u00f3n</th></tr>`
+   +g.map(x=>row(lab(x.k),x,x.tasks,false)).join('')+row('Total per\u00edodo',T,T.tasks,true);
+}
+function renderVistaTables(SC,arrAll,meta,gUnitFn,jefArrAll,jUnitFn){
+  if(!SC.on)return;
+  vistaTable(document.getElementById('vistaTblGT'),arrAll,gUnitFn,meta,activeUnitLabel(),productivityUnitText());
+  vistaTable(document.getElementById('vistaTblJT'),jefArrAll,jUnitFn,meta,jefUnitLabel(),isOnlyPP(jefSelectedCats())?'cajas/HH':'und/HH');
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vista]');if(!b)return;VISTA=b.dataset.vista==='day'?'day':'week';const s=$('mgmtLevel');if(s&&noGlobalFilter())s.value=VISTA==='day'?'day':'week';render();});
+function enforceDailyExecutiveView(){const s=$('mgmtLevel');if(!s)return;const nf=noGlobalFilter();
+  if(nf){if(!__prevNoFilter)s.value=VISTA==='day'?'day':'week';}   // al quitar los filtros vuelve al nivel de la vista elegida
+  else if(shouldSeparateByDay()&&s.value!=='day')s.value='day';     // con filtros: se mantiene el comportamiento anterior
+  __prevNoFilter=nf;}
 function modeLabel(){
   return currentProdMode()==='effective' ? 'Efectiva WMS' : 'Operativa estimada';
 }
@@ -4456,8 +4497,8 @@ function exportJefWeekTable(){
 
 function render(){
   enforceDailyExecutiveView();
-  const arr=filtered(), meta=activeMeta(), globalUnitFn=activeUnitFn(), S=summarize(arr,currentProdMode(),globalUnitFn);
-  const jefArr=getJefArray(arr);
+  const arrAll=filtered(), SC=scopeVista(arrAll), arr=SC.arr, meta=activeMeta(), globalUnitFn=activeUnitFn(), S=summarize(arr,currentProdMode(),globalUnitFn);
+  const jefArr=getJefArray(arr), jefArrAll=getJefArray(arrAll);
   const jefUnit=jefUnitFn();
   SETTINGS.prodMode=currentProdMode();
   saveSettingsToStorage();
@@ -4480,21 +4521,21 @@ function render(){
   $('kProdEff').style.color=colorFor(S.prodEff,meta);
   $('kUtil').textContent=fmt1(S.utilization)+'%';
   $('kUtil').style.color=S.utilization>=90?'#168a50':S.utilization>=75?'#d68b18':'#c92535';
-  renderSupervisor(arr,meta);
-  renderSupervisorHeatmap(arr);
-  renderMgmtTable(arr);
-  renderJefWeekTable(arr);
+  renderSupervisor(arrAll,meta);
+  renderSupervisorHeatmap(arrAll);
+  renderMgmtTable(arrAll);
+  renderJefWeekTable(arrAll);
   const daily=grouped(jefArr,r=>r.d,currentProdMode(),jefUnit).sort((a,b)=>a.k.localeCompare(b.k));
   dailyUnitsChart($('dayChart'),daily,meta,jefUnitLabel());
-  renderUserDay(arr,meta);
-  const weekly=grouped(arr,r=>weekStart(r.d),currentProdMode(),globalUnitFn).sort((a,b)=>a.k.localeCompare(b.k));
-  renderManagementEvolutionChart(arr,meta);
-  renderCategoryEvolution(arr,globalUnitFn);
+  renderUserDay(arrAll,meta);
+  const weekly=grouped(arrAll,r=>weekStart(r.d),currentProdMode(),globalUnitFn).sort((a,b)=>a.k.localeCompare(b.k));
+  renderManagementEvolutionChart(arrAll,meta);
+  renderCategoryEvolution(arrAll,globalUnitFn);
   renderStartAnalysis(arr);
   lineChart($('weekChart'),weekly,meta,k=>'Sem '+isoWeekNumber(k));
   const cats=grouped(arr,r=>r.c,currentProdMode(),globalUnitFn).sort((a,b)=>b.prod-a.prod);
   barChart($('catChart'),cats,meta);
-  const monthly=grouped(arr,r=>r.d.slice(0,7),currentProdMode(),globalUnitFn).sort((a,b)=>a.k.localeCompare(b.k));
+  const monthly=grouped(arrAll,r=>r.d.slice(0,7),currentProdMode(),globalUnitFn).sort((a,b)=>a.k.localeCompare(b.k));
   lineChart($('monthChart'),monthly,meta,monthName);
 
   const hours=grouped(jefArr,r=>String(r.h).padStart(2,'0')+':00',currentProdMode(),jefUnit).sort((a,b)=>a.k.localeCompare(b.k));
@@ -4510,10 +4551,12 @@ function render(){
     ranking.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(r.k)}</td><td class="num">${fmt(r.units)}</td><td class="num">${fmt1(r.hh)}</td><td class="num"><b>${fmt1(r.prod)}</b></td><td class="num ${r.prod>=meta?'good':r.prod>=meta*.88?'mid':'bad'}">${fmt1(r.prod/meta*100)}%</td><td class="num">${fmt1(r.utilization)}%</td></tr>`).join('');
   renderAlerts(arr,S,weekly,cats,grouped(arr,r=>String(r.h).padStart(2,'0')+':00',currentProdMode(),globalUnitFn).sort((a,b)=>a.k.localeCompare(b.k)),grouped(arr,r=>r.u,currentProdMode(),globalUnitFn).filter(r=>r.hh>=1).sort((a,b)=>b.prod-a.prod),meta,'alertsGerencia','metaGerencia',activeUnitLabel(),productivityUnitText());
   const jefSummary=summarize(jefArr,currentProdMode(),jefUnit);
-  const jefWeekly=grouped(jefArr,r=>weekStart(r.d),currentProdMode(),jefUnit).sort((a,b)=>a.k.localeCompare(b.k));
+  const jefWeekly=grouped(jefArrAll,r=>weekStart(r.d),currentProdMode(),jefUnit).sort((a,b)=>a.k.localeCompare(b.k));
   const jefCats=grouped(jefArr,r=>r.c,currentProdMode(),jefUnit).sort((a,b)=>b.prod-a.prod);
   renderAlerts(jefArr,jefSummary,jefWeekly,jefCats,hours,ranking,meta,'alerts',null,jefUnitLabel(),isOnlyPP(jefSelectedCats())?'cajas/HH':'und/HH');
-  $('footRange').textContent=arr.length?currentFilterText():'Sin datos';
+  $('footRange').textContent=arrAll.length?currentFilterText():'Sin datos';
+  renderVistaTables(SC,arrAll,meta,globalUnitFn,jefArrAll,jefUnit);
+  updateVistaUI(SC);
 }
 function renderAlerts(arr,S,weekly,cats,hours,ranking,meta,targetId='alerts',metaId=null,unitLabel='Unidades',unitText='und/HH'){
   const A=[];
@@ -7753,7 +7796,7 @@ function body(m){const O=m.O,W=weeks(O),Ru=rutas(O),k=(l,v,c,i)=>'<div class="k"
  h+='<div class="c pb"><h2>3 · PRODUCTIVIDAD PROYECTADA POR PICKER (Plan/H de META) '+tgb('cat')+'</h2>'+(hid('cat')?'':'<table><tr><th>CATEGORÍA</th><th>PICKERS</th><th>PLAN/H</th><th>PLAN DEL DÍA ('+String(m.hrs).replace('.',',')+' h)</th><th>REAL/H</th></tr>'+cats.map(x=>'<tr><td>'+x.c+'</td><td>'+f(x.n)+'</td><td>'+f(x.mh)+'</td><td>'+f(x.n*x.mh*m.hrs)+'</td><td>—</td></tr>').join('')+'<tr class="t"><td>TOTAL</td><td>'+f(m.pk.length)+'</td><td>'+f(m.s.eq+m.pp.eq)+'</td><td>'+f(m.proy)+'</td><td>—</td></tr></table>')
  +'<h2 style="margin-top:14px">DETALLE POR PICKER (asistentes del día)</h2><table><tr><th>N°</th><th style="text-align:left">PICKER</th><th>NIVEL</th><th>PLAN/H</th><th>PLAN DEL DÍA</th><th>REAL/H</th></tr>'+m.pk.map((p,i)=>'<tr><td>'+(i+1)+'</td><td style="text-align:left">'+esc(p.n)+'</td><td>'+esc(p.c)+'</td><td>'+f(p.mh)+'</td><td>'+f(p.mh*m.hrs)+'</td><td>—</td></tr>').join('')+'</table><p class="n">Real/H queda en “—” hasta conectar la producción del día.</p></div>';
  const tw=W.reduce((s,x)=>s+x.t,0),Rl=Ru.slice(0,10),sm=lp=>Ru.filter(x=>nz(x.lp)===lp).reduce((s,x)=>s+x.t,0);
- h+='<div class="g2 pb"><div class="c"><h2>PENDIENTE POR SEMANA</h2><table><tr><th>SEMANA</th><th>ACTIVO</th><th>PARADAS</th><th>SIN STOCK</th><th>TOTAL</th><th>%</th></tr>'+W.map(x=>'<tr><td>SEM '+x.w+'</td><td class="G">'+f(x.a)+'</td><td class="O">'+f(x.p)+'</td><td class="R">'+f(x.s)+'</td><td>'+f(x.t)+'</td><td>'+pc(x.t,tw)+'</td></tr>').join('')+'<tr class="t"><td>TOTAL</td><td class="G">'+f(a.ACTIVO)+'</td><td class="O">'+f(a.PARADAS)+'</td><td class="R">'+f(a.SIN)+'</td><td>'+f(tw)+'</td><td>100%</td></tr></table></div>'
+ h+='<div class="g2 pb"><div class="c"><h2>PENDIENTE POR SEMANA <button type="button" class="tg" data-ola-det="1" title="Descarga el detalle de la Corrida de Olas de la fecha en consulta">\u2b07 DETALLE</button></h2><table><tr><th>SEMANA</th><th>ACTIVO</th><th>PARADAS</th><th>SIN STOCK</th><th>TOTAL</th><th>%</th></tr>'+W.map(x=>'<tr><td>SEM '+x.w+'</td><td class="G">'+f(x.a)+'</td><td class="O">'+f(x.p)+'</td><td class="R">'+f(x.s)+'</td><td>'+f(x.t)+'</td><td>'+pc(x.t,tw)+'</td></tr>').join('')+'<tr class="t"><td>TOTAL</td><td class="G">'+f(a.ACTIVO)+'</td><td class="O">'+f(a.PARADAS)+'</td><td class="R">'+f(a.SIN)+'</td><td>'+f(tw)+'</td><td>100%</td></tr></table></div>'
  +'<div class="c"><h2>PENDIENTE POR RUTA / ÁREA (mayores)</h2><table><tr><th>ÁREA · RUTA</th><th>ACTIVO</th><th>SIN STOCK</th><th>TOTAL</th></tr>'+Rl.map(x=>'<tr><td>'+esc(x.lp)+' · '+esc(x.ruta)+'</td><td class="G">'+f(x.a+x.p)+'</td><td class="R">'+f(x.s)+'</td><td>'+f(x.t)+'</td></tr>').join('')+'<tr class="t"><td>TOTAL LIMA</td><td></td><td></td><td>'+f(sm('LIMA'))+'</td></tr><tr class="t"><td>TOTAL PROVINCIA</td><td></td><td></td><td>'+f(sm('PROVINCIA'))+'</td></tr></table></div></div>';
  const Cc=m.C||{calz:0,acc:0,lima:0,prov:0};
  h+='<div class="c pb"><h2>4 · PACKING · PENDIENTE POR EMBALAR (archivo CARTONES)</h2><div class="k5">'+k('FALTA EMBALAR',f(m.falta),'R','CALZ '+f(Cc.calz)+' · ACC '+f(Cc.acc))+k('LIMA / PROVINCIA',f(Cc.lima)+' / '+f(Cc.prov),'','por embalar')+k('PROYECCIÓN DE PICKING',f(m.proy),'G','Cierre: '+f(m.falta)+' + '+f(m.proy)+' = '+f(m.carga))+k('CAPACIDAD PACKING',f(m.cap),'B',f(m.nEmb)+' embaladores × meta × '+String(m.hrs).replace('.',',')+' h')+k('COBERTURA DEL CIERRE',pc(m.cap,m.carga),col(m.cobE)||'P','Proyección de embalaje ÷ '+f(m.carga))+k('ESTIMADO SIN EMBALAR',f(m.sin),'R','Carga − capacidad')+'</div></div>';
@@ -7764,7 +7807,24 @@ function render(){const el=document.getElementById('gerBody');if(!el)return;cons
  if(inp)inp.value=F;if(ch){const pdx=new Set(prodDates());ch.innerHTML=[...new Set(Object.keys(H_).concat([...pdx]))].sort().reverse().slice(0,14).map(k=>'<button type="button" class="btn" data-gf="'+k+'" title="'+(pdx.has(k)?'Con producción cargada':'')+'" style="'+(k===F?'background:#2d3139;color:#fff':'')+'">'+k.split('-').reverse().slice(0,2).join('/')+(pdx.has(k)?' ⚙':'')+'</button>').join('');}
  el.innerHTML='<style>'+CSS+'</style>'+(H_[F]?'':'<div class="nb" style="margin-bottom:10px">No hay foto guardada del '+esc(F.split('-').reverse().join('/'))+'. Se guarda sola al subir PEND-STOCK-RUTA, PLANT_DE_ASIGNACION o CARTONES.</div>')+body(model());}
 window.__gerRender=render;
+// ---- DETALLE de la Corrida de Olas de la fecha en consulta (se rearma desde el PEND-STOCK-RUTA guardado en este equipo) ----
+async function olaDetalle(){try{
+  const F=fSel(),h=H()[F]||{};
+  if(!h.ola){st('No hay Corrida de Olas cargada para el <b>'+fh(F)+'</b>.');return;}
+  if(!window.XLSX||!window.__olaRunWb){st('El motor de Excel a\u00fan no est\u00e1 listo. Intenta de nuevo en unos segundos.');return;}
+  let v=null;try{v=h.olaId?await idbGet(h.olaId):null;}catch(e){}
+  if(!v||!v.length){st('El detalle del <b>'+fh(F)+'</b> no est\u00e1 guardado en este equipo (se guarda en el equipo donde se subi\u00f3 el PEND-STOCK-RUTA). S\u00fabelo de nuevo en CORRIDA DE OLAS.');return;}
+  st('Generando el detalle de la Corrida de Olas del '+fh(F)+'\u2026');await new Promise(r=>setTimeout(r,30));
+  const nmap=[['_RUTA_Y_PRIORIDAD.CSV','RUTA Y PRIORIDAD'],['_STOCK.CSV','STOCK'],['_PEND.CSV','PEND']],wb=XLSX.utils.book_new();
+  v.forEach(x=>{const u=String(x.n).toUpperCase(),m=nmap.find(q=>u.endsWith(q[0]));if(!m)return;const w=XLSX.read(String(x.t).replace(/^\uFEFF/,''),{type:'string',FS:';',raw:true});XLSX.utils.book_append_sheet(wb,w.Sheets[w.SheetNames[0]],m[1]);});
+  if(wb.SheetNames.length<3)throw new Error('La copia guardada de esta carga est\u00e1 incompleta. Sube de nuevo el PEND-STOCK-RUTA.');
+  const O=window.__olaRunWb(wb),ws=XLSX.utils.aoa_to_sheet([O.H].concat(O.out));
+  ws['!cols']=O.H.map((x,i)=>({wch:[10,10,9,16,16,12,12,10,12,24,12,18,16,30,12,10,10,10,14,14,16,14,22][i]}));
+  const w2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w2,ws,'DETALLE OLAS WMS');XLSX.writeFile(w2,'CORRIDA_OLA_WMS_'+F+'.xlsx');
+  st('Detalle de la <b>Corrida de Olas</b> del <b>'+fh(F)+'</b> descargado ('+f(O.out.length)+' l\u00edneas).');
+ }catch(er){st('<span style="color:#d62839">'+esc(er.message)+'</span>');}}
 document.getElementById('gerBody').addEventListener('click',e=>{const pf=e.target.closest('[data-pf]');if(pf){const q=pf.dataset.pf.split('|'),F_=PF[q[0]]=PF[q[0]]||{CALZ:1,ACC:1,SOLI:1,'PRE PACK':1,INSUMOS:1};F_[q[1]]=F_[q[1]]?0:1;render();return;}
+ const od=e.target.closest('[data-ola-det]');if(od){olaDetalle();return;}
  const pd=e.target.closest('[data-pd]');if(pd){if(pd.dataset.pd==='pdf')prodPdf();else prodXls();return;}
  const b=e.target.closest('[data-tg]');if(!b)return;COL[b.dataset.tg]=!COL[b.dataset.tg];render();});
 window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
