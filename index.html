@@ -1534,7 +1534,7 @@ body.v38-tv{--ui:1.25}
 
       <div class="loadcard">
         <div class="lh">🌊 Análisis de Corrida de Olas</div>
-        <div class="ld">Carga el Excel con hojas PEND, STOCK y RUTA Y PRIORIDAD. El stock se asigna primero a rutas activas (SI), dentro de ellas primero HUB y luego Regular; las rutas inactivas (NO) van al final. La hoja RUTA Y PRIORIDAD debe traer RUTA ACTIVA? y ALMAC.</div>
+        <div class="ld">Carga el Excel con hojas PEND, STOCK y RUTA Y PRIORIDAD. El stock se asigna primero a rutas activas (SI), dentro de ellas primero HUB y luego Regular; las rutas inactivas (NO) van al final. BUFFER-A-B es el último área en asignar: solo se usa si el resto del stock no alcanza (ACCION = STOCK EN BUFFER-A-B). La hoja RUTA Y PRIORIDAD debe traer RUTA ACTIVA? y ALMAC.</div>
         <div class="loadbuttons">
           <label class="filebtn">Cargar PEND-STOCK-RUTA<input id="olaInput" type="file" accept=".xlsx"></label>
           <button class="btn" id="olaDownloadBtn" type="button" disabled>⬇ Descargar corrida (Excel)</button>
@@ -1985,7 +1985,7 @@ body.v38-tv{--ui:1.25}
 
     <div id="view-olas" class="viewsection">
       <section class="opsum"><div class="h">Corrida de Olas</div>
-        <div class="mod-note">El stock se asigna primero a rutas activas (RUTA ACTIVA? = SI), dentro de ellas primero HUB y luego Regular, y después por orden de ruta; las rutas inactivas (NO) quedan al final. El archivo debe tener las hojas PEND, STOCK y RUTA Y PRIORIDAD (con las columnas RUTA ACTIVA? y ALMAC).</div>
+        <div class="mod-note">El stock se asigna primero a rutas activas (RUTA ACTIVA? = SI), dentro de ellas primero HUB y luego Regular, y después por orden de ruta; las rutas inactivas (NO) quedan al final. BUFFER-A-B es el último área en asignar: solo se usa si el resto del stock no alcanza (ACCION = STOCK EN BUFFER-A-B). El archivo debe tener las hojas PEND, STOCK y RUTA Y PRIORIDAD (con las columnas RUTA ACTIVA? y ALMAC).</div>
         <div class="mod-actions"><label class="btn">📂 Cargar PEND-STOCK-RUTA<input id="olaInput2" type="file" accept=".xlsx" hidden></label><button class="btn" id="olaDownloadBtn2" type="button">⬇ Descargar corrida (Excel)</button></div>
         <div class="mod-status" id="olaStatus2">Sin archivo de corrida cargado.</div>
         <div class="heatbox" style="max-height:520px"><table class="heatmap" id="olaTable"></table></div>
@@ -5932,12 +5932,14 @@ function run(wb){
  const S=XLSX.utils.sheet_to_json(sheet(wb,'STOCK'),{header:1,raw:true,defval:null}).slice(1);
  const R=XLSX.utils.sheet_to_json(sheet(wb,'RUTA Y PRIORIDAD'),{raw:true,defval:null});
  // stock (NIVEL (PISO) y NIVEL + BUFFER)
- const tot=new Map(),niv=new Map(),nbf=new Map();
+ const tot=new Map(),niv=new Map(),nbf=new Map(),nivAB=new Map(),rT=new Map(),aT=new Map();
  S.forEach(r=>{const a=norm(r[0]),sku=String(r[1]==null?'':r[1]).trim(),u=norm(r[3]);if(!sku)return;
   const n=piso(a,u);if(n==='OMITIR')return;const nb=(a==='CDBUFFER'&&u.includes('CDBUFFER-C'))?'BUFFER-C':(a==='CDBUFFER'&&(u.includes('CDBUFFER-A')||u.includes('CDBUFFER-B')))?'BUFFER-A-B':n;
-  const d=(num(r[4])-num(r[5]))*mult(sku);tot.set(sku,(tot.get(sku)||0)+d);
-  if(!niv.has(sku))niv.set(sku,new Map());niv.get(sku).set(n,(niv.get(sku).get(n)||0)+d);
-  if(!nbf.has(sku))nbf.set(sku,new Map());nbf.get(sku).set(nb,(nbf.get(sku).get(nb)||0)+d);});
+ const d=(num(r[4])-num(r[5]))*mult(sku);tot.set(sku,(tot.get(sku)||0)+d);
+ // BUFFER-A-B es el ULTIMO en asignar: su stock va en una bolsa aparte del resto de areas
+ if(nb==='BUFFER-A-B'){aT.set(sku,(aT.get(sku)||0)+d);if(!nivAB.has(sku))nivAB.set(sku,new Map());nivAB.get(sku).set(n,(nivAB.get(sku).get(n)||0)+d);return;}
+ rT.set(sku,(rT.get(sku)||0)+d);if(!niv.has(sku))niv.set(sku,new Map());niv.get(sku).set(n,(niv.get(sku).get(n)||0)+d);
+ if(!nbf.has(sku))nbf.set(sku,new Map());nbf.get(sku).set(nb,(nbf.get(sku).get(nb)||0)+d);});
  // ruta: RUTA ACTIVA? (SI/NO) y HUB? (columna ALMAC: HUB → HUB, otro → Regular)
  const hd=R.length?Object.keys(R[0]):[],kAct=hd.find(k=>norm(k).replace(/[ ?]/g,'')==='RUTAACTIVA'),kAlm=hd.find(k=>norm(k)==='ALMAC'),avisos=[];
  if(!kAct)avisos.push("no se encontró la columna 'RUTA ACTIVA?': se asume todo SI");
@@ -5955,7 +5957,7 @@ function run(wb){
   const on=Number(ru['ORDEN']);
   return {no,sku,sol,asg,pend,pc:pend*mult(sku),est:r[1],tda:r[5],desc:r[6],lp:lpv,ruta:ru['RUTA']||(window.rutaNombre?window.rutaNombre(r[5]):''),sd:(sem+' '+dia).trim(),s6:(sem+' '+dia).trim().slice(0,6),da:atn(dia),ca:String(sku).replace(/-/g,''),etq:String(ru['ETIQUETA']==null?'':ru['ETIQUETA']).trim(),nom:ru['NOMBR'],
    act:ru.__act||'',hub:ru.__hub||'Regular',pa:ru.__act==='NO'?1:0,ph:ru.__hub==='HUB'?0:1,on:isNaN(on)?99999:on,disp:tot.get(sku)||0,
-   a:niv.has(sku)?best(niv.get(sku)):'',ab:nbf.has(sku)?best(nbf.get(sku)):''};});
+   a:niv.has(sku)?best(niv.get(sku)):'',ab:nbf.has(sku)?best(nbf.get(sku)):'',aa:nivAB.has(sku)?best(nivAB.get(sku)):''};});
  // validación: las órdenes de PEND deben cruzar con RUTA Y PRIORIDAD y debe haber pendientes
  if(sinD.size)avisos.push('día de correo sin regla de atención (DIA DE ATENCION queda vacío): '+[...sinD].join(', '));
  if(!rows.length||pendN===0)throw new Error('No hay pendientes en la hoja PEND.');
@@ -5963,13 +5965,14 @@ function run(wb){
  // orden de consumo de stock: ruta activa SI antes que NO → HUB antes que Regular → ORDEN de ruta → N° orden → SKU
  const cmp=(a,b)=>a<b?-1:a>b?1:0;
  rows.sort((x,y)=>(x.pa-y.pa)||(x.ph-y.ph)||(x.on-y.on)||((x.no||0)-(y.no||0))||cmp(x.sku,y.sku));
- const rest=new Map(tot),acc={'ACTIVO PARA PICKING':0,'TDAS PARADAS':0,'SIN STOCK ACTIVO':0};let si=0,no_=0;
- rows.forEach(r=>{const e=norm(r.etq);
+ const rest=new Map(rT),abr=new Map(aT),acc={'ACTIVO PARA PICKING':0,'TDAS PARADAS':0,'STOCK EN BUFFER-A-B':0,'SIN STOCK ACTIVO':0};let si=0,no_=0;
+ rows.forEach(r=>{const e=norm(r.etq);r.bf=false;
   if(e==='INSUMOS'||e==='UNIFORMES'){r.A=e;r.AB=e;r.ok=true;}
-  else{const d=rest.get(r.sku)||0;
-   if(r.pc<=0||d<=0||d<r.pc){if(r.pc>0&&d>0)rest.set(r.sku,0);r.A='SIN STOCK';r.AB='SIN STOCK';r.ok=false;}
-   else{rest.set(r.sku,d-r.pc);r.A=r.a||'SIN STOCK';r.AB=r.ab||'SIN STOCK';r.ok=true;}}
-  r.ac=!r.ok?'SIN STOCK ACTIVO':(r.act==='NO'?'TDAS PARADAS':'ACTIVO PARA PICKING');acc[r.ac]++;if(r.ok)si++;else no_++;});
+  else{const R_=Math.max(rest.get(r.sku)||0,0),A_=Math.max(abr.get(r.sku)||0,0);
+   if(r.pc<=0||(R_+A_)<r.pc){if(r.pc>0){rest.set(r.sku,0);abr.set(r.sku,0);}r.A='SIN STOCK';r.AB='SIN STOCK';r.ok=false;}
+   else if(R_>=r.pc){rest.set(r.sku,R_-r.pc);r.A=r.a||'SIN STOCK';r.AB=r.ab||'SIN STOCK';r.ok=true;}
+   else{rest.set(r.sku,0);abr.set(r.sku,A_-(r.pc-R_));r.A=r.aa||'SIN STOCK';r.AB='BUFFER-A-B';r.ok=true;r.bf=true;}}
+  r.ac=!r.ok?'SIN STOCK ACTIVO':(r.bf?'STOCK EN BUFFER-A-B':(r.act==='NO'?'TDAS PARADAS':'ACTIVO PARA PICKING'));acc[r.ac]++;if(r.ok)si++;else no_++;});
  // salida: ordenada por NIVEL (PISO), RUTA, N° orden, SKU
  const srt=rows.slice().sort((x,y)=>cmp(x.A,y.A)||((x.ruta===''?1:0)-(y.ruta===''?1:0))||cmp(String(x.ruta),String(y.ruta))||((x.no||0)-(y.no||0))||cmp(x.sku,y.sku));
  const H=['LIMA/PROV','RUTA','SEMANA','SEMANA-DIA','DIA DE ATENCION','ETIQUETA','RUTA ACTIVA?','HUB?','TDA DESTINO','NOMBRE TIENDA','N° ORDEN','SKU','COD ALTERNATIVO','DESCRIPCIÓN','ESTADO ORDEN','CANT. SOL','CANT. ASIG','CANT. PEND','PEND. CONVERTIDO','NIVEL (PISO)','NIVEL + BUFFER','DISP. CONVERTIDO','ACCION'];
@@ -5984,7 +5987,7 @@ async function procOla(e){
   if(!window.XLSX)throw new Error('Motor Excel no disponible.');
   await new Promise(r=>setTimeout(r,30));
   OUT=run(XLSX.read(await file.arrayBuffer(),{type:'array'}));window.__olaOut=OUT;try{window.__gerSaveOla&&window.__gerSaveOla(OUT,file&&file.lastModified,file&&file.name,file);}catch(e){}
-  st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · ACTIVO PARA PICKING: <b>'+OUT.acc['ACTIVO PARA PICKING'].toLocaleString('es-PE')+'</b> · TDAS PARADAS: <b>'+OUT.acc['TDAS PARADAS'].toLocaleString('es-PE')+'</b> · SIN STOCK ACTIVO: <b>'+OUT.acc['SIN STOCK ACTIVO'].toLocaleString('es-PE')+'</b>'+(OUT.avisos.length?' · ⚠️ '+OUT.avisos.join(' · '):'');
+  st.innerHTML='<b>'+file.name+'</b> · '+OUT.total.toLocaleString('es-PE')+' líneas · SÍ: <b>'+OUT.si.toLocaleString('es-PE')+'</b> · NO: <b>'+OUT.no.toLocaleString('es-PE')+'</b> · ACTIVO PARA PICKING: <b>'+OUT.acc['ACTIVO PARA PICKING'].toLocaleString('es-PE')+'</b> · TDAS PARADAS: <b>'+OUT.acc['TDAS PARADAS'].toLocaleString('es-PE')+'</b> · STOCK EN BUFFER-A-B: <b>'+OUT.acc['STOCK EN BUFFER-A-B'].toLocaleString('es-PE')+'</b> · SIN STOCK ACTIVO: <b>'+OUT.acc['SIN STOCK ACTIVO'].toLocaleString('es-PE')+'</b>'+(OUT.avisos.length?' · ⚠️ '+OUT.avisos.join(' · '):'');
   btn.disabled=false;const s2=document.getElementById('olaStatus2');if(s2)s2.innerHTML=st.innerHTML;window.renderOla&&window.renderOla(OUT);
  }catch(err){OUT=null;st.textContent='Error: '+err.message;const s2=document.getElementById('olaStatus2');if(s2)s2.textContent=st.textContent;}
  e.target.value='';
@@ -7765,7 +7768,7 @@ document.getElementById('gerBody').addEventListener('click',e=>{const pf=e.targe
  const pd=e.target.closest('[data-pd]');if(pd){if(pd.dataset.pd==='pdf')prodPdf();else prodXls();return;}
  const b=e.target.closest('[data-tg]');if(!b)return;COL[b.dataset.tg]=!COL[b.dataset.tg];render();});
 window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
- O.out.forEach(x=>{const v=Number(x[18])||0;if(v<=0)return;const a=x[22]==='ACTIVO PARA PICKING'?'ACTIVO':x[22]==='TDAS PARADAS'?'PARADAS':'SIN';r.tot+=v;r.acc[a]+=v;
+ O.out.forEach(x=>{const v=Number(x[18])||0;if(v<=0)return;const a=x[22]==='ACTIVO PARA PICKING'?'ACTIVO':x[22]==='TDAS PARADAS'?'PARADAS':x[22]==='STOCK EN BUFFER-A-B'?(x[6]==='NO'?'PARADAS':'ACTIVO'):'SIN';r.tot+=v;r.acc[a]+=v;
   const e=nz(x[5])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
   const rt=String(x[1]==null?'':x[1]).trim(),kk=(x[0]||'SIN ZONA')+'|'+(rt&&nz(rt)!=='NAN'?rt:'SIN RUTA · '+(x[9]||x[8]||'tienda sin nombre'));(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
  const rc=snap({ola:r},k,{file:fname});if(file&&rc)saveCsv(rc.id,file,['PEND','STOCK','RUTA Y PRIORIDAD'],k,'PEND-STOCK-RUTA');selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
