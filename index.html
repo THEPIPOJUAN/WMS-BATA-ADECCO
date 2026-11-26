@@ -91,6 +91,14 @@ input[type=file]{display:none}
 .datebox{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
 .vistabar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0}.vistabar .vistabtn{cursor:pointer;font-weight:800;font-size:12.5px;letter-spacing:.3px;padding:9px 16px;border-radius:10px;background:#fff;color:var(--navy);border:1px solid var(--line)}.vistabar .vistabtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}.vistabar.off .vistabtn{opacity:.55}.vistabar .vistanote{font-size:12px;color:#6b7280}.vistatbl th{position:sticky;top:0;background:#f4f5f7;z-index:1}
+.rp{overflow-x:auto;padding:4px 0}.rp table{border-collapse:collapse;font-size:14px;min-width:780px;margin:0 0 14px;background:#fff;color:#111}
+.rp td,.rp th{border:1px solid #1c1c1c;padding:5px 9px;text-align:center;font-variant-numeric:tabular-nums}
+.rp .ttl{background:#000;color:#fff;font-style:italic;font-weight:800;font-size:18px;text-decoration:underline;padding:6px}
+.rp tr.nv th{background:#1f3864;color:#fff;font-size:13px;letter-spacing:.3px}.rp tr.gr th{background:#375623;color:#fff;font-size:13px;letter-spacing:.3px}
+.rp td.lb{font-size:12.5px;text-align:left;font-weight:600}.rp td.sm{text-align:left;font-size:13px}
+.rp td.c1{color:#1f5fa8;font-weight:700;font-size:15px}.rp td.c2{color:#c7791f;font-weight:700;font-size:15px}.rp td.c3{color:#7030a0;font-weight:700;font-size:15px}.rp td.c4{color:#2e8b3d;font-weight:700;font-size:15px}.rp td.c5{color:#555;font-weight:700}
+.rp tr.yl td{background:#ffff00;font-weight:800;font-size:15px}.rp tr.bk td{background:#000;color:#fff;font-style:italic;font-weight:800}.rp tr.bk td.c1,.rp tr.bk td.c2,.rp tr.bk td.c3,.rp tr.bk td.c4,.rp tr.bk td.c5{color:#fff}
+.rp td.ob{padding:0;text-align:left;min-width:190px}.rp input.obs{width:100%;box-sizing:border-box;border:0;background:#fffef2;font:inherit;font-size:12.5px;padding:7px 8px;color:#111}.rp input.obs:focus{outline:2px solid #1f3864;background:#fff}
 .kpis .card{padding:10px 11px;min-width:0}
 .kpis .kpi .lab,.kpis .lab{font-size:10px;line-height:1.2}
 .kpis .kpi .val,.kpis .val{font-size:23px;line-height:1.05}
@@ -1624,6 +1632,7 @@ body.v38-tv{--ui:1.25}
       <button class="viewtab" data-view="presc">PRESCRIPCIONES SEMANALES</button>
       <button class="viewtab" data-view="usuarios">USUARIOS</button>
       <button class="viewtab" data-view="repsem">REPORTE SEMANAL</button>
+<button class="viewtab" data-view="reppend">REPORTE DE PENDIENTES</button>
     </div>
 
     <div class="optabs" id="opTabs"><button type="button" data-op="PICKING" class="active">PICKING</button><button type="button" data-op="PACKING">PACKING</button><button type="button" data-op="AMBOS">AMBOS</button></div>
@@ -2086,6 +2095,13 @@ body.v38-tv{--ui:1.25}
         <div class="mod-note" id="rsMetaInfo"></div>
         <div class="mod-actions" id="rsMetaTabs"><button class="btn on" data-tx="PICKING" type="button">Picking</button><button class="btn" data-tx="PACKING" type="button">Packing</button><button class="btn" id="rsMetaReset" type="button">↺ Restaurar la semana</button><button class="btn" id="rsMetaSave" type="button">💾 Guardar ajustes</button></div>
         <div class="heatbox" style="max-height:none"><table class="heatmap" id="rsMetaTable"></table></div>
+      </section>
+    </div>
+        <div id="view-reppend" class="viewsection">
+      <section class="opsum"><div class="h">REPORTE DE PENDIENTES</div>
+        <div class="mod-note">Sale de las Corridas de Olas guardadas (PEND-STOCK-RUTA) y de la producción cargada. <b>Pendiente semanas anteriores</b> = foto del lunes (no se descuenta producción); cada día se suma lo prescrito de la semana actual. <b>Evolutivo</b> = pendiente general menos lo atendido en picking. Pickers: se cuentan los que trabajaron al menos 70% de la jornada (7.5 h).</div>
+        <div class="mod-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><b>Fecha de corte (AM)</b><select id="rpFecha" class="pdetsel"></select><button class="btn" id="rpRefresh" type="button">↻ Actualizar</button><button class="btn" id="rpXls" type="button">⬇ Descargar Excel</button></div>
+        <div id="rpBody"></div>
       </section>
     </div>
     <div id="view-maestro" class="viewsection">
@@ -6402,9 +6418,9 @@ function render(){const A=all(),t=$$('prescTable');if(!t)return;
  const g=new Map();L.forEach(r=>{const k=r.atn+'|'+r.fatn;let o=g.get(k);if(!o){o={atn:r.atn,fatn:r.fatn,pri:r.pri,z:{}};g.set(k,o);}o.pri=Math.min(o.pri,r.pri);const z=o.z[r.zona]||(o.z[r.zona]={g:new Set(),c:0});z.g.add(r.guia);z.c+=r.cant;});
  const zs=['LIMA','PROVINCIA'].concat([...new Set(L.map(r=>r.zona))].filter(z=>z!=='LIMA'&&z!=='PROVINCIA'));
  const rowsS=[...g.values()].sort((a,b)=>a.pri-b.pri);
- $$('prescSum').innerHTML='<tr><th class="name">SEMANA ATENCION</th><th>Fecha</th>'+zs.map(z=>'<th>'+z+' · guías</th><th>'+z+' · cant.</th>').join('')+'<th>Total guías</th><th>Total cant.</th></tr>'+rowsS.map(o=>{const tg=new Set();let tc=0;
-  const cells=zs.map(z=>{const x=o.z[z];if(x){x.g.forEach(v=>tg.add(v));tc+=x.c;}return '<td class="num">'+(x?f0(x.g.size):'-')+'</td><td class="num">'+(x?f0(x.c):'-')+'</td>';}).join('');
-  return '<tr><td class="name"><b>'+esc(o.atn)+'</b></td><td>'+lab(o.fatn)+'</td>'+cells+'<td class="num"><b>'+f0(tg.size)+'</b></td><td class="num"><b>'+f0(tc)+'</b></td></tr>';}).join('');
+ $$('prescSum').innerHTML='<tr><th class="name">SEMANA ATENCION</th><th>Fecha</th>'+zs.map(z=>'<th>'+z+'</th>').join('')+'<th>Total cant.</th></tr>'+rowsS.map(o=>{let tc=0;
+  const cells=zs.map(z=>{const x=o.z[z];if(x)tc+=x.c;return '<td class="num">'+(x?f0(x.c):'-')+'</td>';}).join('');
+  return '<tr><td class="name"><b>'+esc(o.atn)+'</b></td><td>'+lab(o.fatn)+'</td>'+cells+'<td class="num"><b>'+f0(tc)+'</b></td></tr>';}).join('');
  weekDay(A,L,fs,f0);
  t.innerHTML='<tr>'+COLS.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>'+L.slice(0,500).map(r=>'<tr>'+rowVals(r).map((v,i)=>{const k=COLS[i];return '<td'+(k==='Guia Duplicada'&&v?' style="background:#f4a3a3;font-weight:700"':(k==='Suma de CANTI'||k==='PRIORIDAD ATENCIÓN'?' class="num"':''))+'>'+esc(k==='Suma de CANTI'?f0(v):v)+'</td>';}).join('')+'</tr>').join('')+
   (L.length>500?'<tr><td colspan="'+COLS.length+'">Se muestran 500 de '+f0(L.length)+'. Usa los filtros o descarga el Excel.</td></tr>':'');}
@@ -6413,25 +6429,32 @@ const DAYS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'],
 const PAL=['#d9232d','#2d3139','#e0a43a','#8a94a3','#2f8f5b','#b04a9c'];
 function chart(el,labels,series,title){
  if(!el)return;if(!labels.length){el.innerHTML='';return;}
- const W=Math.max(560,labels.length*96+90),H=300,Lm=70,Rm=12,Tm=44,Bm=48,pw=W-Lm-Rm,ph=H-Tm-Bm,tot=labels.map((_,i)=>series.reduce((a,x)=>a+(x.v[i]||0),0)),mx=Math.max(1,...tot);
- const step=Math.pow(10,Math.floor(Math.log10(mx))),nice=Math.ceil(mx/step*2)/2*step||mx,f=n=>Number(n).toLocaleString('es-PE');
- let g='<text x="'+Lm+'" y="22" font-size="17" font-weight="700" fill="#2d3139">'+esc(title)+'</text>';
- let lx=Lm;series.forEach((x,k)=>{g+='<rect x="'+lx+'" y="30" width="12" height="12" fill="'+PAL[k%PAL.length]+'"/><text x="'+(lx+17)+'" y="41" font-size="13" fill="#41536a">'+esc(x.name)+'</text>';lx+=36+x.name.length*8;});
- for(let i=0;i<=4;i++){const y=Tm+ph-ph*i/4;g+='<line x1="'+Lm+'" x2="'+(W-Rm)+'" y1="'+y+'" y2="'+y+'" stroke="#e5ebf0"/><text x="'+(Lm-8)+'" y="'+(y+5)+'" font-size="13" text-anchor="end" fill="#41536a">'+f(nice*i/4)+'</text>';}
+ const f=n=>Number(n).toLocaleString('es-PE'),W=Math.max(640,labels.length*104+90),Lm=70,Rm=14,Bm=66,PH=230,pw=W-Lm-Rm;
+ // leyenda con salto de línea (no se monta sobre el título ni sobre las barras)
+ let lx=Lm,ly=0,leg='';
+ series.forEach((x,k)=>{const w=34+String(x.name).length*8;if(lx+w>W-Rm&&lx>Lm){lx=Lm;ly+=20;}leg+='<rect x="'+lx+'" y="'+(38+ly)+'" width="12" height="12" fill="'+PAL[k%PAL.length]+'"/><text x="'+(lx+17)+'" y="'+(49+ly)+'" font-size="13" fill="#41536a">'+esc(x.name)+'</text>';lx+=w;});
+ const Tm=88+ly,H=Tm+PH+Bm,ph=PH,tot=labels.map((_,i)=>series.reduce((q,x)=>q+(x.v[i]||0),0)),mx=Math.max(1,...tot);
+ const step=Math.pow(10,Math.floor(Math.log10(mx))),nice=Math.ceil(mx*1.08/step*2)/2*step||mx;
+ let g='<text x="'+Lm+'" y="22" font-size="16" font-weight="700" fill="#2d3139">'+esc(title)+'</text>'+leg;
+ for(let i=0;i<=4;i++){const y=Tm+ph-ph*i/4;g+='<line x1="'+Lm+'" x2="'+(W-Rm)+'" y1="'+y+'" y2="'+y+'" stroke="#e5ebf0"/><text x="'+(Lm-8)+'" y="'+(y+4)+'" font-size="12" text-anchor="end" fill="#41536a">'+f(nice*i/4)+'</text>';}
  const bw=Math.min(64,pw/labels.length*0.62);
  labels.forEach((lb,i)=>{const cx=Lm+pw*(i+.5)/labels.length;let y=Tm+ph;
-  series.forEach((x,k)=>{const v=x.v[i]||0,h=ph*v/nice;if(v>0){y-=h;g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+h+'" fill="'+PAL[k%PAL.length]+'"><title>'+esc(lb+' · '+x.name+': '+f(v))+'</title></rect>';if(h>20)g+='<text x="'+cx+'" y="'+(y+h/2+5)+'" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">'+f(v)+'</text>';}});
-  g+='<text x="'+cx+'" y="'+(y-6)+'" font-size="14" font-weight="700" fill="#2d3139" text-anchor="middle">'+f(tot[i])+'</text><text x="'+cx+'" y="'+(Tm+ph+22)+'" font-size="14" fill="#41536a" text-anchor="middle">'+esc(lb)+'</text>';});
- el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" style="width:100%;max-width:'+Math.max(W,760)+'px;height:auto" role="img">'+g+'</svg>';}
+  series.forEach((x,k)=>{const v=x.v[i]||0,h=ph*v/nice;if(v>0){y-=h;g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+h+'" fill="'+PAL[k%PAL.length]+'"><title>'+esc(lb+' · '+x.name+': '+f(v))+'</title></rect>';if(h>22&&bw>34)g+='<text x="'+cx+'" y="'+(y+h/2+4)+'" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">'+f(v)+'</text>';}});
+  const pt=String(lb).split(' '),l1=pt.length>2?pt.slice(0,2).join(' '):pt.join(' '),l2=pt.length>2?pt.slice(2).join(' '):'';
+  g+='<text x="'+cx+'" y="'+(y-7)+'" font-size="13" font-weight="700" fill="#2d3139" text-anchor="middle">'+f(tot[i])+'</text><text x="'+cx+'" y="'+(Tm+ph+20)+'" font-size="13" fill="#41536a" text-anchor="middle">'+esc(l1)+'</text>'+(l2?'<text x="'+cx+'" y="'+(Tm+ph+37)+'" font-size="13" fill="#41536a" text-anchor="middle">'+esc(l2)+'</text>':'');});
+ el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" style="width:100%;min-width:'+W+'px;max-width:'+Math.max(W,1100)+'px;height:auto" role="img">'+g+'</svg>';}
 function weekDay(A,L,fs,f0){
  const fz=$$('pfZona').value,fe=$$('pfEt').value,LW=A.filter(r=>(!fz||r.zona===fz)&&(!fe||r.etiqueta===fe));
- const dOf=r=>String(r.atn).split(' ').slice(2).join(' '),sems=[...new Set(LW.map(r=>r.sem))].sort((a,b)=>parseInt(a.slice(4))-parseInt(b.slice(4)));
- const days=DAYS.filter(d=>LW.some(r=>dOf(r)===d)),cats=['CALZADO','ACCESORIOS','INSUMOS'].concat([...new Set(LW.map(r=>CATN(r.etiqueta)))].filter(c=>!['CALZADO','ACCESORIOS','INSUMOS'].includes(c)));
- let h='<tr><th class="name">SEMANA</th><th>CATEGORÍA</th>'+days.map(d=>'<th>'+(DLAB[d]||d)+'</th>').join('')+'<th>TOTAL</th><th>TOTAL SEMANA</th></tr>';
- sems.forEach(sm=>{const R0=LW.filter(r=>r.sem===sm),cs=cats.filter(c=>R0.some(r=>CATN(r.etiqueta)===c)),tw=R0.reduce((a,r)=>a+r.cant,0);
-  cs.forEach((c,k)=>{const RC=R0.filter(r=>CATN(r.etiqueta)===c);h+='<tr>'+(k?'':'<td class="name" rowspan="'+cs.length+'"><b>'+esc(sm)+'</b><br><button class="btn pw-btn" data-sem="'+esc(sm)+'" type="button">Ver detalle</button></td>')+'<td class="name"><b>'+c+'</b></td>'+days.map(d=>'<td class="num">'+f0(RC.filter(r=>dOf(r)===d).reduce((a,r)=>a+r.cant,0))+'</td>').join('')+'<td class="num"><b>'+f0(RC.reduce((a,r)=>a+r.cant,0))+'</b></td>'+(k?'':'<td class="num" rowspan="'+cs.length+'"><b>'+f0(tw)+'</b></td>')+'</tr>';});});
- $$('prescWeek').innerHTML=sems.length?h:'<tr><td>Sin datos.</td></tr>';
- chart($$('prescWeekChart'),sems,cats.map(c=>({name:c,v:sems.map(sm=>LW.filter(r=>r.sem===sm&&CATN(r.etiqueta)===c).reduce((a,r)=>a+r.cant,0))})).filter(x=>x.v.some(v=>v>0)),'Cantidad por semana de atención y categoría');
+  const dOf=r=>String(r.semdia).split(' ').slice(2).join(' '),sems=[...new Set(LW.map(r=>r.sem))].sort((a,b)=>parseInt(a.slice(4))-parseInt(b.slice(4)));
+  // día de correo (viernes a jueves) en filas; categorías en columnas
+  const ORDC=['VIERNES','SABADO','DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES'],FIXC=['CALZADO','ACCESORIOS','INSUMOS','UNIFORMES','ACRILICOS'];
+  const CK=r=>{const n=nrm(r.etiqueta);return n.startsWith('UNIF')?'UNIFORMES':n.startsWith('ACRIL')?'ACRILICOS':CATN(r.etiqueta);};
+  const cats=FIXC.concat([...new Set(LW.map(CK))].filter(c=>!FIXC.includes(c)));
+  let h='<tr><th class="name">SEMANA</th><th class="name">DIA</th>'+cats.map(c=>'<th>'+esc(c)+'</th>').join('')+'<th>TOTAL</th></tr>';
+  sems.forEach(sm=>{const R0=LW.filter(r=>r.sem===sm),ds=ORDC.filter(d=>R0.some(r=>dOf(r)===d));
+   ds.forEach((d,k)=>{const RD=R0.filter(r=>dOf(r)===d);h+='<tr>'+(k?'':'<td class="name" rowspan="'+ds.length+'"><b>'+esc(sm.replace(/^SEM\s*/,''))+'</b><br><button class="btn pw-btn" data-sem="'+esc(sm)+'" type="button">VER DETALLE</button></td>')+'<td class="name"><b>'+(DLAB[d]||d)+'</b></td>'+cats.map(c=>'<td class="num">'+f0(RD.filter(r=>CK(r)===c).reduce((q,r)=>q+r.cant,0))+'</td>').join('')+'<td class="num"><b>'+f0(RD.reduce((q,r)=>q+r.cant,0))+'</b></td></tr>';});});
+  $$('prescWeek').innerHTML=sems.length?h:'<tr><td>Sin datos.</td></tr>';
+  chart($$('prescWeekChart'),sems,cats.map(c=>({name:c,v:sems.map(sm=>LW.filter(r=>r.sem===sm&&CK(r)===c).reduce((q,r)=>q+r.cant,0))})).filter(x=>x.v.some(v=>v>0)),'Cantidad por semana de atención y categoría');
  const ats=[...new Set(L.slice().sort((a,b)=>a.pri-b.pri).map(r=>r.atn))],zs=[...new Set(L.map(r=>r.zona))];
  chart($$('prescDayChart'),ats,zs.map(z=>({name:z,v:ats.map(a=>L.filter(r=>r.atn===a&&r.zona===z).reduce((q,r)=>q+r.cant,0))})),'Cantidad por día de atención y zona');
  const sel=$$('prescDetSem');sel.innerHTML='<option value="">SEMANA…</option>'+sems.map(x=>'<option'+(fs===x&&detMode?' selected':'')+'>'+esc(x)+'</option>').join('');
@@ -7827,9 +7850,20 @@ document.getElementById('gerBody').addEventListener('click',e=>{const pf=e.targe
  const od=e.target.closest('[data-ola-det]');if(od){olaDetalle();return;}
  const pd=e.target.closest('[data-pd]');if(pd){if(pd.dataset.pd==='pdf')prodPdf();else prodXls();return;}
  const b=e.target.closest('[data-tg]');if(!b)return;COL[b.dataset.tg]=!COL[b.dataset.tg];render();});
-window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{}};
+// ---- pendiente por semana / día de correo / categoría (para REPORTE DE PENDIENTES) ----
+const pcat=e=>{const n=nz(e);return n.startsWith('CALZ')?'CALZADO':n.startsWith('ACC')?'ACCESORIO':n.startsWith('UNIF')?'UNIFORME':(n.startsWith('INSUM')||n.startsWith('MATERIAL'))?'INSUMO':'OTROS';};
+const pwAdd=(pw,x,v)=>{const m=/(\d{1,2})/.exec(String(x[2]||'')),w=m?m[1].padStart(2,'0'):'?',sd=nz(x[3]).split(' '),d=sd.length>2?sd.slice(2).join(' '):'?',c=pcat(x[5]),a=pw[w]=pw[w]||{},b=a[d]=a[d]||{};b[c]=(b[c]||0)+v;};
+const PWC={};
+window.__pendDates=()=>{const H_=H();return Object.keys(H_).filter(k=>H_[k]&&H_[k].ola).sort();};
+window.__pendSnap=async k=>{const h=H()[k];if(!h||!h.ola)return null;if(h.ola.pw)return h.ola.pw;if(PWC[k])return PWC[k];
+  try{const v=h.olaId?await idbGet(h.olaId):null;if(!v||!v.length||!window.XLSX||!window.__olaRunWb)return null;
+   const nmap=[['_RUTA_Y_PRIORIDAD.CSV','RUTA Y PRIORIDAD'],['_STOCK.CSV','STOCK'],['_PEND.CSV','PEND']],wb=XLSX.utils.book_new();
+   v.forEach(x=>{const u=String(x.n).toUpperCase(),m=nmap.find(q=>u.endsWith(q[0]));if(!m)return;const w=XLSX.read(String(x.t).replace(/^\uFEFF/,''),{type:'string',FS:';',raw:true});XLSX.utils.book_append_sheet(wb,w.Sheets[w.SheetNames[0]],m[1]);});
+   if(wb.SheetNames.length<3)return null;
+   const O=window.__olaRunWb(wb),pw={};O.out.forEach(x=>{const q=Number(x[18])||0;if(q>0)pwAdd(pw,x,q);});PWC[k]=pw;return pw;}catch(e){return null;}};
+window.__gerSaveOla=function(O,lm,fname,file){const k=ov()||fdate(lm),r={fecha:k,src:ov()?'fecha indicada':'fecha del archivo',tot:0,acc:{ACTIVO:0,PARADAS:0,SIN:0},et:{},sem:{},ruta:{},pw:{}};
  O.out.forEach(x=>{const v=Number(x[18])||0;if(v<=0)return;const a=x[22]==='ACTIVO PARA PICKING'?'ACTIVO':x[22]==='TDAS PARADAS'?'PARADAS':x[22]==='STOCK EN BUFFER-A-B'?(x[6]==='NO'?'PARADAS':'ACTIVO'):'SIN';r.tot+=v;r.acc[a]+=v;
-  const e=nz(x[5])||'OTROS';r.et[e]=(r.et[e]||0)+v;const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
+  const e=nz(x[5])||'OTROS';r.et[e]=(r.et[e]||0)+v;pwAdd(r.pw,x,v);const mm=/(\d{1,2})/.exec(String(x[2]||'')),w=mm?mm[1].padStart(2,'0'):'—';(r.sem[w]=r.sem[w]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;
   const rt=String(x[1]==null?'':x[1]).trim(),kk=(x[0]||'SIN ZONA')+'|'+(rt&&nz(rt)!=='NAN'?rt:'SIN RUTA · '+(x[9]||x[8]||'tienda sin nombre'));(r.ruta[kk]=r.ruta[kk]||{ACTIVO:0,PARADAS:0,SIN:0})[a]+=v;});
  const rc=snap({ola:r},k,{file:fname});if(file&&rc)saveCsv(rc.id,file,['PEND','STOCK','RUTA Y PRIORIDAD'],k,'PEND-STOCK-RUTA');selF=k;render();st('<b>Corrida de Olas</b>: foto guardada en el <b>'+fh(k)+'</b> ('+r.src+').');};
 const st=t=>{const e=document.getElementById('gerSt');if(e)e.innerHTML=t;};
@@ -7928,15 +7962,15 @@ setTheme(store('v38theme')==='dark'?'dark':'light');
 /* barra lateral: 4 menús que abren o cierran sus submenús, con iconos a color */
 var tabs=$('.viewtabs',dash);
 if(tabs){
- var I={gerencia:'<path d="M5 20V10M12 20V4M19 20v-7"/>',jefatura:'<path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>',usuarios:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.5 0 4 2 4 5"/>',supervision:'<path d="M5 15a7 7 0 0114 0"/><path d="M3 15h18v3H3z"/><path d="M12 8V5"/>',olas:'<path d="M2 10c2.5-3 4.5-3 7 0s4.5 3 7 0"/><path d="M2 15c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6 0"/><path d="M2 20c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6 0"/>',asignacion:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>',ger:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',repsem:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>',archivos:'<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',maestro:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4"/>',presc:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',rutas:'<path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>'};
- var C={gerencia:'#4f9dff',jefatura:'#34d399',usuarios:'#fbbf24',supervision:'#fb923c',olas:'#22d3ee',asignacion:'#a78bfa',ger:'#f87171',repsem:'#f472b6',archivos:'#facc15',maestro:'#2dd4bf',presc:'#818cf8',rutas:'#fb7185'};
+ var I={gerencia:'<path d="M5 20V10M12 20V4M19 20v-7"/>',jefatura:'<path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>',usuarios:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.5 0 4 2 4 5"/>',supervision:'<path d="M5 15a7 7 0 0114 0"/><path d="M3 15h18v3H3z"/><path d="M12 8V5"/>',olas:'<path d="M2 10c2.5-3 4.5-3 7 0s4.5 3 7 0"/><path d="M2 15c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6 0"/><path d="M2 20c2.5-3 4.5-3 7 0s4.5 3 7 0 4.5-3 6 0"/>',asignacion:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>',ger:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',reppend:'<path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',repsem:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/>',archivos:'<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',maestro:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4"/>',presc:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',rutas:'<path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>'};
+ var C={gerencia:'#4f9dff',jefatura:'#34d399',usuarios:'#fbbf24',supervision:'#fb923c',olas:'#22d3ee',asignacion:'#a78bfa',ger:'#f87171',repsem:'#f472b6',reppend:'#f59e0b',archivos:'#facc15',maestro:'#2dd4bf',presc:'#818cf8',rutas:'#fb7185'};
  var by={};$$('.viewtab',tabs).forEach(function(bt){var v=bt.getAttribute('data-view');by[v]=bt;
   if(!$('.v38-ico',bt)){var sp=document.createElement('span');sp.className='v38-ico';sp.style.color=C[v]||'#fff';sp.style.background=(C[v]||'#ffffff')+'2e';
    sp.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(I[v]||'<circle cx="12" cy="12" r="4"/>')+'</svg>';bt.insertBefore(sp,bt.firstChild)}});
  var head=document.createElement('div');head.className='v38-head';
  head.innerHTML='<div class="v38-logo">Bata <span>Adecco</span></div><div class="v38-sub">Logística Picking & Packing</div>';
  tabs.insertBefore(head,tabs.firstChild);
- var GR=[['Dashboards',['gerencia','jefatura']],['Operación',['usuarios','supervision','olas','asignacion']],['Reportes',['ger','repsem']],['Datos',['archivos','maestro','presc','rutas']]];
+ var GR=[['Dashboards',['gerencia','jefatura']],['Operación',['usuarios','supervision','olas','asignacion']],['Reportes',['ger','repsem','reppend']],['Datos',['archivos','maestro','presc','rutas']]];
  var saved={};try{saved=JSON.parse(store('v38open')||'{}')||{}}catch(e){}
  var GH=[];
  GR.forEach(function(g){var h=document.createElement('button');h.type='button';h.className='v38-gh';
@@ -7996,6 +8030,124 @@ if(!(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)){
 }
 }catch(err){console.warn('V38 UI:',err)}
 })();
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id),f0=n=>Number(n||0).toLocaleString('es-PE');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CATS=['CALZADO','ACCESORIO','UNIFORME','INSUMO'],CC=['c1','c2','c3','c4'];
+const DN=['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'],DLAB={MIERCOLES:'MIÉRCOLES',SABADO:'SÁBADO'};
+const CORREO=['VIERNES','SABADO','DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES'],OFF={LUNES:0,MARTES:1,MIERCOLES:2,JUEVES:3,VIERNES:-3,SABADO:-2,DOMINGO:-1};
+const DAY=864e5,utc=s=>Date.parse(s+'T00:00:00Z'),iso=ms=>new Date(ms).toISOString().slice(0,10),dnum=ms=>new Date(ms).getUTCDate();
+const dlab=d=>DLAB[d]||d,nrm=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
+function isoWeek(ms){const d=new Date(ms),day=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-day+3);const y=d.getUTCFullYear(),j=new Date(Date.UTC(y,0,4));return 1+Math.round(((d-j)/DAY-3+((j.getUTCDay()+6)%7))/7);}
+const calMon=ms=>ms-((new Date(ms).getUTCDay()+6)%7)*DAY;
+function monOfWeek(F,w){const b=calMon(utc(F));for(const k of [0,-1,1,-2,2]){const m=b+k*7*DAY;if(isoWeek(m)===w)return m;}return b;}
+const zero=()=>({CALZADO:0,ACCESORIO:0,UNIFORME:0,INSUMO:0,OTROS:0});
+const sumO=o=>Object.keys(o).reduce((q,k)=>q+o[k],0);
+const addO=(a,b)=>{Object.keys(b).forEach(k=>{a[k]=(a[k]||0)+b[k];});return a;};
+const catP=k=>{const n=nrm(k);return n.startsWith('CALZ')?'CALZADO':n.startsWith('ACC')?'ACCESORIO':n.startsWith('UNIF')?'UNIFORME':(n.startsWith('INSUM')||n.startsWith('MATERIAL'))?'INSUMO':null;};
+// semana actual = la mayor presente en la foto (con salto de año)
+function curWeek(pw){const ws=Object.keys(pw||{}).filter(w=>/^\d+$/.test(w)).map(Number);if(!ws.length)return null;const hi=ws.some(w=>w>=50),lo=ws.some(w=>w<=4);return hi&&lo?Math.max.apply(null,ws.filter(w=>w<=4)):Math.max.apply(null,ws);}
+const pad2=n=>String(n).padStart(2,'0');
+// ---- producción (DATA) por día y operación ----
+function prodDay(rows,tx,day){
+  const cat=zero(),us={};let tot=0;
+  rows.forEach(r=>{if(r.d!==day||(r.op||'PICKING')!==tx)return;const u=r.u||'S/N';us[u]=(us[u]||0)+(Number(r.om)||0);const c=catP(r.k);if(!c)return;const n=Number(r.n)||0;cat[c]+=n;tot+=n;});
+  const dw=new Date(utc(day)).getUTCDay(),fac=(typeof CFG!=='undefined'&&CFG&&CFG.factorDia&&CFG.factorDia[dw]>0)?CFG.factorDia[dw]:(dw===6?0.5:1),thr=0.7*7.5*60*fac;
+  let pk=Object.keys(us).filter(u=>us[u]>=thr).length;const all=Object.keys(us).length;if(!pk)pk=all;
+  return {d:day,cat,tot,pickers:pk,per:pk?tot/pk:0};
+}
+function prodList(rows,tx,from,to){const s=new Set();rows.forEach(r=>{if((r.op||'PICKING')===tx&&r.d>=from&&r.d<to)s.add(r.d);});return [...s].sort().map(d=>prodDay(rows,tx,d)).filter(x=>x.tot>0||x.pickers>0);}
+// ---- modelo del reporte ----
+async function calc(F,dates,getPW,rows){
+  const ds=dates.filter(d=>d<=F).sort();if(!ds.length)return {err:'No hay Corrida de Olas hasta esa fecha.'};
+  const pwF=await getPW(F);if(!pwF)return {err:'La corrida de olas del '+F+' no tiene su detalle en este equipo. Súbela de nuevo en CORRIDA DE OLAS.'};
+  const cur=curWeek(pwF);if(cur==null)return {err:'No se encontró la semana actual en la corrida de olas.'};
+  const mon=monOfWeek(F,cur),monIso=iso(mon);
+  const win=ds.filter(d=>d>=monIso);const photo=win.length?win[0]:F;
+  const pwP=await getPW(photo)||pwF;
+  // semanas anteriores (foto del lunes)
+  const prev=[];Object.keys(pwP).forEach(w=>{if(!/^\d+$/.test(w))return;const n=Number(w),diff=(cur-n+53)%53;if(diff<1||diff>30)return;const c=zero();Object.keys(pwP[w]).forEach(d=>addO(c,pwP[w][d]));prev.push({w:n,diff,cat:c,tot:sumO(c)});});
+  prev.sort((a,b)=>b.diff-a.diff);
+  const base=zero();prev.forEach(p=>addO(base,p.cat));
+  // prescrito de la semana actual: valor de la primera foto donde aparece cada día de correo (no se descuenta producción)
+  const seen={},wk=pad2(cur);
+  for(const s of ds.filter(d=>d>=photo)){const pw=await getPW(s);const cw=pw&&(pw[wk]||pw[String(cur)]);if(!cw)continue;
+    Object.keys(cw).forEach(d=>{const dd=nrm(d);if(seen[dd])return;const c=cw[d],t=sumO(c);if(t>0)seen[dd]={d:dd,cat:Object.assign(zero(),c),tot:t,snap:s};});}
+  const presc=CORREO.filter(d=>seen[d]).map(d=>Object.assign({date:mon+OFF[d]*DAY},seen[d]));
+  const tot=addO(addO(zero(),base),presc.reduce((q,x)=>addO(q,x.cat),zero()));
+  const lastDay=presc.length?presc[presc.length-1].date:mon;
+  // producción
+  const pick=prodList(rows,'PICKING',photo,F),pack=prodList(rows,'PACKING',photo,F);
+  // evolutivo
+  const tl=[...new Set(ds.filter(d=>d>=photo).concat([F]))].sort(),evo=tl.map(t=>{const c=addO(zero(),base);presc.forEach(x=>{if(x.snap<=t)addO(c,x.cat);});
+    let tt=iso(utc(t));prodList(rows,'PICKING',photo,t).forEach(p=>CATS.concat(['OTROS']).forEach(k=>{c[k]-=p.cat[k]||0;}));return {t,cat:c,tot:sumO(c)};});
+  return {F,cur,mon,photo,prev,base,presc,tot,lastDay,pick,pack,evo};
+}
+// ---- observaciones (editables) ----
+const OK='rp_obs';let OBS={};try{OBS=JSON.parse(localStorage.getItem(OK)||'{}')||{};}catch(e){}
+const obsSave=()=>{try{localStorage.setItem(OK,JSON.stringify(OBS));}catch(e){}};
+// ---- HTML ----
+const cats=(o,tag)=>CATS.map((k,i)=>'<td class="'+CC[i]+'">'+(o[k]?f0(o[k]):'0')+'</td>').join('');
+function html(M){
+  if(M.err)return '<div class="mod-note">'+esc(M.err)+'</div>';
+  const otros=M.tot.OTROS>0||M.evo.some(e=>e.cat.OTROS)||M.pick.some(p=>p.cat.OTROS)||M.pack.some(p=>p.cat.OTROS);
+  const NC=CATS.length+(otros?1:0),CL=CATS.concat(otros?['OTROS']:[]),ch=CL.map(c=>'<th>'+c+'</th>').join(''),cv=(o,bold)=>CL.map((k,i)=>'<td class="'+(CC[i]||'c5')+'">'+f0(o[k]||0)+'</td>').join('');
+  let h='<div class="rp">';
+  // 1) PENDIENTE GENERAL
+  h+='<table><thead><tr><th colspan="'+(NC+4)+'" class="ttl">PENDIENTE GENERAL</th></tr><tr class="nv"><th>ACCION</th><th>SEMANA</th>'+ch+'<th>TOTAL</th><th>TOTAL<br>DETALLE</th></tr></thead><tbody>';
+  const n=M.prev.length;
+  if(!n)h+='<tr><td class="lb">PENDIENTE SEMANAS ANTERIORES</td><td>-</td>'+cv(zero())+'<td><b>0</b></td><td><b>0</b></td></tr>';
+  M.prev.forEach((p,i)=>{h+='<tr>'+(i?'':'<td class="lb" rowspan="'+n+'">PENDIENTE<br>SEMANAS ANTERIORES</td>')+'<td class="sm">SEM '+pad2(p.w)+'</td>'+(i?'':cv(M.base).replace(/<td /g,'<td rowspan="'+n+'" ')+'<td rowspan="'+n+'"><b>'+f0(sumO(M.base))+'</b></td>')+'<td><b>'+f0(p.tot)+'</b></td></tr>';});
+  M.presc.forEach(x=>{h+='<tr><td class="lb">PRESCRITO '+dlab(x.d)+' '+dnum(x.date)+'</td><td class="sm">SEM '+pad2(M.cur)+'</td>'+cv(x.cat)+'<td><b>'+f0(x.tot)+'</b></td><td><b>'+f0(x.tot)+'</b></td></tr>';});
+  h+='<tr class="yl"><td>PENDIENTE</td><td>TOTAL AL '+dnum(M.lastDay)+'</td>'+cv(M.tot)+'<td>'+f0(sumO(M.tot))+'</td><td>'+f0(sumO(M.tot))+'</td></tr></tbody></table>';
+  // 2) PRODUCCION PICKING & PACKING
+  h+='<table><thead><tr><th colspan="'+(NC+5)+'" class="ttl">PRODUCCION PICKING &amp; PACKING</th></tr></thead></table>';
+  [['PICKING',M.pick,'pick'],['PACKING',M.pack,'pack']].forEach(([tx,L,key])=>{
+    h+='<table><thead><tr class="gr"><th>ACCION</th><th>SEMANA</th><th>% X PICKER</th>'+ch+'<th>TOTAL</th><th colspan="2">OBSERVACION</th></tr></thead><tbody>';
+    if(!L.length)h+='<tr><td class="lb">PRODUCCION '+tx+'</td><td colspan="'+(NC+6)+'">Sin producción cargada en el rango.</td></tr>';
+    L.forEach((p,i)=>{const k0=key+'|'+p.d+'|';h+='<tr>'+(i?'':'<td class="lb" rowspan="'+L.length+'">PRODUCCION<br>'+tx+'</td>')+'<td class="sm">'+dlab(DN[new Date(utc(p.d)).getUTCDay()])+' '+dnum(utc(p.d))+'</td><td>'+f0(Math.round(p.per))+'</td>'+cv(p.cat)+'<td><b>'+f0(p.tot)+'</b></td>'+[0,1].map(j=>'<td class="ob"><input class="obs" data-k="'+esc(k0+j)+'" value="'+esc(OBS[k0+j]||'')+'" placeholder="escribir…"></td>').join('')+'</tr>';});
+    if(L.length){const T=L.reduce((q,p)=>addO(q,p.cat),zero()),av=L.reduce((q,p)=>q+p.per,0)/L.length;h+='<tr class="yl"><td colspan="2">TOTAL</td><td>'+f0(Math.round(av))+'</td>'+cv(T)+'<td>'+f0(sumO(T))+'</td><td colspan="2"></td></tr>';}
+    h+='</tbody></table>';});
+  // 3) PENDIENTE GENERAL EVOLUTIVO
+  h+='<table><thead><tr><th colspan="'+(NC+2)+'" class="ttl">PENDIENTE GENERAL EVOLUTIVO</th></tr><tr class="nv"><th>ACCION</th>'+ch+'<th>TOTAL</th></tr></thead><tbody>';
+  M.evo.forEach((e,i)=>{const last=i===M.evo.length-1,w=utc(e.t);h+='<tr class="'+(last?'bk':'')+'"><td class="lb">PENDIENTE AL '+dlab(DN[new Date(w).getUTCDay()])+' '+dnum(w)+' AM</td>'+cv(e.cat)+'<td><b>'+f0(e.tot)+'</b></td></tr>';});
+  return h+'</tbody></table></div>';
+}
+// ---- Excel ----
+function xl(M){
+  const A=[],CL=CATS.concat(['OTROS']);A.push(['REPORTE DE PENDIENTES','','','','','','','']);A.push([]);
+  A.push(['PENDIENTE GENERAL']);A.push(['ACCION','SEMANA'].concat(CL,['TOTAL','TOTAL DETALLE']));
+  M.prev.forEach((p,i)=>A.push([i?'':'PENDIENTE SEMANAS ANTERIORES','SEM '+pad2(p.w)].concat(CL.map(k=>i?'':(M.base[k]||0)),[i?'':sumO(M.base),p.tot])));
+  M.presc.forEach(x=>A.push(['PRESCRITO '+dlab(x.d)+' '+dnum(x.date),'SEM '+pad2(M.cur)].concat(CL.map(k=>x.cat[k]||0),[x.tot,x.tot])));
+  A.push(['PENDIENTE','TOTAL AL '+dnum(M.lastDay)].concat(CL.map(k=>M.tot[k]||0),[sumO(M.tot),sumO(M.tot)]));A.push([]);
+  [['PICKING',M.pick,'pick'],['PACKING',M.pack,'pack']].forEach(([tx,L,key])=>{A.push(['PRODUCCION '+tx]);A.push(['ACCION','SEMANA','% X PICKER'].concat(CL,['TOTAL','OBSERVACION','']));
+    L.forEach(p=>A.push(['PRODUCCION '+tx,dlab(DN[new Date(utc(p.d)).getUTCDay()])+' '+dnum(utc(p.d)),Math.round(p.per)].concat(CL.map(k=>p.cat[k]||0),[p.tot,OBS[key+'|'+p.d+'|0']||'',OBS[key+'|'+p.d+'|1']||''])));A.push([]);});
+  A.push(['PENDIENTE GENERAL EVOLUTIVO']);A.push(['ACCION'].concat(CL,['TOTAL']));
+  M.evo.forEach(e=>{const w=utc(e.t);A.push(['PENDIENTE AL '+dlab(DN[new Date(w).getUTCDay()])+' '+dnum(w)+' AM'].concat(CL.map(k=>e.cat[k]||0),[e.tot]));});
+  return A;
+}
+if(typeof document==='undefined'||!$('view-reppend')){ if(typeof module!=='undefined')module.exports={calc,html,xl,prodDay,curWeek,monOfWeek,isoWeek};return;}
+// ---- UI ----
+let M=null,busy=false;
+async function render(){
+  if(busy)return;busy=true;const box=$('rpBody'),sel=$('rpFecha'),dates=(window.__pendDates?window.__pendDates():[]);
+  try{
+    if(!dates.length){sel.innerHTML='';box.innerHTML='<div class="mod-note">Aún no hay Corridas de Olas cargadas. Sube el PEND-STOCK-RUTA en CORRIDA DE OLAS para generar el reporte.</div>';M=null;return;}
+    const prev=sel.value;sel.innerHTML=dates.slice().reverse().map(d=>'<option value="'+d+'">'+d.split('-').reverse().join('/')+'</option>').join('');sel.value=dates.indexOf(prev)>=0?prev:dates[dates.length-1];
+    box.innerHTML='<div class="mod-note">Armando reporte…</div>';
+    const rows=(typeof DATA!=='undefined'&&Array.isArray(DATA))?DATA:[];
+    M=await calc(sel.value,dates,k=>window.__pendSnap(k),rows);box.innerHTML=html(M);
+  }catch(e){box.innerHTML='<div class="mod-note" style="color:#d62839">'+esc(e.message)+'</div>';}finally{busy=false;}
+}
+document.addEventListener('input',e=>{const i=e.target.closest&&e.target.closest('input.obs');if(!i)return;OBS[i.dataset.k]=i.value;obsSave();});
+$('rpFecha').addEventListener('change',render);
+$('rpRefresh').addEventListener('click',render);
+$('rpXls').addEventListener('click',()=>{if(!M||M.err||!window.XLSX){alert('No hay reporte para descargar.');return;}const ws=XLSX.utils.aoa_to_sheet(xl(M));ws['!cols']=[{wch:34},{wch:14}].concat(Array(10).fill({wch:14}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'REPORTE DE PENDIENTES');XLSX.writeFile(wb,'REPORTE_DE_PENDIENTES_'+M.F+'.xlsx');});
+document.querySelector('.viewtab[data-view="reppend"]').addEventListener('click',()=>setTimeout(render,60));
+})();
+
 </script>
 </body>
 </html>
