@@ -2054,11 +2054,11 @@ body.v38-tv{--ui:1.25}
         <div class="mod-actions" style="margin-top:10px"><input id="usrSearch" class="pdetsel" placeholder="Buscar usuario, DNI, nombre o área…" style="min-width:260px"></div>
         <div class="mod-status" id="usrStatus">Sin usuarios cargados.</div>
         <div class="mod-actions" style="margin-top:12px;align-items:center"><b style="font-size:15px">Asistencia semanal</b><button class="btn" id="asisPrev" type="button">◀</button><label style="display:flex;gap:6px;align-items:center">Año <input id="asisYear" type="number" class="pdetsel" style="width:90px"></label><label style="display:flex;gap:6px;align-items:center">Semana <input id="asisWeek" type="number" min="1" max="53" class="pdetsel" style="width:80px"></label><button class="btn" id="asisNext" type="button">▶</button><button class="btn" id="asisNow" type="button">Semana actual</button><span id="asisTag" style="font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:#eef0f2"></span><span id="asisRange" style="font-size:13px;color:#5b6b7c"></span></div>
-        <div class="mod-actions"><button class="btn" id="asisAllA" type="button">Marcar todos «A»</button><button class="btn" id="asisUnlock" type="button" style="display:none">✏️ Habilitar edición</button><button class="btn" id="asisSave" type="button">💾 Guardar asistencia</button><span id="asisSum" style="font-size:13px;color:#41536a"></span></div>
+        <div class="mod-actions"><button class="btn" id="asisAllA" type="button">Marcar todos «A»</button><button class="btn" id="asisUnlock" type="button" style="display:none">✏️ Habilitar edición</button><button class="btn" id="asisSave" type="button">💾 Guardar asistencia</button><button class="btn" id="asisXls" type="button">⬇ Excel</button><button class="btn" id="asisPdf" type="button">⬇ PDF</button><button class="btn" id="asisJpg" type="button">⬇ JPG</button><span id="asisSum" style="font-size:13px;color:#41536a"></span></div>
         <div class="mod-actions" id="selBar" style="display:none;background:#fbe9c3;border-radius:12px;padding:8px 10px;align-items:center"><b id="selCount">0 seleccionados</b><button class="btn" id="selAllBtn" type="button">Seleccionar todo</button><button class="btn" id="selNoneBtn" type="button">Quitar selección</button><button class="btn" id="selDelBtn" type="button" style="color:#b3141e">🗑 Borrar seleccionados</button><button class="btn" id="selExitBtn" type="button">Salir de selección masiva</button></div>
-        <div class="mod-note">A = Asistió · T = Tardanza · F = Faltó · D = Descanso · DM = Descanso médico · V = Vacaciones · L = Licencia · P = Permiso. Elige de la lista o escribe la letra. El sábado es medio día.</div>
+        <div class="mod-note">A = Asistió · T = Tarde · F = Faltó · DM = Descanso médico · AT = Atención médica · P = Permiso. Elige de la lista. El sábado es medio día.</div>
         <div style="overflow-x:auto"><table class="heatmap asis-t" id="usrTable"></table></div>
-        <datalist id="asisOpts"><option value="A"><option value="T"><option value="F"><option value="D"><option value="DM"><option value="V"><option value="L"><option value="P"><option value="TD"></datalist>
+        <datalist id="asisOpts"><option value="A"><option value="T"><option value="F"><option value="DM"><option value="AT"><option value="P"></datalist>
       </section>
       <section class="opsum" id="metaPanel" style="display:none;margin-top:12px"><div class="h">META individual por usuario</div>
         <div class="mod-note">Cada día tiene su meta por hora y su categoría, según la última carga. Si cambias la categoría (o la meta) de un día, el nuevo monto y la categoría rigen desde ese día en adelante y no modifican los días anteriores. Pulsa Guardar para dejarlo grabado; los reportes y semáforos usan siempre lo último. La meta del día = meta por hora × horas trabajadas (tope 7.5 h, que ya descuenta tiempos muertos; el sábado es medio día). La meta de packing es estándar (500 und/h). Sube el Excel con USUARIO, NOMBRE, ÁREA, GRUPO, CATEGORÍA y META x HORA.</div>
@@ -6438,13 +6438,13 @@ function askEtq(label,qty,guias,fname){return new Promise(res=>{
   +'<div style="font-size:12px;color:#777;margin-bottom:12px">'+Number(qty||0).toLocaleString('es-PE')+' unidades'+(guias?' · '+guias+' guía(s)':'')+'</div>'
   +'<div style="font-size:14px;margin-bottom:10px">¿A qué categoría se asigna?</div>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button data-c="CALZADO" style="'+bt+'background:#1f5fa8">CALZADO</button><button data-c="ACCESORIO" style="'+bt+'background:#c7791f">ACCESORIO</button><button data-c="INSUMO" style="'+bt+'background:#2e8b3d">INSUMO</button></div>'
-  +'<div style="margin-top:12px"><button data-c="OTROS" style="border:0;background:#eee;color:#444;border-radius:8px;padding:8px 12px;cursor:pointer">Dejar en OTROS</button></div></div>';
+  +'<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button data-c="OTROS" style="border:0;background:#eee;color:#444;border-radius:8px;padding:8px 12px;cursor:pointer">Dejar en OTROS</button><button data-c="DEL" style="border:0;background:#fbe3e5;color:#b3141e;font-weight:700;border-radius:8px;padding:8px 12px;cursor:pointer">🗑 Borrar estas líneas</button></div></div>';
  document.body.appendChild(ov);
  const done=v=>{ov.remove();document.removeEventListener('keydown',kd);res(v);},kd=e=>{if(e.key==='Escape')done(null);};
  document.addEventListener('keydown',kd);
- ov.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>done(b.dataset.c));
+ ov.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{if(b.dataset.c==='DEL'&&!confirm('¿Borrar las líneas con la etiqueta "'+label+'" ('+Number(qty||0).toLocaleString('es-PE')+' und)? Esta acción no se puede deshacer.'))return;done(b.dataset.c);});
 });}
-window.__etqAskMany=async items=>{let n=0;for(const it of items){const c=await askEtq(it.label,it.qty,it.guias,it.file);if(c){etqSet(it.label==='(vacía)'?'':it.label,c);n++;}}return n;};
+window.__etqAskMany=async items=>{const r={n:0,del:[]};for(const it of items){const c=await askEtq(it.label,it.qty,it.guias,it.file);if(c==='DEL')r.del.push(it.label==='(vacía)'?'':it.label);else if(c){etqSet(it.label==='(vacía)'?'':it.label,c);r.n++;}}return r;};
 async function cargar(files){files=[...files].filter(f=>/\.xlsx?$/i.test(f.name)&&!f.name.startsWith('~$'));if(!files.length)return;
  let nuevas=0,reemp=0,ok=0;
  for(const f of files){try{
@@ -6458,7 +6458,9 @@ async function cargar(files){files=[...files].filter(f=>/\.xlsx?$/i.test(f.name)
    if(!picked){window.__toast(f.name+': omitido, no se cargó.');continue;}
    let {out,bad,byName}=R;if(picked!==def){out.forEach(r=>{r.d=picked;});byName=false;}
    const um=new Map();out.forEach(r=>{if(window.__etqKnown(r.etiqueta))return;const k=nrm(r.etiqueta),u=um.get(k)||{label:String(r.etiqueta||'').trim()||'(vacía)',qty:0,g:new Set(),file:f.name};u.qty+=r.cant;u.g.add(r.guia);um.set(k,u);});
-   if(um.size)await window.__etqAskMany([...um.values()].map(u=>({label:u.label,qty:u.qty,guias:u.g.size,file:u.file})));
+   if(um.size){const rr=await window.__etqAskMany([...um.values()].map(u=>({label:u.label,qty:u.qty,guias:u.g.size,file:u.file})));
+     if(rr.del.length){const dk=new Set(rr.del.map(nrm)),n0=out.length;out=out.filter(r=>!dk.has(nrm(r.etiqueta)));window.__toast(f.name+': '+(n0-out.length)+' línea(s) borrada(s), no se cargaron.');}
+     if(!out.length){window.__toast(f.name+': no quedó ninguna línea para cargar.');continue;}}
    // si se vuelve a subir el MISMO archivo, se reemplaza solo su carga anterior (las guías repetidas de otros correos se conservan)
    const prev=window.FILES.filter(x=>x.kind==='Prescripciones'&&x.name===f.name).map(x=>x.id);
    if(prev.length){const n0=window.PRESC.length;window.PRESC=window.PRESC.filter(r=>!prev.includes(r.src));reemp+=n0-window.PRESC.length;window.FILES=window.FILES.filter(x=>!prev.includes(x.id));}
@@ -6598,7 +6600,7 @@ document.getElementById('filtersBtn').addEventListener('click',function(){const 
 .mf-hb{margin-top:4px;border:1px solid #d9e2e8;background:#fff;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer}.mf-hb.on{background:#e31b2a;color:#fff;border-color:#e31b2a}
 .mf-dd{position:relative;display:inline-block}.mf-b{border:1px solid #d9e2e8;background:#fff;border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;min-width:200px;text-align:left}.mf-p{position:absolute;top:calc(100% + 4px);left:0;z-index:60;background:#fff;border:1px solid #d9e2e8;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;min-width:240px;max-height:360px;overflow:auto;display:none}.mf-p.on{display:block}.mf-g{font-size:11px;font-weight:800;letter-spacing:1px;color:#5b6b7c;margin:8px 4px 2px;border-top:1px solid #eef2f6;padding-top:6px}.mf-g:first-child{border-top:0;margin-top:2px}.mf-p label{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px}.mf-p label:hover{background:#f1f5f8}.mf-p label.mf-g{font-size:11px;font-weight:800;letter-spacing:1px;color:#5b6b7c;border-top:1px solid #eef2f6;margin-top:8px;padding-top:6px;border-radius:0}
 .mt-tx{width:150px;border:1px solid #d9e2e8;border-radius:8px;padding:6px;font-size:13px;background:#fffdf3}
-.asis-in{width:48px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;text-transform:uppercase;font-size:14px}
+.asis-in{width:48px;text-align:center;font-weight:700;border:1px solid #d9e2e8;border-radius:8px;padding:6px;text-transform:uppercase;font-size:14px}select.asis-in{width:66px;padding:6px 2px;cursor:pointer;background-color:transparent;text-align-last:center}
 .asis-back{position:fixed;inset:0;background:rgba(20,24,30,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
 .asis-back.show{display:flex}
 .asis-box{background:#fff;border-radius:16px;width:min(1100px,100%);max-height:92vh;overflow:auto;padding:18px}
@@ -6729,7 +6731,7 @@ async function leer(file){
   if(tx.includes('\uFFFD')){const o=[];let i=0;while(i<b.length){const c=b[i];if(c<128){o.push(c);i++;}else if(c>=194&&c<=223&&(b[i+1]&192)===128){o.push(((c&31)<<6)|(b[i+1]&63));i+=2;}else if(c>=224&&c<=239&&(b[i+1]&192)===128&&(b[i+2]&192)===128){o.push(((c&15)<<12)|((b[i+1]&63)<<6)|(b[i+2]&63));i+=3;}else{o.push(c);i++;}}tx=String.fromCharCode.apply(null,o);}
   return XLSX.read(tx.replace(/^\uFEFF/,''),{type:'string'});}
  return XLSX.read(await file.arrayBuffer(),{type:'array'});}
-const DAYRE=/^(LU|MA|MI|JU|VI|SA|DO)\s*\d{1,2}\/\d{1,2}$/,OKST=['A','T','F','D','DM','V','L','P','TD'];   // TD = asistió, trabajo diferenciado (cuenta como asistencia, no como producción de picking)
+const DAYRE=/^(LU|MA|MI|JU|VI|SA|DO)\s*\d{1,2}\/\d{1,2}$/,OKST=['A','T','F','D','DM','AT','V','L','P','TD'];   // TD = asistió, trabajo diferenciado (cuenta como asistencia, no como producción de picking)
 const MAP={nombre:['NOMBRE','NOMBRES','NOMBRE COMPLETO','PERSONAL'],apellidos:['APELLIDOS','APELLIDO'],usuario:['USUARIO','USER','USUARIO WMS'],dni:['DNI','DOCUMENTO','NRO DOCUMENTO'],area:['AREA'],grupo:['GRUPO'],categoria:['CATEGORIA']};
 function sheets(wb){const out=[];wb.SheetNames.forEach(sn=>{const rs=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});out.push(rs);});return out;}
 function isoWeekOfMonday(d,m){const now=new Date(),cand=[now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1].filter(y=>new Date(Date.UTC(y,m-1,d)).getUTCDay()===1).sort((a,b)=>Math.abs(new Date(Date.UTC(a,m-1,d))-now)-Math.abs(new Date(Date.UTC(b,m-1,d))-now));
@@ -7074,6 +7076,8 @@ let unlocked=false;const draft={};let massMode=false;const SEL=new Set();
 const wkey=()=>$$('asisYear').value+'-W'+String($$('asisWeek').value).padStart(2,'0');
 function estado(){const n=isoNow(),a=(+$$('asisYear').value)*100+(+$$('asisWeek').value),b=n.y*100+n.w;return a<b?'past':a>b?'future':'now';}
 function filtrar(){const q=nrm($$('usrSearch').value);return window.USUARIOS.slice().sort((a,b)=>nm(a).localeCompare(nm(b))).filter(r=>(!US.area||areaDe(r)===US.area)&&(!q||nrm([r.usuario,r.dni,nm(r),areaDe(r),r.grupo,(metaDe(r)||{}).grupo].join(' ')).includes(q)));}
+const AS_OPTS=['A','T','F','DM','AT','P'];   // solo estos códigos se ofrecen; si una casilla antigua trae D, V, L o TD, se conserva
+const asSel=(key,i,v)=>'<select class="asis-in" data-u="'+esc(key)+'" data-k="'+i+'"><option value="">—</option>'+AS_OPTS.concat(v&&AS_OPTS.indexOf(v)<0?[v]:[]).map(o=>'<option value="'+esc(o)+'"'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
 function pintar(){
  const t=$$('usrTable');if(!t)return;if(!$$('asisYear').value){const n=isoNow();$$('asisYear').value=n.y;$$('asisWeek').value=n.w;}
  const y=+$$('asisYear').value,w=+$$('asisWeek').value,mo=monday(y,w),st=estado(),ro=st==='past'&&!unlocked,k=wkey(),rec=window.ASISTENCIA[k]||{},dr=draft[k]||{},L=filtrar();
@@ -7084,7 +7088,7 @@ function pintar(){
  if(!window.USUARIOS.length){t.innerHTML='<tr><td>Carga el Excel o el PDF de asistencia, o agrega usuarios.</td></tr>';$$('asisSum').textContent='';return;}
  const val=(key,i)=>{const d=dr[key];return d&&d['d'+i]!==undefined?d['d'+i]:((rec[key]||{})['d'+i]||'');};
  t.innerHTML='<tr>'+(massMode?'<th><input type="checkbox" id="selAll" title="Seleccionar todo"></th>':'')+'<th>N°</th><th class="l">Nombre</th>'+DN.map((d,i)=>'<th>'+d+'<br>'+fd(new Date(mo.getTime()+i*864e5))+'</th>').join('')+'<th></th></tr>'
-  +L.map((r,n)=>{const key=nk(r);return '<tr>'+(massMode?'<td><input type="checkbox" class="sel-ck" data-k="'+esc(kid(r))+'"'+(SEL.has(kid(r))?' checked':'')+'></td>':'')+'<td>'+(n+1)+'</td><td class="l"><b>'+esc(nm(r))+'</b></td>'+DN.map((d,i)=>{const v=val(key,i);return ro?'<td class="'+(v?'as-'+v:'')+'"><b>'+(v||'—')+'</b></td>':'<td class="'+(v?'as-'+v:'')+'"><input class="asis-in" list="asisOpts" maxlength="2" autocomplete="off" data-u="'+esc(key)+'" data-k="'+i+'" value="'+esc(v)+'"></td>';}).join('')+'<td style="white-space:nowrap"><button class="btn pw-btn" data-e="'+esc(kid(r))+'" type="button">Editar</button> <button class="btn pw-btn" data-d="'+esc(kid(r))+'" type="button">Borrar</button></td></tr>';}).join('')
+  +L.map((r,n)=>{const key=nk(r);return '<tr>'+(massMode?'<td><input type="checkbox" class="sel-ck" data-k="'+esc(kid(r))+'"'+(SEL.has(kid(r))?' checked':'')+'></td>':'')+'<td>'+(n+1)+'</td><td class="l"><b>'+esc(nm(r))+'</b></td>'+DN.map((d,i)=>{const v=val(key,i);return ro?'<td class="'+(v?'as-'+v:'')+'"><b>'+(v||'—')+'</b></td>':'<td class="'+(v?'as-'+v:'')+'">'+asSel(key,i,v)+'</td>';}).join('')+'<td style="white-space:nowrap"><button class="btn pw-btn" data-e="'+esc(kid(r))+'" type="button">Editar</button> <button class="btn pw-btn" data-d="'+esc(kid(r))+'" type="button">Borrar</button></td></tr>';}).join('')
   +'<tr class="tot">'+(massMode?'<td></td>':'')+'<td></td><td class="l">% asistencia del día</td>'+DN.map((d,i)=>'<td data-pc="'+i+'"></td>').join('')+'<td></td></tr>';
  calc();}
 function calc(){const t=$$('usrTable');if(!t)return;const y=+$$('asisYear').value,w=+$$('asisWeek').value,k=wkey(),rec=window.ASISTENCIA[k]||{},dr=draft[k]||{},L=filtrar();let A=0,F=0,tot=[0,0,0,0,0,0].map(()=>({a:0,f:0}));
@@ -7111,7 +7115,7 @@ $$('usrTable').addEventListener('dblclick',e=>{if(!unlocked&&estado()==='past'&&
 $$('usrTable').addEventListener('input',e=>{const inp=e.target.closest('.asis-in');if(!inp)return;inp.value=inp.value.toUpperCase().replace(/[^A-Z]/g,'');const v=inp.value;
  if(v&&OKST.indexOf(v)<0){inp.parentElement.className='';if(v.length>=2){inp.style.borderColor='#d9232d';}else inp.style.borderColor='';return;}
  inp.style.borderColor='';inp.parentElement.className=v?'as-'+v:'';const k=wkey();((draft[k]=draft[k]||{})[inp.dataset.u]=draft[k][inp.dataset.u]||{})['d'+inp.dataset.k]=v;calc();});
-$$('usrTable').addEventListener('change',e=>{const inp=e.target.closest('.asis-in');if(inp&&inp.value&&OKST.indexOf(inp.value)<0){window.__toast&&window.__toast('Usa A, T, F, D, DM, V, L o P.');inp.value='';inp.style.borderColor='';inp.parentElement.className='';const k=wkey();if(draft[k]&&draft[k][inp.dataset.u])draft[k][inp.dataset.u]['d'+inp.dataset.k]='';calc();}});
+$$('usrTable').addEventListener('change',e=>{const inp=e.target.closest('.asis-in');if(inp&&inp.value&&OKST.indexOf(inp.value)<0){window.__toast&&window.__toast('Usa A, T, F, DM, AT o P.');inp.value='';inp.style.borderColor='';inp.parentElement.className='';const k=wkey();if(draft[k]&&draft[k][inp.dataset.u])draft[k][inp.dataset.u]['d'+inp.dataset.k]='';calc();}});
 $$('asisAllA').onclick=()=>{const wk=wkey(),n=isoNow(),actual=wk===(n.y+'-W'+String(n.w).padStart(2,'0')),hoyI=actual?Math.min((new Date().getDay()+6)%7,5):0,names=['Lun','Mar','Mié','Jue','Vie','Sáb'];
  const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(20,28,40,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
  ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:20px 22px;max-width:92vw;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="font-size:16px;font-weight:800;margin-bottom:4px">Marcar A a todos</div><div style="font-size:13px;color:#5b6b7c;margin-bottom:12px">¿Para qué día? Solo se llenan las casillas vacías de ese día.</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+names.map((x,i)=>'<button type="button" class="btn" data-aak="'+i+'" style="'+(i===hoyI?'background:#2d3139;color:#fff':'')+'">'+x+(actual&&i===hoyI?' · hoy':'')+'</button>').join('')+'</div><div style="margin-top:14px;text-align:right"><button type="button" class="btn" data-aak="x">Cancelar</button></div></div>';
@@ -7123,6 +7127,61 @@ $$('asisSave').onclick=async()=>{if(!window.requestUploadAccess())return;const k
  $$('usrTable').querySelectorAll('.asis-in').forEach(s=>{const u=s.dataset.u;keys.add(u);const o=rec[u]=Object.assign({},rec[u]||{});if(s.value&&OKST.indexOf(s.value)>=0)o['d'+s.dataset.k]=s.value;else delete o['d'+s.dataset.k];});
  keys.forEach(u=>{const o=rec[u],has=[0,1,2,3,4,5].some(i=>o['d'+i]);if(!has&&!o.obs)delete rec[u];});
  window.ASISTENCIA[k]=rec;delete draft[k];window.__toast&&window.__toast('Asistencia de la semana '+$$('asisWeek').value+' guardada.');window.renderUsuarios();if(window.saveCloud)await window.saveCloud();};
+
+// ---- Descargar la asistencia (Excel / PDF / JPG), cuadrada en una sola hoja ----
+const asLoad=u=>new Promise((ok,ko)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>ko(new Error('No se pudo cargar '+u));document.head.appendChild(e);});
+const AS_BG={A:'D9F2E3',T:'FBE9C3',F:'F6C9CC',P:'E3E6EA',TD:'DCE8FB'},asRgb=h=>[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+function asisData(){
+ const y=+$$('asisYear').value,w=+$$('asisWeek').value,mo=monday(y,w),k=wkey(),rec=window.ASISTENCIA[k]||{},dr=draft[k]||{},L=filtrar();
+ const val=(key,i)=>{const d=dr[key];return d&&d['d'+i]!==undefined?d['d'+i]:((rec[key]||{})['d'+i]||'');};
+ const days=DN.map((d,i)=>d+' '+fd(new Date(mo.getTime()+i*864e5)));
+ const rows=L.map((r,n)=>{const key=nk(r);return [n+1,nm(r)].concat([0,1,2,3,4,5].map(i=>val(key,i)));});
+ const pct=[0,1,2,3,4,5].map(i=>{let a=0,f=0;L.forEach(r=>{const v=val(nk(r),i);if(v==='A'||v==='T'||v==='TD')a++;if(v==='F')f++;});return a+f?Math.round(a/(a+f)*100)+'%':'';});
+ return {y,w,days,rows,pct,title:'ASISTENCIA SEMANAL · SEMANA '+w+' · '+y,sub:'Del '+fd(mo)+' al '+fd(new Date(mo.getTime()+5*864e5))+(US.area?' · Área: '+US.area:'')+' · '+rows.length+' personas'};
+}
+const asFile=(d,ext)=>'ASISTENCIA_SEM'+String(d.w).padStart(2,'0')+'_'+d.y+'.'+ext;
+const asSave=(blob,name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);};
+function asCheck(){if(!window.USUARIOS.length){alert('No hay usuarios para descargar.');return null;}const d=asisData();if(!d.rows.length){alert('No hay personas en la lista (revisa los filtros).');return null;}return d;}
+$$('asisXls').onclick=async()=>{const d=asCheck();if(!d)return;
+ try{if(!window.ExcelJS)await asLoad('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('ASISTENCIA',{views:[{showGridLines:false}]}),bd={style:'thin',color:{argb:'FF1C1C1C'}},B={top:bd,left:bd,bottom:bd,right:bd},fill=h=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+h}}),nC=2+d.days.length;
+  ws.columns=[{width:6},{width:38}].concat(d.days.map(()=>({width:12})));
+  ws.mergeCells(1,1,1,nC);const t=ws.getCell(1,1);t.value=d.title;t.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};t.fill=fill('000000');t.alignment={horizontal:'center',vertical:'middle'};ws.getRow(1).height=26;
+  ws.mergeCells(2,1,2,nC);const s=ws.getCell(2,1);s.value=d.sub;s.font={italic:true,size:11};s.alignment={horizontal:'center'};
+  const h=ws.getRow(3);['N°','NOMBRE'].concat(d.days).forEach((x,i)=>{const c=h.getCell(i+1);c.value=x;c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill=fill('2D3139');c.border=B;c.alignment={horizontal:i===1?'left':'center',vertical:'middle',wrapText:true};});h.height=28;
+  d.rows.forEach((r,n)=>{const row=ws.getRow(4+n);r.forEach((v,i)=>{const c=row.getCell(i+1);c.value=v;c.border=B;c.alignment={horizontal:i===1?'left':'center',vertical:'middle'};c.font={bold:i>=1,size:11};if(i>=2&&AS_BG[v])c.fill=fill(AS_BG[v]);});});
+  const last=4+d.rows.length,tr=ws.getRow(last);['','% asistencia del día'].concat(d.pct).forEach((v,i)=>{const c=tr.getCell(i+1);c.value=v;c.border=B;c.font={bold:true};c.fill=fill('EEF0F2');c.alignment={horizontal:i===1?'left':'center'};});
+  ws.pageSetup={paperSize:9,orientation:d.rows.length>30?'portrait':'landscape',fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,printArea:'A1:'+String.fromCharCode(64+nC)+last,margins:{left:.4,right:.4,top:.4,bottom:.4,header:.2,footer:.2}};
+  asSave(new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),asFile(d,'xlsx'));
+ }catch(e){alert('No se pudo generar el Excel: '+e.message+'. Revisa tu conexión a internet.');}};
+$$('asisPdf').onclick=async()=>{const d=asCheck();if(!d)return;
+ try{if(!(window.jspdf&&window.jspdf.jsPDF))await asLoad('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  if(!window.jspdf.jsPDF.API.autoTable)await asLoad('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  let scale=1,doc;
+  for(let tries=0;tries<8;tries++){
+   doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+   const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=24,top=m+32;
+   doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(d.title,pw/2,m+8,{align:'center'});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(d.sub,pw/2,m+22,{align:'center'});
+   const rowH=(ph-top-m)/(d.rows.length+3)*scale,fs=Math.max(3.5,Math.min(10,rowH*.6)),pad=Math.max(.3,(rowH-fs*1.15)/2);
+   doc.autoTable({startY:top,head:[['N°','NOMBRE'].concat(d.days.map(x=>x.replace(' ','\n')))],body:d.rows.concat([['','% asistencia del día'].concat(d.pct)]),theme:'plain',margin:{left:m,right:m,top:top,bottom:m},tableWidth:pw-2*m,pageBreak:'avoid',
+    styles:{fontSize:fs,cellPadding:pad,lineWidth:.4,lineColor:[28,28,28],halign:'center',valign:'middle'},headStyles:{fillColor:[45,49,57],textColor:255,fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:Math.max(14,fs*3)},1:{halign:'left',fontStyle:'bold'}},
+    didParseCell:x=>{if(x.section!=='body')return;if(x.row.index===d.rows.length){x.cell.styles.fillColor=[238,240,242];x.cell.styles.fontStyle='bold';return;}if(x.column.index>=2){x.cell.styles.fontStyle='bold';const v=x.cell.raw;if(AS_BG[v])x.cell.styles.fillColor=asRgb(AS_BG[v]);}}});
+   if(doc.getNumberOfPages()===1)break;scale*=.9;
+  }
+  doc.save(asFile(d,'pdf'));
+ }catch(e){alert('No se pudo generar el PDF: '+e.message+'. Revisa tu conexión a internet.');}};
+$$('asisJpg').onclick=()=>{const d=asCheck();if(!d)return;
+ try{const W=[56,420].concat(d.days.map(()=>112)),tw=W.reduce((a,b)=>a+b,0),TH=64,SH=34,HH=44,RH=34,FH=40,H=TH+SH+HH+RH*d.rows.length+FH+8,SC=2,cv=document.createElement('canvas');cv.width=tw*SC;cv.height=H*SC;const g=cv.getContext('2d');g.scale(SC,SC);
+  g.fillStyle='#fff';g.fillRect(0,0,tw,H);
+  const cell=(x,y,w,h,txt,o)=>{g.fillStyle=o.bg||'#fff';g.fillRect(x,y,w,h);g.strokeStyle='#1c1c1c';g.lineWidth=1;g.strokeRect(x+.5,y+.5,w-1,h-1);g.fillStyle=o.fg||'#111';g.font=o.font;g.textAlign=o.al||'center';g.textBaseline='middle';let t=String(txt==null?'':txt);if(g.measureText(t).width>w-16){while(t.length>1&&g.measureText(t+'…').width>w-16)t=t.slice(0,-1);t+='…';}g.fillText(t,(o.al==='left')?x+10:x+w/2,y+h/2+1);};
+  g.fillStyle='#000';g.fillRect(0,0,tw,TH);g.fillStyle='#fff';g.font='bold 26px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText(d.title,tw/2,TH/2);
+  g.fillStyle='#111';g.font='italic 17px Arial';g.fillText(d.sub,tw/2,TH+SH/2);
+  let y=TH+SH,x=0;['N°','NOMBRE'].concat(d.days).forEach((hd,i)=>{cell(x,y,W[i],HH,hd,{bg:'#2d3139',fg:'#fff',font:'bold 16px Arial',al:i===1?'left':'center'});x+=W[i];});y+=HH;
+  d.rows.forEach(r=>{x=0;r.forEach((v,i)=>{cell(x,y,W[i],RH,v,{bg:i>=2&&AS_BG[v]?'#'+AS_BG[v]:'#fff',font:(i>=1?'bold ':'')+'16px Arial',al:i===1?'left':'center'});x+=W[i];});y+=RH;});
+  x=0;['','% asistencia del día'].concat(d.pct).forEach((v,i)=>{cell(x,y,W[i],FH,v,{bg:'#eef0f2',font:'bold 16px Arial',al:i===1?'left':'center'});x+=W[i];});
+  cv.toBlob(b=>{if(!b){alert('No se pudo generar la imagen.');return;}asSave(b,asFile(d,'jpg'));},'image/jpeg',0.95);
+ }catch(e){alert('No se pudo generar el JPG: '+e.message);}};
 window.renderUsuarios();
 })();
 </script>
@@ -8219,7 +8278,9 @@ document.addEventListener('input',e=>{const i=e.target.closest&&e.target.closest
 $('rpFecha').addEventListener('change',render);
 $('rpRefresh').addEventListener('click',render);
 document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('#rpEtq');if(!b||!M||!M.unk||!window.__etqAskMany)return;
-  await window.__etqAskMany(Object.keys(M.unk).map(l=>({label:l,qty:M.unk[l]})));render();});
+  const rr=await window.__etqAskMany(Object.keys(M.unk).map(l=>({label:l,qty:M.unk[l]})));
+  if(rr.del&&rr.del.length&&window.requestUploadAccess&&window.requestUploadAccess()){const dk=new Set(rr.del.map(nrm));window.PRESC=(window.PRESC||[]).filter(r=>!dk.has(nrm(r.etiqueta)));window.renderPresc&&window.renderPresc();try{await window.saveCloud();}catch(e){}}
+  render();});
 // ---- Descargas con el mismo formato y colores de la web ----
 const rpLoad={};function rpScript(u){return rpLoad[u]||(rpLoad[u]=new Promise((ok,ko)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>{delete rpLoad[u];ko(new Error('No se pudo cargar '+u));};document.head.appendChild(e);}));}
 const rpCol=c=>{const m=/rgba?\(([^)]+)\)/.exec(c||'');if(!m)return null;const p=m[1].split(',').map(x=>parseFloat(x));if(p.length>3&&p[3]===0)return null;return [Math.round(p[0]),Math.round(p[1]),Math.round(p[2])];};
