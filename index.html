@@ -5480,7 +5480,7 @@ async function init(){
   currentProfile=null;
   refreshAuth();
   await checkRemote();
-  setInterval(checkRemote,30000);
+  setInterval(checkRemote,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkRemote();});
   await applyCloudIfAvailable();
   // El panel de carga permanece oculto hasta pulsar Gestionar datos.
 }
@@ -5541,6 +5541,23 @@ function requireEditor(){return requestUploadAccess();}
 window.requestUploadAccess=requestUploadAccess;
 window.requestMassAccess=function(){const v=window.prompt('Contraseña para la selección masiva:');if(v===UPLOAD_PASSWORD){setUploadGate(true);return true;}if(v!==null)alert('Contraseña incorrecta.');return false;};
 window.saveCloud=saveCloud;
+// ---- Ahorro de disco en la nube: la lectura grande se guarda en el equipo y solo se vuelve a bajar si cambió la versión ----
+function __idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('wms_cloud_cache',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+async function __cacheGet(){if(window.__memSnap)return window.__memSnap;try{const db=await __idb();return await new Promise(res=>{const t=db.transaction('kv','readonly').objectStore('kv').get('snap');t.onsuccess=()=>{window.__memSnap=t.result||null;res(t.result||null);};t.onerror=()=>res(null);});}catch(e){return null;}}
+async function __cachePut(ts,payload){const v={updated_at:ts,payload};window.__memSnap=v;try{const db=await __idb();await new Promise(res=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,'snap');tx.oncomplete=()=>res();tx.onerror=()=>res();tx.onabort=()=>res();});}catch(e){}}
+const __sameTs=(a,b)=>{const x=new Date(a).getTime(),y=new Date(b).getTime();return !isNaN(x)&&x===y;};
+// 1) consulta liviana de la versión; 2) si es la misma que la guardada en el equipo, no se descarga nada; 3) si cambió, se baja una sola vez
+async function __getSnapshot(){
+  const m=await sb.from('dashboard_snapshots').select('updated_at').eq('id',1).maybeSingle();
+  if(m.error)return {data:null,error:m.error};
+  if(!m.data)return {data:null,error:null};
+  const c=await __cacheGet();
+  if(c&&c.payload&&__sameTs(c.updated_at,m.data.updated_at))return {data:{payload:c.payload,updated_at:c.updated_at},error:null};
+  const f=await sb.from('dashboard_snapshots').select('payload,updated_at').eq('id',1).maybeSingle();
+  if(f.error||!f.data)return f;
+  __cachePut(f.data.updated_at,f.data.payload);
+  return f;
+}
 function snapshot(noDet){return {
   methodologyVersion:typeof METHODOLOGY_VERSION!=='undefined'?METHODOLOGY_VERSION:'V2',savedAt:new Date().toISOString(),
   histData:HIST_DATA||[],dayData:DAY_DATA||[],histMeta:HIST_META||[],dayMeta:DAY_META||[],histDetails:noDet?[]:window.__packDet(HIST_DETAILS||[]),dayDetails:noDet?[]:window.__packDet(DAY_DETAILS||[]),
@@ -5552,14 +5569,19 @@ async function saveCloud(){
   notice('Guardando datos en la nube…',true);
   try{
     if(!(window.RUTAS||[]).length||!(window.MAESTRO||[]).length||!(window.PRESC||[]).length){
-      const g=await sb.from('dashboard_snapshots').select('payload').eq('id',1).maybeSingle();
+      const g=await __getSnapshot();
       if(g&&g.data){const gp=await window.__unpack(g.data.payload||{});
         if(!(window.RUTAS||[]).length&&Array.isArray(gp.rutas)&&gp.rutas.length){window.RUTAS=gp.rutas;window.renderRutas&&window.renderRutas();}
         if(!(window.MAESTRO||[]).length&&Array.isArray(gp.maestro)&&gp.maestro.length){window.MAESTRO=gp.maestro;window.renderMaestro&&window.renderMaestro();}
         if(!(window.PRESC||[]).length&&Array.isArray(gp.presc)&&gp.presc.length){window.PRESC=gp.presc;window.renderPresc&&window.renderPresc();}}
     }
   }catch(e){}
-  let last=null;
+  try{const lv=localStorage.getItem('PICKING_LAST_CLOUD_VERSION')||'',pv=JSON.parse(localStorage.getItem('PICKING_CLOUD_HASHES')||'null');
+    if(lv&&pv&&Object.keys(pv).length){const hk=__hk(snapshot(false)),diff=Object.keys(hk).filter(k=>k!=='savedAt'&&k!=='methodologyVersion'&&hk[k]!==pv[k]);
+      if(!diff.length){const m=await sb.from('dashboard_snapshots').select('updated_at').eq('id',1).maybeSingle();
+        if(m&&m.data&&__sameTs(m.data.updated_at,lv)){notice('Sin cambios: no hacía falta guardar nada nuevo en la nube.',true);return true;}}}
+  }catch(e){}
+  let last=null,net=false;
   for(const [mode,noDet] of [['gz',false],['gz',true],['raw',true]]){
     try{
       const snap=snapshot(noDet);
@@ -5568,12 +5590,12 @@ async function saveCloud(){
       const mb=((payload.data||JSON.stringify(payload)).length/1048576).toFixed(1),t0=Date.now();
       const q=await sb.rpc('save_dashboard_snapshot',{p_password:UPLOAD_PASSWORD,p_payload:payload});
       if(q.error)throw q.error;
-      const t=q.data?.updated_at||new Date().toISOString();localStorage.setItem('PICKING_LAST_CLOUD_VERSION',t);try{const pv=JSON.parse(localStorage.getItem('PICKING_CLOUD_HASHES')||'{}');localStorage.setItem('PICKING_CLOUD_HASHES',JSON.stringify(Object.assign(pv,__hk(snap))));}catch(e){}updateCloudButton(false);hideUpdBar();
+      const t=q.data?.updated_at||new Date().toISOString();localStorage.setItem('PICKING_LAST_CLOUD_VERSION',t);if(q.data&&q.data.updated_at&&payload&&payload.data)__cachePut(q.data.updated_at,payload);try{const pv=JSON.parse(localStorage.getItem('PICKING_CLOUD_HASHES')||'{}');localStorage.setItem('PICKING_CLOUD_HASHES',JSON.stringify(Object.assign(pv,__hk(snap))));}catch(e){}updateCloudButton(false);hideUpdBar();
       const info=' ('+mb+' MB · '+((Date.now()-t0)/1000).toFixed(1)+' s)';
       notice(noDet?'⚠️ Guardado SIN el detalle por hora (era muy pesado): el clic en las cantidades solo funcionará en la PC donde subiste el archivo.'+info:'✅ Datos guardados en la nube. Al abrir en otra PC se cargarán solos.'+info,true);return true;
-    }catch(e){last=e;}
+    }catch(e){last=e;const m=String((e&&(e.message||e.details))||e).toLowerCase();if(/timeout|timed out|connection|network|failed to fetch|fetch failed|\b50[234]\b|\b52[0-4]\b/.test(m)){net=true;break;}}
   }
-  notice('❌ No se pudo guardar: '+((last&&((last.code?last.code+': ':'')+(last.message||last.details||last.hint)))||String(last)),true);return false;
+  notice('❌ No se pudo guardar: '+((last&&((last.code?last.code+': ':'')+(last.message||last.details||last.hint)))||String(last))+(net?' · La base está lenta o saturada: no se reintentó para no sobrecargarla. Espera unos minutos y vuelve a guardar.':''),true);return false;
 }
 
 
@@ -5653,18 +5675,19 @@ function describeChanges(keys,p){const out=[],DN=['Lun','Mar','Mié','Jue','Vie'
  }catch(e){}
  return out;}
 async function tryAutoApply(){if(window.__autoBusy)return false;window.__autoBusy=true;
- try{const f=await sb.from('dashboard_snapshots').select('payload,updated_at').eq('id',1).maybeSingle();if(f.error||!f.data)return false;
+ try{const f=await __getSnapshot();if(f.error||!f.data)return false;
+  const sig=f.data.updated_at+'|'+openModules().join(',');if(window.__autoSig===sig)return false;   // misma versión y mismos módulos abiertos: no se vuelve a procesar
   const p=await window.__unpack(f.data.payload||{}),H=__hk(p);let prev=null;try{prev=JSON.parse(localStorage.getItem('PICKING_CLOUD_HASHES')||'null');}catch(e){}
-  if(!prev||!Object.keys(prev).length){showUpdBar([]);return false;}   // sin referencia de lo que cambió: se pide actualizar
+  if(!prev||!Object.keys(prev).length){showUpdBar([]);window.__autoSig=sig;return false;}   // sin referencia de lo que cambió: se pide actualizar
   const rel=Object.keys(H).filter(k=>H[k]!==(prev[k]||'')&&CLOUD_VIEWS[k]),open=openModules(),blocked=rel.filter(k=>CLOUD_VIEWS[k].some(v=>open.indexOf(v)>=0)),allowed=rel.filter(k=>blocked.indexOf(k)<0);
   if(allowed.length){const sub={};allowed.forEach(k=>sub[k]=p[k]);await __applyP(sub,f.data.updated_at,!blocked.length);
    const lb=[...new Set(allowed.map(k=>CLOUD_LABEL[k]).filter(Boolean))];window.__toast&&window.__toast('🔄 Datos actualizados automáticamente: '+lb.join(', ')+'.');}
   else if(!blocked.length){localStorage.setItem('PICKING_LAST_CLOUD_VERSION',f.data.updated_at);updateCloudButton(false);}
-  if(blocked.length){showUpdBar(blocked,describeChanges(blocked,p),new Date(f.data.updated_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));return false;}
-  hideUpdBar();return true;
+  if(blocked.length){showUpdBar(blocked,describeChanges(blocked,p),new Date(f.data.updated_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));window.__autoSig=sig;return false;}
+  window.__autoSig=null;hideUpdBar();return true;
  }catch(e){return false;}finally{window.__autoBusy=false;}}
 async function checkRemote(){
-  if(!sb)return;
+  if(!sb||document.hidden)return;
   const q=await sb.from('dashboard_snapshots')
     .select('id,updated_at')
     .eq('id',1)
@@ -5689,10 +5712,7 @@ async function checkRemote(){
 window.__cloudReload=()=>applyCloudIfAvailable();
 async function applyCloudIfAvailable(){
   if(!sb)return;
-  const q=await sb.from('dashboard_snapshots')
-    .select('payload,updated_at')
-    .eq('id',1)
-    .maybeSingle();
+  const q=await __getSnapshot();
   if(q.error){notice('❌ No se pudo leer la nube: '+q.error.message,true);return;}
   if(!q.data)return;
   const p=await window.__unpack(q.data.payload||{});
@@ -5708,12 +5728,9 @@ function updateCloudButton(n){
 }
 async function applyCloud(){
   if(!sb)return;
-  const q=await sb.from('dashboard_snapshots')
-    .select('payload,updated_at')
-    .eq('id',1)
-    .single();
-  if(q.error){
-    notice('No se pudo actualizar: '+q.error.message,true);
+  const q=await __getSnapshot();
+  if(q.error||!q.data){
+    notice('No se pudo actualizar: '+((q.error&&q.error.message)||'sin datos en la nube'),true);
     return;
   }
   const p=await window.__unpack(q.data.payload||{});
